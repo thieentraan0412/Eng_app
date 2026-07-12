@@ -416,7 +416,7 @@ textarea::placeholder {
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 2.2rem 2.5rem 3rem;
+  padding: 1.1rem 1.5rem 1.2rem;
 }
 
 /* ---------- Pages ---------- */
@@ -1002,7 +1002,7 @@ textarea::placeholder {
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.5rem;
 }
 /* Hàng đầu gọn: quay lại + tiêu đề + đếm từ + lưu + xóa */
 .editor-head {
@@ -1050,12 +1050,12 @@ textarea::placeholder {
   width: 100%;
   height: 100%;
   margin: 0;
-  padding: 1.4rem 1.6rem;
+  padding: 1rem 1.2rem;
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   font-family: var(--font-serif);
   font-size: 1.05rem;
-  line-height: 1.85;
+  line-height: 1.7;
   letter-spacing: normal;
   white-space: pre-wrap;
   overflow-wrap: break-word;

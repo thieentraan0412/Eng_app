@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, safeStorage } from 'electron'
+import { app, BrowserWindow, ipcMain, safeStorage, Menu } from 'electron'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -13,12 +13,16 @@ const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 let win: BrowserWindow | null = null
 
 function createWindow() {
+  // Bỏ thanh menu mặc định (File/Edit/View/Window/Help)
+  Menu.setApplicationMenu(null)
+
   win = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 900,
     minHeight: 600,
     title: 'EngMaster',
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
