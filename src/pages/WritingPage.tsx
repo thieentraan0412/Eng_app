@@ -12,6 +12,20 @@ import { CloudApi, type Writing } from '../services/cloud/CloudApiClient'
 import { suggest, type Suggestion } from '../services/suggestion'
 import { ignoreWord, isMisspelled, suggestFix, tokenizeWords } from '../services/spellcheck'
 import { checkGrammar, type GrammarMatch } from '../services/grammarcheck'
+import { checkLocalGrammar } from '../services/localgrammar'
+
+// Gộp lỗi offline + LanguageTool, bỏ trùng theo vị trí, sắp theo thứ tự trong câu
+function mergeGrammar(a: GrammarMatch[], b: GrammarMatch[]): GrammarMatch[] {
+  const seen = new Set<string>()
+  const out: GrammarMatch[] = []
+  for (const m of [...a, ...b]) {
+    const key = `${m.offset}:${m.length}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(m)
+  }
+  return out.sort((x, y) => x.offset - y.offset).slice(0, 15)
+}
 
 interface SpellItem {
   word: string
@@ -166,16 +180,19 @@ function Editor({
     return () => clearTimeout(handle)
   }, [content, spellEnabled, spellVersion])
 
-  // Kiểm tra câu (LanguageTool, debounce 1.5s)
+  // Kiểm tra câu: luật OFFLINE hiện ngay + LanguageTool (online, debounce 1.5s) rồi gộp lại
   useEffect(() => {
     if (!grammarEnabled || !content.trim()) {
       setGrammar([])
       return
     }
+    // Luật cục bộ: chạy tức thì để không phải chờ mạng
+    const local = checkLocalGrammar(content)
+    setGrammar(local)
     setGrammarChecking(true)
     const handle = setTimeout(async () => {
-      const matches = await checkGrammar(content)
-      setGrammar(matches)
+      const remote = await checkGrammar(content)
+      setGrammar(mergeGrammar(local, remote))
       setGrammarChecking(false)
     }, 1500)
     return () => clearTimeout(handle)
@@ -280,6 +297,20 @@ function Editor({
     }
   }
 
+  // Ctrl+S (hoặc Cmd+S trên Mac) để lưu nhanh những gì đã nhập
+  const saveRef = useRef(save)
+  saveRef.current = save
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault()
+        void saveRef.current()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const typeLabel: Record<Suggestion['type'], string> = {
     auto: 'gợi ý',
     nextword: 'tiếp theo',
@@ -302,7 +333,7 @@ function Editor({
           {countWords(content)} từ · {content.length} ký tự
           {savedAt && ` · Đã lưu ${savedAt}`}
         </span>
-        <button className="btn primary" type="submit" disabled={saving}>
+        <button className="btn primary" type="submit" disabled={saving} title="Lưu (Ctrl+S)">
           {saving ? 'Đang lưu…' : '💾 Lưu'}
         </button>
         {onDelete && (

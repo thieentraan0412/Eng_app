@@ -11,10 +11,26 @@ import '@fontsource/lora/400.css'
 import '@fontsource/lora/500.css'
 import '@fontsource/lora/600.css'
 import App from './App'
+import DesktopTranslatePopup from './components/DesktopTranslatePopup'
 import './styles.css'
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+// Cùng một bundle renderer phục vụ 2 cửa sổ:
+//  - Mặc định: ứng dụng chính (App)
+//  - ?view=translate: cửa sổ popup dịch nhanh toàn màn hình (nhỏ, trong suốt)
+const view = new URLSearchParams(window.location.search).get('view')
+const root = ReactDOM.createRoot(document.getElementById('root')!)
+
+if (view === 'translate') {
+  document.body.classList.add('popup-body')
+  root.render(
+    <React.StrictMode>
+      <DesktopTranslatePopup />
+    </React.StrictMode>,
+  )
+} else {
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  )
+}

@@ -41,12 +41,11 @@ export default function ReadingPage() {
 
   if (selected) {
     return (
-      <div className="page">
+      <div className="page page-wide">
         <button className="btn tiny" onClick={() => setSelected(null)}>
           ← Danh sách bài đọc
         </button>
         <h1 className="page-title">{selected.title}</h1>
-        <p className="muted">💡 Bôi/tô một từ tiếng Anh để xem nghĩa tiếng Việt.</p>
         <div className="reading-text">{selected.content}</div>
       </div>
     )

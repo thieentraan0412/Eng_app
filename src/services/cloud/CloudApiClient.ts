@@ -153,6 +153,18 @@ export const CloudApi = {
     if (error) throw error
   },
 
+  // Đổi tên (tiêu đề) bộ từ
+  async renameDeck(deckId: string, name: string): Promise<Deck> {
+    const { data, error } = await supabase
+      .from('decks')
+      .update({ name, updated_at: new Date().toISOString() })
+      .eq('id', deckId)
+      .select()
+      .single()
+    if (error) throw error
+    return data as Deck
+  },
+
   // ---------- Cards (thẻ từ) ----------
   async listCards(deckId: string): Promise<Card[]> {
     const { data, error } = await supabase

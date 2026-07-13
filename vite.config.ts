@@ -15,6 +15,14 @@ export default defineConfig({
       {
         // Tiến trình Main (Node)
         entry: 'electron/main.ts',
+        vite: {
+          build: {
+            rollupOptions: {
+              // Native module: không bundle, để require lúc chạy
+              external: ['uiohook-napi'],
+            },
+          },
+        },
       },
       {
         // Script preload (cầu nối an toàn Renderer ⇄ Main)

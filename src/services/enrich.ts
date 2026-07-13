@@ -37,11 +37,26 @@ const STOP = new Set([
   'from', 'his', 'her', 'their', 'its', 'my', 'your', 'our', 'i', 'you', 'he', 'she', 'we', 'they',
   'will', 'would', 'can', 'could', 'has', 'have', 'had', 'do', 'does', 'did', 'so',
 ])
-// Giới từ/tiểu từ dùng để dựng mẫu câu (pattern)
-const PREPS = ['to', 'for', 'of', 'in', 'on', 'at', 'with', 'about', 'from', 'into', 'as', 'over']
+// Giới từ/tiểu từ dùng để dựng mẫu câu (pattern) — mở rộng để nhiều từ có pattern hơn
+const PREPS = [
+  'to', 'for', 'of', 'in', 'on', 'at', 'with', 'about', 'from', 'into', 'as', 'over',
+  'against', 'between', 'through', 'under', 'without', 'upon', 'towards', 'toward', 'after',
+  'before', 'by', 'off', 'out', 'up', 'down', 'around', 'along', 'across', 'beyond',
+]
+
+// Số đếm / lượng từ — là collocation kém (two main, three main…), bỏ khi dựng collocation
+const NUM_QUANT = new Set([
+  'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'many', 'much',
+  'few', 'several', 'whose', 'each', 'every', 'any', 'all', 'both', 'some', 'most', 'more', 'less',
+  'various', 'certain', 'such', 'other', 'another', 'same', 'own', 'first', 'second', 'third',
+])
 
 function isContent(t: string): boolean {
   return /^[a-z][a-z-]*$/.test(t) && t.length > 1 && !STOP.has(t)
+}
+// Collocation chất lượng: là từ nội dung và KHÔNG phải số đếm/lượng từ
+function isGoodColloc(t: string): boolean {
+  return isContent(t) && !NUM_QUANT.has(t)
 }
 
 function dedupe(arr: string[]): string[] {
@@ -56,7 +71,7 @@ interface DMWord {
 async function datamuse(rel: 'rel_bga' | 'rel_bgb', word: string): Promise<DMWord[]> {
   try {
     const res = await fetch(
-      `https://api.datamuse.com/words?${rel}=${encodeURIComponent(word)}&max=20`,
+      `https://api.datamuse.com/words?${rel}=${encodeURIComponent(word)}&max=30`,
     )
     if (!res.ok) return []
     return (await res.json()) as DMWord[]
@@ -145,19 +160,22 @@ export async function fetchEnrichment(word: string): Promise<Enrichment> {
     fetchDictionary(w),
   ])
 
-  const collocations = dedupe([
-    ...before.filter((x) => isContent(x.word)).map((x) => `${x.word} ${w}`),
-    ...after.filter((x) => isContent(x.word)).map((x) => `${w} ${x.word}`),
-  ]).slice(0, 8)
+  // Gộp collocation trước/sau, ưu tiên theo điểm phổ biến (datamuse score) -> cụm hay lên đầu
+  const collocs = [
+    ...before.filter((x) => isGoodColloc(x.word)).map((x) => ({ t: `${x.word} ${w}`, s: x.score ?? 0 })),
+    ...after.filter((x) => isGoodColloc(x.word)).map((x) => ({ t: `${w} ${x.word}`, s: x.score ?? 0 })),
+  ].sort((a, b) => b.s - a.s)
+  const collocations = dedupe(collocs.map((c) => c.t)).slice(0, 8)
 
+  // Chỉ xét giới từ trong TOP đầu (liên kết mạnh theo datamuse) để tránh pattern nhiễu
   const patterns = dedupe(
-    after.flatMap((x) => {
+    after.slice(0, 12).flatMap((x) => {
       const a = x.word
       if (a === 'to') return [`${w} to do sth`]
       if (PREPS.includes(a)) return [`${w} ${a} sth`]
       return []
     }),
-  ).slice(0, 6)
+  ).slice(0, 5)
 
   return { collocations, patterns, examples: dict.examples, pos: dict.pos }
 }

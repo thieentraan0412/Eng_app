@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Sidebar from './Sidebar'
 import TranslatePopup from './TranslatePopup'
 import { CloudApi, type Deck } from '../services/cloud/CloudApiClient'
+import { translate, translateOnline } from '../services/translation'
+import { fetchEnrichment, searchSentences, shortPos } from '../services/enrich'
 import type { PageKey } from '../pages/pages'
 import DashboardPage from '../pages/DashboardPage'
 import VocabularyPage from '../pages/VocabularyPage'
@@ -15,19 +17,77 @@ const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
 
 export default function AppLayout() {
   const [page, setPage] = useState<PageKey>('dashboard')
+  const [toast, setToast] = useState<string | null>(null)
 
-  // Lưu từ đang bôi dịch vào một bộ "Từ đã lưu" (tự tạo nếu chưa có)
-  const handleSaveWord = async (entry: { word: string; meaning: string; phonetic?: string }) => {
-    if (!entry.meaning) return
+  // Chọn bộ đích: deckId đã chọn > bộ dùng gần nhất > bộ mới nhất > tạo bộ mặc định
+  const resolveDeck = async (deckId?: string): Promise<Deck> => {
     const decks = await CloudApi.listDecks()
-    let deck: Deck | undefined = decks.find((d) => d.name === SAVED_DECK_NAME)
-    if (!deck) deck = await CloudApi.createDeck(SAVED_DECK_NAME, 'Các từ lưu khi bôi màu dịch')
-    await CloudApi.createCard(deck.id, {
-      word: entry.word,
-      meaning: entry.meaning,
-      phonetic: entry.phonetic,
-    })
+    const byId = (id?: string | null) => (id ? decks.find((d) => d.id === id) : undefined)
+    const chosen = byId(deckId) ?? byId(localStorage.getItem('last_deck_id')) ?? decks[0]
+    if (chosen) return chosen
+    return CloudApi.createDeck(SAVED_DECK_NAME, 'Các từ lưu khi bôi màu dịch')
   }
+
+  // Lưu từ đang bôi dịch vào bộ đã chọn (hoặc bộ gần nhất),
+  // LÀM GIÀU đầy đủ giống thêm thủ công: nghĩa + từ loại + collocation + pattern + ví dụ.
+  const handleSaveWord = async (
+    entry: { word: string; meaning: string; phonetic?: string },
+    deckId?: string,
+  ) => {
+    const word = entry.word.trim()
+    if (!word) return
+    const lw = word.toLowerCase()
+    const isSingleWord = /^[a-z]+$/.test(lw)
+
+    // Nghĩa: ưu tiên nghĩa sẵn có; trống -> offline rồi online
+    let meaning = entry.meaning?.trim() ?? ''
+    if (!meaning) {
+      meaning = translate(lw).vi ?? (await translateOnline(lw)) ?? ''
+    }
+
+    // Làm giàu (chỉ với từ đơn): collocation / pattern / ví dụ / từ loại
+    const data = isSingleWord
+      ? await fetchEnrichment(lw)
+      : { collocations: [], patterns: [], examples: [], pos: [] }
+
+    const offPos = translate(lw).pos
+    const pos = data.pos[0] ?? (offPos ? shortPos(offPos) : '')
+    const collocations = data.collocations.slice(0, 4)
+    const patterns = data.patterns.slice(0, 3)
+    let examples = data.examples.slice(0, 2)
+    // Không có ví dụ từ từ điển -> tìm câu thật chứa từ (Tatoeba)
+    if (isSingleWord && examples.length === 0) examples = await searchSentences(lw, 2)
+
+    const deck = await resolveDeck(deckId)
+    await CloudApi.createCard(deck.id, {
+      word,
+      meaning,
+      phonetic: entry.phonetic,
+      pos: pos || undefined,
+      collocation: collocations.length ? collocations.join('\n') : undefined,
+      pattern: patterns.length ? patterns.join('\n') : undefined,
+      example: examples.length ? examples.join('\n') : undefined,
+    })
+    localStorage.setItem('last_deck_id', deck.id) // nhớ bộ gần nhất cho lần sau
+  }
+
+  // Đồng bộ trạng thái tính năng "Dịch nhanh toàn màn hình" theo cài đặt đã lưu,
+  // và nhận yêu cầu "Lưu vào bộ từ" đến từ popup toàn cục (cửa sổ khác).
+  useEffect(() => {
+    if (localStorage.getItem('desktop_translate_enabled') === '1') {
+      window.api.setDesktopTranslate(true)
+    }
+    const off = window.api.onQuickSave(async (entry) => {
+      try {
+        await handleSaveWord(entry)
+        setToast(`Đã lưu “${entry.word}” vào bộ từ`)
+      } catch {
+        setToast('Lưu từ thất bại (kiểm tra đăng nhập / mạng)')
+      }
+      window.setTimeout(() => setToast(null), 2600)
+    })
+    return off
+  }, [])
 
   const renderPage = () => {
     switch (page) {
@@ -55,6 +115,7 @@ export default function AppLayout() {
         <main className="content">{renderPage()}</main>
       </div>
       <TranslatePopup onSave={handleSaveWord} />
+      {toast && <div className="app-toast">{toast}</div>}
     </div>
   )
 }

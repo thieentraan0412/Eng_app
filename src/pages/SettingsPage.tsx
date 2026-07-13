@@ -8,6 +8,17 @@ export default function SettingsPage() {
   const [suggest, setSuggest] = useState(localStorage.getItem('suggest_enabled') !== '0')
   const [spell, setSpell] = useState(localStorage.getItem('spell_enabled') !== '0')
   const [grammar, setGrammar] = useState(localStorage.getItem('grammar_enabled') !== '0')
+  // Mặc định TẮT (tính năng nền toàn cục, người dùng chủ động bật)
+  const [deskTrans, setDeskTrans] = useState(
+    localStorage.getItem('desktop_translate_enabled') === '1',
+  )
+
+  const toggleDeskTrans = () => {
+    const next = !deskTrans
+    setDeskTrans(next)
+    localStorage.setItem('desktop_translate_enabled', next ? '1' : '0')
+    window.api.setDesktopTranslate(next)
+  }
 
   const toggleSuggest = () => {
     const next = !suggest
@@ -82,6 +93,20 @@ export default function SettingsPage() {
         </div>
         <button className="btn" onClick={toggleGrammar}>
           {grammar ? 'Tắt' : 'Bật'}
+        </button>
+      </div>
+
+      <div className="setting-row">
+        <div>
+          <div className="setting-label">Dịch nhanh toàn màn hình</div>
+          <div className="muted">
+            {deskTrans
+              ? 'Bôi/tô chữ ở BẤT KỲ app nào (trình duyệt, Word, PDF…) để dịch'
+              : 'Đang tắt'}
+          </div>
+        </div>
+        <button className="btn" onClick={toggleDeskTrans}>
+          {deskTrans ? 'Tắt' : 'Bật'}
         </button>
       </div>
     </div>

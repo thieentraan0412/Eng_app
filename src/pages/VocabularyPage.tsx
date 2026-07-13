@@ -38,6 +38,29 @@ export default function VocabularyPage() {
   const [selected, setSelected] = useState<Deck | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [newDeckName, setNewDeckName] = useState('')
+  // Đổi tên (tiêu đề) bộ từ ngay trên thẻ
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+
+  const startRename = (deck: Deck) => {
+    setEditingId(deck.id)
+    setEditName(deck.name)
+  }
+  const saveRename = async () => {
+    const id = editingId
+    const name = editName.trim()
+    setEditingId(null)
+    if (!id || !name) return
+    const cur = decks.find((d) => d.id === id)
+    if (cur && cur.name === name) return // không đổi -> bỏ qua
+    try {
+      const updated = await CloudApi.renameDeck(id, name)
+      setDecks((d) => d.map((x) => (x.id === updated.id ? updated : x)))
+      if (selected?.id === updated.id) setSelected(updated)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
 
   const loadDecks = async () => {
     try {
@@ -100,7 +123,21 @@ export default function VocabularyPage() {
       ) : (
         <div className="deck-grid">
           {decks.map((deck) => (
-            <div key={deck.id} className="deck-card" onClick={() => setSelected(deck)}>
+            <div
+              key={deck.id}
+              className="deck-card"
+              onClick={() => (editingId === deck.id ? undefined : setSelected(deck))}
+            >
+              <button
+                className="deck-edit"
+                title="Đổi tên bộ từ"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  startRename(deck)
+                }}
+              >
+                ✎
+              </button>
               <button
                 className="deck-del"
                 title="Xóa bộ từ"
@@ -112,7 +149,26 @@ export default function VocabularyPage() {
                 ✕
               </button>
               <div className="deck-icon">{deck.name.trim().charAt(0).toUpperCase() || '📚'}</div>
-              <div className="deck-name">{deck.name}</div>
+              {editingId === deck.id ? (
+                <input
+                  className="deck-rename"
+                  autoFocus
+                  value={editName}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onBlur={saveRename}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      saveRename()
+                    } else if (e.key === 'Escape') {
+                      setEditingId(null)
+                    }
+                  }}
+                />
+              ) : (
+                <div className="deck-name">{deck.name}</div>
+              )}
               <div className="deck-desc">{deck.description || 'Bộ từ vựng'}</div>
               <div className="deck-foot">
                 <span>Mở bộ</span>

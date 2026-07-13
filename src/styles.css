@@ -515,6 +515,10 @@ textarea::placeholder {
   margin: 0 auto;
   animation: fadein 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* Trang cần dùng hết bề ngang khung app (vd: đọc bài) */
+.page.page-wide {
+  max-width: none;
+}
 @keyframes fadein {
   from {
     opacity: 0;
@@ -970,6 +974,48 @@ textarea::placeholder {
   background: rgba(240, 68, 56, 0.12);
   color: var(--danger);
 }
+/* Nút đổi tên bộ từ (đặt cạnh trái nút xóa) */
+.deck-edit {
+  position: absolute;
+  top: 0.65rem;
+  right: 2.55rem;
+  width: 27px;
+  height: 27px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.82rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.deck-card:hover .deck-edit {
+  opacity: 1;
+}
+.deck-edit:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+/* Ô nhập đổi tên inline trên thẻ */
+.deck-rename {
+  font-weight: 680;
+  font-size: 1.05rem;
+  padding: 0.18rem 0.45rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+  outline: none;
+}
+.deck-rename:focus {
+  box-shadow: 0 0 0 2px rgba(124, 92, 255, 0.35);
+}
 
 .card-list {
   display: grid;
@@ -1354,13 +1400,22 @@ textarea::placeholder {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  padding: 2.2rem 2.4rem;
-  line-height: 2.1;
-  font-size: 1.18rem;
+  padding: 2rem 2.6rem;
+  /* Chiếm hết bề ngang khung nội dung */
+  width: 100%;
+  margin: 0.4rem 0 0;
+  line-height: 1.8;
+  font-size: 1rem;
   font-family: var(--font-serif);
-  color: var(--text-soft);
+  color: var(--text); /* nền sáng: chữ gần đen cho đậm, rõ */
+  letter-spacing: 0.01em;
   user-select: text;
   box-shadow: var(--shadow-xs);
+  white-space: pre-wrap; /* giữ xuống dòng/đoạn nếu nội dung có */
+}
+/* Chế độ Tối: dùng màu dịu hơn cho đỡ chói mắt khi đọc dài */
+:root[data-theme='dark'] .reading-text {
+  color: var(--text-soft);
 }
 .reading-editor {
   width: 100%;
@@ -1440,6 +1495,21 @@ textarea::placeholder {
   font-size: 0.7rem;
   color: var(--muted);
 }
+/* Dropdown chọn bộ từ trong popup dịch */
+.tp-deck {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.82rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+}
+.tp-deck:focus {
+  box-shadow: 0 0 0 2px rgba(124, 92, 255, 0.3);
+}
 .tp-gloss {
   display: flex;
   flex-direction: column;
@@ -1464,6 +1534,56 @@ textarea::placeholder {
 .tp-gloss-vi {
   color: var(--text-soft);
   text-align: right;
+}
+
+/* ---------- Popup dịch nhanh TOÀN MÀN HÌNH (cửa sổ riêng) ---------- */
+/* Cửa sổ popup trong suốt: chỉ hiện thẻ dịch, phần còn lại thấy xuyên qua */
+.popup-body {
+  background: transparent !important;
+  overflow: hidden;
+}
+.translate-popup.desktop {
+  position: static;
+  transform: none;
+  margin: 6px;
+  animation: pop-desktop 0.12s ease;
+}
+@keyframes pop-desktop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.tp-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 2px;
+}
+.tp-close:hover {
+  color: var(--text);
+}
+
+/* ---------- Toast nhỏ (thông báo lưu từ) ---------- */
+.app-toast {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  padding: 0.6rem 1.1rem;
+  font-size: 0.9rem;
+  z-index: 2000;
+  animation: pop 0.15s ease;
 }
 
 /* ---------- Panel + BarChart ---------- */

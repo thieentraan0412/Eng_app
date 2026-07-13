@@ -23,6 +23,9 @@
       "dist-electron",
       "package.json"
     ],
+    "asarUnpack": [
+      "**/node_modules/uiohook-napi/**"
+    ],
     "win": {
       "target": [
         "nsis",
@@ -44,7 +47,8 @@
     "dictionary-en": "^4.0.0",
     "nspell": "^2.1.5",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "uiohook-napi": "^1.5.5"
   },
   "devDependencies": {
     "@types/react": "^18.3.5",

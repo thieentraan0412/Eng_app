@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { translate, translateOnline, isSingleWord } from '../services/translation'
+import { CloudApi, type Deck } from '../services/cloud/CloudApiClient'
 
 interface PopupState {
   x: number
@@ -22,7 +23,7 @@ interface SaveEntry {
 }
 
 interface Props {
-  onSave: (entry: SaveEntry) => Promise<void>
+  onSave: (entry: SaveEntry, deckId?: string) => Promise<void>
 }
 
 // Bôi/tô văn bản tiếng Anh bất kỳ (kể cả trong ô nhập) -> dịch sang tiếng Việt.
@@ -30,6 +31,24 @@ export default function TranslatePopup({ onSave }: Props) {
   const [popup, setPopup] = useState<PopupState | null>(null)
   const [view, setView] = useState<View>(null)
   const [saved, setSaved] = useState(false)
+  const [decks, setDecks] = useState<Deck[]>([])
+  const [deckId, setDeckId] = useState('')
+
+  // Nạp danh sách bộ từ khi popup mở; mặc định chọn bộ dùng gần nhất / mới nhất
+  useEffect(() => {
+    if (!popup) return
+    CloudApi.listDecks()
+      .then((ds) => {
+        setDecks(ds)
+        setDeckId((cur) => {
+          if (cur && ds.some((d) => d.id === cur)) return cur
+          const last = localStorage.getItem('last_deck_id')
+          if (last && ds.some((d) => d.id === last)) return last
+          return ds[0]?.id ?? ''
+        })
+      })
+      .catch(() => {})
+  }, [popup?.text])
 
   // Bắt sự kiện bôi chọn
   useEffect(() => {
@@ -108,9 +127,9 @@ export default function TranslatePopup({ onSave }: Props) {
 
   const handleSave = async () => {
     if (view.kind === 'word') {
-      await onSave({ word: view.word, meaning: view.vi, phonetic: view.phonetic })
+      await onSave({ word: view.word, meaning: view.vi, phonetic: view.phonetic }, deckId || undefined)
     } else if (view.kind === 'online') {
-      await onSave({ word: view.text, meaning: view.vi })
+      await onSave({ word: view.text, meaning: view.vi }, deckId || undefined)
     }
     setSaved(true)
   }
@@ -152,9 +171,27 @@ export default function TranslatePopup({ onSave }: Props) {
       )}
 
       {canSave && (
-        <button className="btn small full" onClick={handleSave} disabled={saved}>
-          {saved ? '✓ Đã lưu' : '➕ Lưu vào bộ từ'}
-        </button>
+        <>
+          {decks.length > 0 && (
+            <select
+              className="tp-deck"
+              value={deckId}
+              disabled={saved}
+              onMouseDown={(e) => e.stopPropagation()}
+              onChange={(e) => setDeckId(e.target.value)}
+              title="Chọn bộ từ để lưu vào"
+            >
+              {decks.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <button className="btn small full" onClick={handleSave} disabled={saved}>
+            {saved ? '✓ Đã lưu' : '➕ Lưu vào bộ từ'}
+          </button>
+        </>
       )}
     </div>
   )

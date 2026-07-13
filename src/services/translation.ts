@@ -59,19 +59,51 @@ export function glossPhrase(text: string): WordGloss[] {
     })
 }
 
-// Dịch online (API MyMemory, miễn phí) — dịch được mọi từ và cả câu.
-// Cần internet. Trả về null nếu lỗi/không dịch được.
+// Dịch online — dịch được mọi từ và cả câu. Cần internet.
+// Ưu tiên Google Translate (đáng tin cả với từ đơn), dự phòng MyMemory.
+// Trả null nếu lỗi/không dịch được (kể cả khi API trả lại đúng từ gốc tiếng Anh).
 export async function translateOnline(text: string): Promise<string | null> {
+  const g = await googleTranslate(text)
+  if (g) return g
+  return myMemoryTranslate(text)
+}
+
+// Coi như "không dịch được" nếu kết quả rỗng hoặc y hệt đầu vào (API trả lại từ gốc)
+function accept(vi: string | undefined | null, src: string): string | null {
+  if (typeof vi !== 'string') return null
+  const t = vi.trim()
+  if (!t || t.toLowerCase() === src.trim().toLowerCase()) return null
+  return t
+}
+
+// Google Translate (endpoint gtx miễn phí, không cần key, có CORS)
+async function googleTranslate(text: string): Promise<string | null> {
   try {
     const url =
-      'https://api.mymemory.translated.net/get?q=' +
-      encodeURIComponent(text) +
-      '&langpair=en|vi'
+      'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=' +
+      encodeURIComponent(text)
     const res = await fetch(url)
     if (!res.ok) return null
     const data = await res.json()
-    const vi = data?.responseData?.translatedText
-    return typeof vi === 'string' && vi.trim() ? vi.trim() : null
+    // data[0] = danh sách các đoạn [đoạnDịch, đoạnGốc, …] -> nối lại thành câu
+    const segs = data?.[0]
+    if (!Array.isArray(segs)) return null
+    const vi = segs.map((s: unknown[]) => (typeof s?.[0] === 'string' ? s[0] : '')).join('')
+    return accept(vi, text)
+  } catch {
+    return null
+  }
+}
+
+// MyMemory (dự phòng)
+async function myMemoryTranslate(text: string): Promise<string | null> {
+  try {
+    const url =
+      'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=en|vi'
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const data = await res.json()
+    return accept(data?.responseData?.translatedText, text)
   } catch {
     return null
   }

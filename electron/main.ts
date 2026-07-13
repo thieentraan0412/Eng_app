@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, safeStorage, Menu } from 'electron'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
 import path from 'node:path'
+import { initGlobalTranslate, disposeGlobalTranslate } from './globalTranslate'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -36,6 +37,15 @@ function createWindow() {
   } else {
     win.loadFile(path.join(RENDERER_DIST, 'index.html'))
   }
+}
+
+// Dịch nhanh toàn màn hình: khởi tạo IPC + hook (bật/tắt điều khiển từ Cài đặt)
+function setupGlobalTranslate() {
+  initGlobalTranslate({
+    getMainWindow: () => win,
+    devUrl: VITE_DEV_SERVER_URL,
+    fileBase: path.join(RENDERER_DIST, 'index.html'),
+  })
 }
 
 // Ví dụ kênh IPC: kiểm tra kết nối mạng (net:status) — sẽ mở rộng ở các giai đoạn sau
@@ -84,13 +94,21 @@ ipcMain.handle('cred:clear', (): boolean => {
   }
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  createWindow()
+  setupGlobalTranslate()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    disposeGlobalTranslate()
     app.quit()
     win = null
   }
+})
+
+app.on('before-quit', () => {
+  disposeGlobalTranslate()
 })
 
 app.on('activate', () => {
