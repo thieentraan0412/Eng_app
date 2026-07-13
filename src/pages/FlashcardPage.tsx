@@ -44,6 +44,19 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   const [flipped, setFlipped] = useState(false)
   const [done, setDone] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  // Chế độ "học lại": ôn qua tất cả thẻ, KHÔNG cập nhật lịch SRS
+  const [practice, setPractice] = useState(false)
+  // Chiều thẻ: false = Anh→Việt (mặc định); true = Việt→Anh (mặt trước hiện nghĩa)
+  const [frontVi, setFrontVi] = useState(() => localStorage.getItem('fc_front_vi') === '1')
+
+  const toggleFront = () => {
+    setFrontVi((v) => {
+      const nv = !v
+      localStorage.setItem('fc_front_vi', nv ? '1' : '0')
+      return nv
+    })
+    setFlipped(false)
+  }
 
   useEffect(() => {
     CloudApi.getDueCards(deck.id)
@@ -55,15 +68,44 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
 
   const rate = async (rating: Rating) => {
     if (!current) return
-    try {
-      await CloudApi.reviewCard(current, rating)
-    } catch (e) {
-      setError((e as Error).message)
-      return
+    // Học lại: chỉ luyện, không ghi SRS
+    if (!practice) {
+      try {
+        await CloudApi.reviewCard(current, rating)
+      } catch (e) {
+        setError((e as Error).message)
+        return
+      }
     }
     setDone((d) => d + 1)
     setFlipped(false)
     setIdx((i) => i + 1)
+  }
+
+  // Chuyển thẻ thủ công (không đánh giá, không ghi SRS)
+  const goNext = () => {
+    if (!queue) return
+    setFlipped(false)
+    setIdx((i) => Math.min(i + 1, queue.length))
+  }
+  const goBack = () => {
+    setFlipped(false)
+    setIdx((i) => Math.max(0, i - 1))
+  }
+
+  // Học lại toàn bộ thẻ trong bộ (không đụng tới lịch ôn)
+  const restudy = async () => {
+    setError(null)
+    setPractice(true)
+    setFlipped(false)
+    setIdx(0)
+    setDone(0)
+    setQueue(null)
+    try {
+      setQueue(await CloudApi.listCards(deck.id))
+    } catch (e) {
+      setError((e as Error).message)
+    }
   }
 
   // Phím tắt: Space lật, 1-4 đánh giá
@@ -73,6 +115,12 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
       if (e.code === 'Space') {
         e.preventDefault()
         setFlipped((f) => !f)
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        goNext()
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        goBack()
       } else if (flipped && ['1', '2', '3', '4'].includes(e.key)) {
         rate(RATINGS[Number(e.key) - 1].key)
       }
@@ -89,48 +137,138 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
     return (
       <div className="page center">
         <h1 className="page-title">🎉 Hoàn thành!</h1>
-        <p className="muted">Bạn đã ôn {done} thẻ trong bộ “{deck.name}”.</p>
-        {done === 0 && <p className="muted">Không có thẻ nào đến hạn hôm nay.</p>}
-        <button className="btn primary" onClick={onExit}>
-          Xong
-        </button>
+        <p className="muted">
+          {practice ? 'Đã học lại' : 'Bạn đã ôn'} {done} thẻ trong bộ “{deck.name}”.
+        </p>
+        {done === 0 && !practice && (
+          <p className="muted">Không có thẻ nào đến hạn hôm nay. Bạn có thể học lại cả bộ.</p>
+        )}
+        <div className="review-actions">
+          <button className="btn primary" onClick={restudy}>
+            🔁 Học lại cả bộ
+          </button>
+          <button className="btn" onClick={onExit}>
+            Xong
+          </button>
+        </div>
       </div>
     )
   }
 
+  const total = queue.length
+  const pct = total ? Math.round((done / total) * 100) : 0
+
   return (
-    <div className="page center">
-      <div className="review-top">
+    <div className="review-page">
+      <div className="review-bar">
         <button className="btn tiny" onClick={onExit}>
           ← Thoát
         </button>
-        <span className="muted">
-          Còn lại {queue.length - idx} · Đã ôn {done}
+        <div className="review-progress" title={`${done}/${total}`}>
+          <div className="review-progress-fill" style={{ width: `${pct}%` }} />
+        </div>
+        <span className="review-count">
+          {practice && <span className="review-mode">Học lại</span>}
+          Còn lại {total - idx} · Đã ôn {done}
         </span>
       </div>
 
-      <div className="flashcard" onClick={() => setFlipped((f) => !f)}>
-        <div className="fc-word">{current.word}</div>
-        {current.phonetic && <div className="fc-phonetic">{current.phonetic}</div>}
+      <div className="review-stage">
+        <button className="fc-dir-toggle" onClick={toggleFront} title="Đổi chiều học">
+          🔁 {frontVi ? 'Việt → Anh' : 'Anh → Việt'}
+        </button>
+
+        <div
+          className={flipped ? 'flashcard flipped' : 'flashcard'}
+          onClick={() => setFlipped((f) => !f)}
+        >
+          <div className="fc-top">
+            {frontVi ? (
+              <span className="fc-word">{current.meaning || '(chưa có nghĩa)'}</span>
+            ) : (
+              <>
+                <span className="fc-word">{current.word}</span>
+                {current.pos && <span className="fc-pos">{current.pos}</span>}
+              </>
+            )}
+          </div>
+
+          {!flipped && (
+            <div className="fc-hint">
+              Bấm (hoặc phím Space) để xem {frontVi ? 'từ tiếng Anh' : 'nghĩa'}
+            </div>
+          )}
+
+          {flipped && (
+            <div className="fc-back">
+              {frontVi ? (
+                <div className="fc-answer">
+                  <span className="fc-answer-word">{current.word}</span>
+                  {current.pos && <span className="fc-pos">{current.pos}</span>}
+                </div>
+              ) : (
+                <div className="fc-meaning">{current.meaning || '(chưa có nghĩa)'}</div>
+              )}
+              <ExtraBlock label="Collocation" value={current.collocation} />
+              <ExtraBlock label="Pattern" value={current.pattern} />
+              {current.example && (
+                <div className="fc-examples">
+                  {current.example
+                    .split('\n')
+                    .filter(Boolean)
+                    .map((ex, i) => (
+                      <div className="fc-example" key={i}>
+                        “{ex}”
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {flipped && (
-          <div className="fc-back">
-            <div className="fc-meaning">{current.meaning || '(chưa có nghĩa)'}</div>
-            {current.example && <div className="fc-example">“{current.example}”</div>}
+          <div className="rating-row">
+            {RATINGS.map((r) => (
+              <button key={r.key} className={`btn rating ${r.cls}`} onClick={() => rate(r.key)}>
+                <span>{r.label}</span>
+                <small>{previewInterval(current, r.key)}</small>
+              </button>
+            ))}
           </div>
         )}
-        {!flipped && <div className="fc-hint">Bấm (hoặc Space) để lật thẻ</div>}
-      </div>
 
-      {flipped && (
-        <div className="rating-row">
-          {RATINGS.map((r) => (
-            <button key={r.key} className={`btn rating ${r.cls}`} onClick={() => rate(r.key)}>
-              <span>{r.label}</span>
-              <small>{previewInterval(current, r.key)}</small>
-            </button>
-          ))}
+        <div className="review-nav">
+          <button className="btn" onClick={goBack} disabled={idx === 0}>
+            ← Trước
+          </button>
+          <span className="review-nav-pos">
+            {idx + 1} / {total}
+          </span>
+          <button className="btn" onClick={goNext}>
+            Tiếp →
+          </button>
         </div>
-      )}
+      </div>
+    </div>
+  )
+}
+
+// Khối phụ (Collocation / Pattern) ở mặt sau thẻ — nhiều giá trị nối bằng xuống dòng
+function ExtraBlock({ label, value }: { label: string; value: string | null }) {
+  if (!value || value === ',') return null
+  const items = value.split('\n').filter(Boolean)
+  if (!items.length) return null
+  return (
+    <div className="fc-extra">
+      <span className="fc-tag">{label}</span>
+      <span className="fc-vals">
+        {items.map((v, i) => (
+          <span className="fc-chip" key={i}>
+            {v}
+          </span>
+        ))}
+      </span>
     </div>
   )
 }

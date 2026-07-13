@@ -1,10 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 
-// Màn hình Đăng nhập / Đăng ký (Supabase Auth thật)
+// Màn hình Đăng nhập (đã ẩn chức năng đăng ký tài khoản)
 export default function AuthScreen() {
-  const { signIn, signUp, configured } = useAuth()
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const { signIn, configured } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
@@ -29,16 +28,10 @@ export default function AuthScreen() {
     setNotice(null)
     setBusy(true)
     try {
-      if (mode === 'login') {
-        await signIn(email, password)
-        // Lưu/xóa thông tin đăng nhập theo lựa chọn "Ghi nhớ"
-        if (remember) await window.api?.saveCred({ email, password })
-        else await window.api?.clearCred()
-      } else {
-        await signUp(email, password)
-        setNotice('Đăng ký thành công! Nếu bật xác nhận email, hãy kiểm tra hộp thư. Nếu tắt, bạn đăng nhập được ngay.')
-        setMode('login')
-      }
+      await signIn(email, password)
+      // Lưu/xóa thông tin đăng nhập theo lựa chọn "Ghi nhớ"
+      if (remember) await window.api?.saveCred({ email, password })
+      else await window.api?.clearCred()
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -57,23 +50,6 @@ export default function AuthScreen() {
             Chưa cấu hình Supabase. Hãy tạo file <code>.env</code> theo hướng dẫn.
           </div>
         )}
-
-        <div className="tabs">
-          <button
-            type="button"
-            className={mode === 'login' ? 'tab active' : 'tab'}
-            onClick={() => setMode('login')}
-          >
-            Đăng nhập
-          </button>
-          <button
-            type="button"
-            className={mode === 'signup' ? 'tab active' : 'tab'}
-            onClick={() => setMode('signup')}
-          >
-            Đăng ký
-          </button>
-        </div>
 
         <label className="field">
           <span>Email</span>
@@ -99,22 +75,20 @@ export default function AuthScreen() {
           />
         </label>
 
-        {mode === 'login' && (
-          <label className="remember">
-            <input
-              type="checkbox"
-              checked={remember}
-              onChange={(e) => setRemember(e.target.checked)}
-            />
-            <span>Ghi nhớ đăng nhập (lưu mật khẩu mã hóa trên máy này)</span>
-          </label>
-        )}
+        <label className="remember">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
+          <span>Ghi nhớ đăng nhập (lưu mật khẩu mã hóa trên máy này)</span>
+        </label>
 
         {error && <div className="alert error">{error}</div>}
         {notice && <div className="alert ok">{notice}</div>}
 
         <button type="submit" className="btn primary full" disabled={busy}>
-          {busy ? 'Đang xử lý…' : mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}
+          {busy ? 'Đang xử lý…' : 'Đăng nhập'}
         </button>
       </form>
     </div>

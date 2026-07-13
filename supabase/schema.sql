@@ -27,6 +27,9 @@ create table if not exists public.cards (
   meaning      text,
   phonetic     text,
   example      text,
+  collocation  text,                             -- cụm từ hay đi kèm (vd: "make a decision")
+  pattern      text,                             -- mẫu câu/ngữ pháp (vd: "interested in + N")
+  pos          text,                             -- từ loại: n / v / adj / adv…
   audio_url    text,
   srs_interval integer not null default 0,       -- số ngày tới lần ôn kế
   srs_ease     real    not null default 2.5,     -- hệ số dễ (ease factor)
@@ -36,6 +39,11 @@ create table if not exists public.cards (
   updated_at   timestamptz not null default now(),
   deleted_at   timestamptz
 );
+
+-- Bổ sung cột cho CSDL đã tạo trước đó (an toàn khi chạy lại)
+alter table public.cards add column if not exists collocation text;
+alter table public.cards add column if not exists pattern     text;
+alter table public.cards add column if not exists pos         text;
 
 -- ---------- 3. REVIEW_LOGS (lịch sử ôn) ----------
 create table if not exists public.review_logs (

@@ -25,6 +25,9 @@ export interface Card {
   meaning: string | null
   phonetic: string | null
   example: string | null
+  collocation: string | null
+  pattern: string | null
+  pos: string | null
   srs_interval: number
   srs_ease: number
   srs_due_date: string
@@ -36,6 +39,9 @@ export interface NewCard {
   meaning?: string
   phonetic?: string
   example?: string
+  collocation?: string
+  pattern?: string
+  pos?: string
 }
 
 export interface Lesson {
@@ -171,6 +177,9 @@ export const CloudApi = {
         meaning: card.meaning ?? null,
         phonetic: card.phonetic ?? null,
         example: card.example ?? null,
+        collocation: card.collocation ?? null,
+        pattern: card.pattern ?? null,
+        pos: card.pos ?? null,
       })
       .select()
       .single()
