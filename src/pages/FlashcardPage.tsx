@@ -48,6 +48,9 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   const [practice, setPractice] = useState(false)
   // Chiều thẻ: false = Anh→Việt (mặc định); true = Việt→Anh (mặt trước hiện nghĩa)
   const [frontVi, setFrontVi] = useState(() => localStorage.getItem('fc_front_vi') === '1')
+  // Câu ví dụ của riêng bạn — nhập ở mặt sau thẻ, lưu thêm vào ví dụ của thẻ
+  const [myEx, setMyEx] = useState('')
+  const [savingEx, setSavingEx] = useState(false)
 
   const toggleFront = () => {
     setFrontVi((v) => {
@@ -65,6 +68,33 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   }, [deck.id])
 
   const current = queue?.[idx]
+
+  // Sang thẻ khác -> xóa nội dung đang nhập dở
+  useEffect(() => {
+    setMyEx('')
+  }, [idx])
+
+  // Lưu câu ví dụ tự nhập: nối thêm vào danh sách ví dụ của thẻ hiện tại
+  const saveExample = async () => {
+    if (!current) return
+    const t = myEx.trim()
+    if (!t) return
+    const lines = (current.example ?? '').split('\n').filter(Boolean)
+    if (lines.includes(t)) {
+      setMyEx('')
+      return
+    }
+    setSavingEx(true)
+    try {
+      const updated = await CloudApi.updateCardExample(current.id, [...lines, t].join('\n'))
+      setQueue((q) => (q ? q.map((c) => (c.id === updated.id ? updated : c)) : q))
+      setMyEx('')
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSavingEx(false)
+    }
+  }
 
   const rate = async (rating: Rating) => {
     if (!current) return
@@ -112,6 +142,9 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (!current) return
+      // Đang gõ trong ô nhập (VD: ô câu ví dụ) -> không kích hoạt phím tắt
+      const t = e.target as HTMLElement
+      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return
       if (e.code === 'Space') {
         e.preventDefault()
         setFlipped((f) => !f)
@@ -158,6 +191,27 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   const total = queue.length
   const pct = total ? Math.round((done / total) * 100) : 0
 
+  // Form tự viết câu ví dụ — dùng ở cả mặt trước lẫn mặt sau thẻ
+  const exampleForm = (
+    <form
+      className="fc-add-example"
+      onClick={(e) => e.stopPropagation()}
+      onSubmit={(e) => {
+        e.preventDefault()
+        saveExample()
+      }}
+    >
+      <input
+        placeholder="Viết câu ví dụ của bạn với từ này…"
+        value={myEx}
+        onChange={(e) => setMyEx(e.target.value)}
+      />
+      <button className="btn small" type="submit" disabled={savingEx || !myEx.trim()}>
+        {savingEx ? 'Đang lưu…' : '+ Lưu ví dụ'}
+      </button>
+    </form>
+  )
+
   return (
     <div className="review-page">
       <div className="review-bar">
@@ -194,9 +248,12 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
           </div>
 
           {!flipped && (
-            <div className="fc-hint">
-              Bấm (hoặc phím Space) để xem {frontVi ? 'từ tiếng Anh' : 'nghĩa'}
-            </div>
+            <>
+              <div className="fc-hint">
+                Bấm (hoặc phím Space) để xem {frontVi ? 'từ tiếng Anh' : 'nghĩa'}
+              </div>
+              {exampleForm}
+            </>
           )}
 
           {flipped && (
@@ -223,6 +280,9 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
                     ))}
                 </div>
               )}
+
+              {/* Tự viết câu ví dụ với từ này -> lưu thêm vào thẻ */}
+              {exampleForm}
             </div>
           )}
         </div>

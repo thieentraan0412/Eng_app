@@ -9,6 +9,7 @@ export interface Enrichment {
   collocations: string[]
   patterns: string[]
   examples: string[]
+  examplesByPos: Record<string, string[]> // ví dụ gom theo từ loại (n, v, adj…)
   pos: string[] // từ loại (đã rút gọn: n, v, adj, adv…)
 }
 
@@ -80,44 +81,62 @@ async function datamuse(rel: 'rel_bga' | 'rel_bgb', word: string): Promise<DMWor
   }
 }
 
-// Câu ví dụ + từ loại từ Free Dictionary API (một lần gọi)
-async function fetchDictionary(word: string): Promise<{ examples: string[]; pos: string[] }> {
+// Câu ví dụ + từ loại từ Free Dictionary API (một lần gọi).
+// Ví dụ được gom thêm THEO TỪ LOẠI (examplesByPos) để lưu đúng loại người dùng chọn.
+async function fetchDictionary(
+  word: string,
+): Promise<{ examples: string[]; pos: string[]; examplesByPos: Record<string, string[]> }> {
   try {
     const res = await fetch(
       `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`,
     )
-    if (!res.ok) return { examples: [], pos: [] }
+    if (!res.ok) return { examples: [], pos: [], examplesByPos: {} }
     const data = (await res.json()) as {
       meanings?: { partOfSpeech?: string; definitions?: { example?: string }[] }[]
     }[]
     const examples: string[] = []
     const pos: string[] = []
+    const byPos: Record<string, string[]> = {}
     for (const entry of data)
       for (const m of entry.meanings ?? []) {
-        if (m.partOfSpeech) pos.push(shortPos(m.partOfSpeech))
-        for (const d of m.definitions ?? []) if (d.example) examples.push(d.example)
+        const p = m.partOfSpeech ? shortPos(m.partOfSpeech) : ''
+        if (p) pos.push(p)
+        for (const d of m.definitions ?? [])
+          if (d.example) {
+            examples.push(d.example)
+            if (p) (byPos[p] ??= []).push(d.example)
+          }
       }
-    return { examples: dedupe(examples).slice(0, 6), pos: dedupe(pos) }
+    for (const p of Object.keys(byPos)) byPos[p] = dedupe(byPos[p]).slice(0, 10)
+    return { examples: dedupe(examples).slice(0, 10), pos: dedupe(pos), examplesByPos: byPos }
   } catch {
-    return { examples: [], pos: [] }
+    return { examples: [], pos: [], examplesByPos: {} }
   }
 }
 
-// Tìm câu ví dụ chứa một cụm từ (collocation/pattern) hoặc từ khóa — nguồn Tatoeba
+// Tìm câu ví dụ chứa một cụm từ (collocation/pattern) hoặc từ khóa — nguồn Tatoeba.
+// Tatoeba trả ~10 câu/trang -> gọi song song nhiều trang cho đủ `limit` (tối đa 3 trang).
 export async function searchSentences(query: string, limit = 6): Promise<string[]> {
   const q = query.trim()
   if (q.length < 2) return []
-  try {
-    const res = await fetch(
-      `https://tatoeba.org/en/api_v0/search?query=${encodeURIComponent(q)}&from=eng&sort=relevance`,
-    )
-    if (!res.ok) return []
-    const data = (await res.json()) as { results?: { text?: string }[] }
-    const out = (data.results ?? []).map((r) => r.text ?? '').filter(Boolean)
-    return dedupe(out).slice(0, limit)
-  } catch {
-    return []
+
+  const fetchPage = async (page: number): Promise<string[]> => {
+    try {
+      const res = await fetch(
+        `https://tatoeba.org/en/api_v0/search?query=${encodeURIComponent(q)}&from=eng&sort=relevance` +
+          (page > 1 ? `&page=${page}` : ''),
+      )
+      if (!res.ok) return []
+      const data = (await res.json()) as { results?: { text?: string }[] }
+      return (data.results ?? []).map((r) => r.text ?? '').filter(Boolean)
+    } catch {
+      return []
+    }
   }
+
+  const pages = Math.min(Math.ceil(limit / 10), 3)
+  const all = await Promise.all(Array.from({ length: pages }, (_, i) => fetchPage(i + 1)))
+  return dedupe(all.flat()).slice(0, limit)
 }
 
 // Bỏ ký hiệu chỗ trống trong pattern (sth/sb/do…) để tìm câu tự nhiên hơn
@@ -152,7 +171,8 @@ export async function fetchPosByPrefix(prefix: string): Promise<Record<string, s
 // Lấy đồng thời collocation + pattern + ví dụ cho một từ
 export async function fetchEnrichment(word: string): Promise<Enrichment> {
   const w = word.trim().toLowerCase()
-  if (!/^[a-z]+$/.test(w)) return { collocations: [], patterns: [], examples: [], pos: [] }
+  if (!/^[a-z]+$/.test(w))
+    return { collocations: [], patterns: [], examples: [], examplesByPos: {}, pos: [] }
 
   const [after, before, dict] = await Promise.all([
     datamuse('rel_bga', w), // từ đứng sau
@@ -177,5 +197,11 @@ export async function fetchEnrichment(word: string): Promise<Enrichment> {
     }),
   ).slice(0, 5)
 
-  return { collocations, patterns, examples: dict.examples, pos: dict.pos }
+  return {
+    collocations,
+    patterns,
+    examples: dict.examples,
+    examplesByPos: dict.examplesByPos,
+    pos: dict.pos,
+  }
 }

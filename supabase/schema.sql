@@ -86,9 +86,13 @@ create table if not exists public.readings (
   title      text not null,
   content    text,
   level      text,
+  highlights jsonb, -- các vùng bôi màu: [{start, end, color}]
   created_at timestamptz not null default now(),
   deleted_at timestamptz
 );
+
+-- Migration (an toàn khi chạy lại): thêm cột bôi màu cho DB đã tạo trước đó
+alter table public.readings add column if not exists highlights jsonb;
 
 -- ---------- 7. WRITINGS (bài viết) ----------
 create table if not exists public.writings (
