@@ -11,6 +11,7 @@ import FlashcardPage from '../pages/FlashcardPage'
 import ReadingPage from '../pages/ReadingPage'
 import GrammarPage from '../pages/GrammarPage'
 import WritingPage from '../pages/WritingPage'
+import SentencePage from '../pages/SentencePage'
 import SettingsPage from '../pages/SettingsPage'
 
 const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
@@ -77,9 +78,9 @@ export default function AppLayout() {
     if (localStorage.getItem('desktop_translate_enabled') === '1') {
       window.api.setDesktopTranslate(true)
     }
-    const off = window.api.onQuickSave(async (entry) => {
+    const off = window.api.onQuickSave(async ({ entry, deckId }) => {
       try {
-        await handleSaveWord(entry)
+        await handleSaveWord(entry, deckId)
         setToast(`Đã lưu “${entry.word}” vào bộ từ`)
       } catch {
         setToast('Lưu từ thất bại (kiểm tra đăng nhập / mạng)')
@@ -105,6 +106,8 @@ export default function AppLayout() {
         return <GrammarPage />
       case 'writing':
         return <WritingPage />
+      case 'sentence':
+        return <SentencePage />
     }
   }
 

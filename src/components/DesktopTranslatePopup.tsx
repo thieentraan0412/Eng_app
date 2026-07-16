@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { translate, translateOnline, isSingleWord } from '../services/translation'
+import { CloudApi, type Deck } from '../services/cloud/CloudApiClient'
 
 // Kết quả hiển thị trong popup toàn màn hình
 type View =
@@ -15,6 +16,8 @@ export default function DesktopTranslatePopup() {
   const [text, setText] = useState('')
   const [view, setView] = useState<View>(null)
   const [saved, setSaved] = useState(false)
+  const [decks, setDecks] = useState<Deck[]>([])
+  const [deckId, setDeckId] = useState('')
 
   // Nhận đoạn chữ cần dịch từ tiến trình main
   useEffect(() => {
@@ -39,6 +42,23 @@ export default function DesktopTranslatePopup() {
       window.removeEventListener('keydown', onKey)
     }
   }, [])
+
+  // Nạp danh sách bộ từ mỗi khi có đoạn chữ mới; mặc định chọn bộ dùng gần nhất / mới nhất.
+  // Cửa sổ popup dùng chung session Supabase (localStorage cùng origin) nên gọi được CloudApi.
+  useEffect(() => {
+    if (!text) return
+    CloudApi.listDecks()
+      .then((ds) => {
+        setDecks(ds)
+        setDeckId((cur) => {
+          if (cur && ds.some((d) => d.id === cur)) return cur
+          const last = localStorage.getItem('last_deck_id')
+          if (last && ds.some((d) => d.id === last)) return last
+          return ds[0]?.id ?? ''
+        })
+      })
+      .catch(() => {})
+  }, [text])
 
   // Dịch khi có đoạn chữ mới
   useEffect(() => {
@@ -72,9 +92,12 @@ export default function DesktopTranslatePopup() {
 
   const handleSave = () => {
     if (view.kind === 'word') {
-      window.api.saveDesktopTranslate({ word: view.word, meaning: view.vi, phonetic: view.phonetic })
+      window.api.saveDesktopTranslate(
+        { word: view.word, meaning: view.vi, phonetic: view.phonetic },
+        deckId || undefined,
+      )
     } else if (view.kind === 'online') {
-      window.api.saveDesktopTranslate({ word: view.text, meaning: view.vi })
+      window.api.saveDesktopTranslate({ word: view.text, meaning: view.vi }, deckId || undefined)
     }
     setSaved(true)
   }
@@ -124,9 +147,26 @@ export default function DesktopTranslatePopup() {
       )}
 
       {canSave && (
-        <button className="btn small full" onClick={handleSave} disabled={saved}>
-          {saved ? '✓ Đã lưu' : '➕ Lưu vào bộ từ'}
-        </button>
+        <>
+          {decks.length > 0 && (
+            <select
+              className="tp-deck"
+              value={deckId}
+              disabled={saved}
+              onChange={(e) => setDeckId(e.target.value)}
+              title="Chọn bộ từ để lưu vào"
+            >
+              {decks.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <button className="btn small full" onClick={handleSave} disabled={saved}>
+            {saved ? '✓ Đã lưu' : '➕ Lưu vào bộ từ'}
+          </button>
+        </>
       )}
     </div>
   )

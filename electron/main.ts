@@ -37,6 +37,15 @@ function createWindow() {
   } else {
     win.loadFile(path.join(RENDERER_DIST, 'index.html'))
   }
+
+  // Đóng cửa sổ chính = thoát hẳn app (kể cả khi popup dịch nổi còn sống).
+  // Không xóa dòng này: nếu không, `win` sẽ trỏ tới cửa sổ đã hủy và popup
+  // giữ tiến trình sống như "bóng ma" (không có main window, không icon taskbar).
+  win.on('closed', () => {
+    win = null
+    disposeGlobalTranslate()
+    app.quit()
+  })
 }
 
 // Dịch nhanh toàn màn hình: khởi tạo IPC + hook (bật/tắt điều khiển từ Cài đặt)

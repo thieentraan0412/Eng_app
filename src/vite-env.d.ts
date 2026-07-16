@@ -20,11 +20,11 @@ export interface EngMasterApi {
 
   // Dịch nhanh toàn màn hình
   setDesktopTranslate: (enabled: boolean) => Promise<boolean>
-  onQuickSave: (cb: (entry: SaveEntry) => void) => () => void
+  onQuickSave: (cb: (payload: { entry: SaveEntry; deckId?: string }) => void) => () => void
   onDesktopTranslateText: (cb: (text: string) => void) => () => void
   requestDesktopText: () => Promise<string>
   setDesktopHover: (interactive: boolean) => Promise<boolean>
-  saveDesktopTranslate: (entry: SaveEntry) => Promise<boolean>
+  saveDesktopTranslate: (entry: SaveEntry, deckId?: string) => Promise<boolean>
   closeDesktopTranslate: () => Promise<boolean>
 }
 

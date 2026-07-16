@@ -108,3 +108,41 @@ async function myMemoryTranslate(text: string): Promise<string | null> {
     return null
   }
 }
+
+// ---------- Dịch NGƯỢC: Việt -> Anh (dùng khi import câu tiếng Việt) ----------
+// Trả null nếu lỗi/không dịch được. Cần internet.
+export async function translateToEnglish(text: string): Promise<string | null> {
+  const g = await googleTranslateVE(text)
+  if (g) return g
+  return myMemoryTranslateVE(text)
+}
+
+async function googleTranslateVE(text: string): Promise<string | null> {
+  try {
+    const url =
+      'https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=en&dt=t&q=' +
+      encodeURIComponent(text)
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const data = await res.json()
+    const segs = data?.[0]
+    if (!Array.isArray(segs)) return null
+    const en = segs.map((s: unknown[]) => (typeof s?.[0] === 'string' ? s[0] : '')).join('')
+    return accept(en, text)
+  } catch {
+    return null
+  }
+}
+
+async function myMemoryTranslateVE(text: string): Promise<string | null> {
+  try {
+    const url =
+      'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=vi|en'
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const data = await res.json()
+    return accept(data?.responseData?.translatedText, text)
+  } catch {
+    return null
+  }
+}

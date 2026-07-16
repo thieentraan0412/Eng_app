@@ -6,6 +6,7 @@ export type PageKey =
   | 'grammar'
   | 'reading'
   | 'writing'
+  | 'sentence'
   | 'settings'
 
 export const NAV: { key: PageKey; label: string; icon: string }[] = [
@@ -15,5 +16,6 @@ export const NAV: { key: PageKey; label: string; icon: string }[] = [
   { key: 'grammar', label: 'Ngữ pháp', icon: '📝' },
   { key: 'reading', label: 'Đọc', icon: '📖' },
   { key: 'writing', label: 'Viết', icon: '✍️' },
+  { key: 'sentence', label: 'Chép câu', icon: '✏️' },
   { key: 'settings', label: 'Cài đặt', icon: '⚙️' },
 ]
