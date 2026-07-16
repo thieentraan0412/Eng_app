@@ -32,7 +32,7 @@ export default function AppLayout() {
   // Lưu từ đang bôi dịch vào bộ đã chọn (hoặc bộ gần nhất),
   // LÀM GIÀU đầy đủ giống thêm thủ công: nghĩa + từ loại + collocation + pattern + ví dụ.
   const handleSaveWord = async (
-    entry: { word: string; meaning: string; phonetic?: string },
+    entry: { word: string; meaning: string; phonetic?: string; pos?: string },
     deckId?: string,
   ) => {
     const word = entry.word.trim()
@@ -49,15 +49,25 @@ export default function AppLayout() {
     // Làm giàu (chỉ với từ đơn): collocation / pattern / ví dụ / từ loại
     const data = isSingleWord
       ? await fetchEnrichment(lw)
-      : { collocations: [], patterns: [], examples: [], pos: [] }
+      : { collocations: [], patterns: [], examples: [], examplesByPos: {}, pos: [] }
 
+    // Từ loại: ưu tiên loại người dùng chọn trong popup, rồi mới đoán tự động
     const offPos = translate(lw).pos
-    const pos = data.pos[0] ?? (offPos ? shortPos(offPos) : '')
+    const pos = entry.pos ?? data.pos[0] ?? (offPos ? shortPos(offPos) : '')
     const collocations = data.collocations.slice(0, 4)
     const patterns = data.patterns.slice(0, 3)
-    let examples = data.examples.slice(0, 2)
-    // Không có ví dụ từ từ điển -> tìm câu thật chứa từ (Tatoeba)
-    if (isSingleWord && examples.length === 0) examples = await searchSentences(lw, 2)
+
+    // Ví dụ: ưu tiên câu ĐÚNG TỪ LOẠI đã chọn (VD chọn "v" -> chỉ lấy ví dụ động từ)
+    const byPos: Record<string, string[]> = data.examplesByPos
+    let examples = (pos ? (byPos[pos] ?? []) : []).slice(0, 2)
+    // Người dùng KHÔNG chỉ định từ loại -> mới được dùng ví dụ chung (mọi loại)
+    if (examples.length === 0 && !entry.pos) examples = data.examples.slice(0, 2)
+    // Vẫn trống -> tìm câu thật (Tatoeba); với động từ tìm "to <từ>" cho đúng cách dùng
+    if (isSingleWord && examples.length === 0) {
+      examples = await searchSentences(pos === 'v' ? `to ${lw}` : lw, 2)
+      // "to <từ>" không ra câu nào (từ đã chia: paid, went…) -> tìm theo chính từ đó
+      if (examples.length === 0) examples = await searchSentences(lw, 2)
+    }
 
     const deck = await resolveDeck(deckId)
     await CloudApi.createCard(deck.id, {

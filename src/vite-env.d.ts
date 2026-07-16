@@ -10,6 +10,8 @@ export interface SaveEntry {
   word: string
   meaning: string
   phonetic?: string
+  pos?: string // từ loại người dùng đã chọn (n, v, adj…)
+  deckId?: string // bộ từ người dùng chọn để lưu vào
 }
 
 export interface EngMasterApi {

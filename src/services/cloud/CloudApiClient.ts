@@ -74,12 +74,20 @@ export interface NewQuestion {
   explanation?: string
 }
 
+// Vùng bôi màu trong bài đọc — tính theo offset ký tự trong content
+export interface ReadingHighlight {
+  start: number
+  end: number
+  color: string
+}
+
 export interface Reading {
   id: string
   user_id: string
   title: string
   content: string | null
   level: string | null
+  highlights: ReadingHighlight[] | null
   created_at: string
 }
 
@@ -193,6 +201,18 @@ export const CloudApi = {
         pattern: card.pattern ?? null,
         pos: card.pos ?? null,
       })
+      .select()
+      .single()
+    if (error) throw error
+    return data as Card
+  },
+
+  // Cập nhật câu ví dụ của một thẻ (dùng khi thêm ví dụ lúc ôn tập)
+  async updateCardExample(cardId: string, example: string): Promise<Card> {
+    const { data, error } = await supabase
+      .from('cards')
+      .update({ example })
+      .eq('id', cardId)
       .select()
       .single()
     if (error) throw error
@@ -335,6 +355,12 @@ export const CloudApi = {
       .from('readings')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
+    if (error) throw error
+  },
+
+  // Lưu các vùng bôi màu của bài đọc
+  async updateReadingHighlights(id: string, highlights: ReadingHighlight[]): Promise<void> {
+    const { error } = await supabase.from('readings').update({ highlights }).eq('id', id)
     if (error) throw error
   },
 

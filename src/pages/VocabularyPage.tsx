@@ -2,7 +2,12 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { CloudApi, type Deck, type Card } from '../services/cloud/CloudApiClient'
 import { autocomplete, fuzzyCorrect, nextWords } from '../services/suggestion'
 import { isMisspelled, suggestFix } from '../services/spellcheck'
-import { translate, translateOnline } from '../services/translation'
+import {
+  translate,
+  translateOnline,
+  translateSenses,
+  type OnlineSense,
+} from '../services/translation'
 import {
   cleanPhrase,
   fetchEnrichment,
@@ -288,15 +293,16 @@ type DropKey = 'word' | 'meaning' | 'collocation' | 'pattern' | 'example' | null
 function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
   const [cards, setCards] = useState<Card[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [form, setForm] = useState({ word: '', meaning: '', pos: '' })
-  // Cho phép chọn NHIỀU collocation / pattern / câu ví dụ
+  const [form, setForm] = useState({ word: '', pos: '' })
+  // Cho phép chọn NHIỀU nghĩa / collocation / pattern / câu ví dụ
+  const [means, setMeans] = useState<string[]>([])
   const [cols, setCols] = useState<string[]>([])
   const [pats, setPats] = useState<string[]>([])
   const [exs, setExs] = useState<string[]>([])
 
   // Trạng thái dropdown gợi ý
   const [open, setOpen] = useState<DropKey>(null)
-  const [online, setOnline] = useState<{ word: string; vi: string | null } | null>(null)
+  const [online, setOnline] = useState<{ word: string; senses: OnlineSense[] } | null>(null)
   const [loadingMeaning, setLoadingMeaning] = useState(false)
   const [saving, setSaving] = useState(false)
   // Gợi ý online cho collocation / pattern / câu ví dụ
@@ -324,7 +330,11 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
   // Nguồn Tatoeba (tìm câu chứa cụm), kèm ví dụ từ điển của từ.
   useEffect(() => {
     const w = form.word.trim().toLowerCase()
-    const dictEx = enrich && enrich.word === w ? enrich.examples : []
+    // Ví dụ từ điển: câu ĐÚNG TỪ LOẠI đang chọn lên trước, rồi tới các câu còn lại
+    const dictEx =
+      enrich && enrich.word === w
+        ? [...new Set([...(enrich.examplesByPos[form.pos] ?? []), ...enrich.examples])]
+        : []
     // Chỉ tìm câu khi người dùng thực sự dùng ô ví dụ (tránh gọi mạng mỗi phím gõ từ)
     const active =
       exampleQuery.trim().length > 0 || cols.length > 0 || pats.length > 0 || open === 'example'
@@ -340,12 +350,14 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
       return
     }
     const id = window.setTimeout(async () => {
-      const sents = await searchSentences(query, 8)
+      const sents = await searchSentences(query, 20)
+      // Cụm quá hẹp, ít câu -> tìm bổ sung theo chính từ cho phong phú
+      const extra = sents.length < 8 && query !== w ? await searchSentences(w, 12) : []
       // Gộp câu tìm được + ví dụ từ điển, loại trùng
-      setExampleSugs([...new Set([...sents, ...dictEx])].slice(0, 10))
+      setExampleSugs([...new Set([...sents, ...extra, ...dictEx])].slice(0, 25))
     }, 300)
     return () => window.clearTimeout(id)
-  }, [exampleQuery, cols, pats, form.word, enrich, open])
+  }, [exampleQuery, cols, pats, form.word, form.pos, enrich, open])
 
   const load = async () => {
     try {
@@ -411,11 +423,12 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
     const w = form.word.trim().toLowerCase()
     return enrich && enrich.word === w ? enrich.patterns : []
   }, [form.word, enrich])
+  // Nghĩa: gộp từ điển offline + ĐA NGHĨA online (Google dictionary, gom theo từ loại)
   const meaningSugs = useMemo(() => {
     const w = form.word.trim().toLowerCase()
     const out = new Set<string>(offlineMeanings(w))
-    if (online && online.word === w && online.vi) splitVi(online.vi).forEach((m) => out.add(m))
-    return [...out].slice(0, 8)
+    if (online && online.word === w) online.senses.forEach((s) => out.add(s.vi))
+    return [...out].slice(0, 12)
   }, [form.word, online])
 
   // Mở/đóng dropdown (đóng có trễ để kịp bắt sự kiện click chọn)
@@ -427,13 +440,13 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
     closeTimer.current = window.setTimeout(() => setOpen(null), 160)
   }
 
-  // Tra nghĩa online khi bấm vào ô "Nghĩa tiếng Việt"
+  // Tra đa nghĩa online khi bấm vào ô "Nghĩa tiếng Việt"
   const fetchMeaning = async () => {
     const w = form.word.trim().toLowerCase()
     if (!w || (online && online.word === w)) return
     setLoadingMeaning(true)
-    const vi = await translateOnline(w)
-    setOnline({ word: w, vi })
+    const senses = await translateSenses(w)
+    setOnline({ word: w, senses })
     setLoadingMeaning(false)
   }
 
@@ -465,11 +478,18 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
           ? enrich
           : { word: lw, ...(await fetchEnrichment(lw)) }
 
-      // Nghĩa: đã nhập -> giữ; trống -> offline trước, rồi online
-      let meaning = form.meaning.trim()
-      if (!meaning) {
-        meaning = offlineMeanings(lw)[0] ?? (await translateOnline(lw)) ?? ''
+      // Nghĩa: đã chọn -> giữ; trống -> gộp offline + đa nghĩa online (tối đa 3)
+      let meaningList = means
+      if (!meaningList.length) {
+        const senses = online && online.word === lw ? online.senses : await translateSenses(lw)
+        meaningList = [...new Set([...offlineMeanings(lw), ...senses.map((s) => s.vi)])].slice(0, 3)
+        // Không tra được nghĩa nào -> dịch thường (1 nghĩa) làm dự phòng
+        if (!meaningList.length) {
+          const vi = await translateOnline(lw)
+          if (vi) meaningList = [vi]
+        }
       }
+      const meaning = meaningList.join('; ')
       // Từ loại: đã có -> giữ; trống -> tối ưu từ gợi ý
       let pos = form.pos
       if (!pos) {
@@ -479,9 +499,13 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
       // Ô trống -> tự điền giá trị TỐI ƯU NHẤT (đứng đầu danh sách gợi ý)
       const finalCols = cols.length ? cols : data.collocations.slice(0, 1)
       const finalPats = pats.length ? pats : data.patterns.slice(0, 1)
-      // Ví dụ tối ưu: ưu tiên câu gợi ý động (theo collocation/pattern), rồi ví dụ từ điển
-      const bestEx = exampleSugs[0] ?? data.examples[0]
-      const finalExs = exs.length ? exs : bestEx ? [bestEx] : []
+      // Ví dụ: đã chọn -> giữ; trống -> tự lấy tối đa 3 câu
+      // (ưu tiên câu ĐÚNG TỪ LOẠI, rồi câu gợi ý động, rồi ví dụ từ điển chung)
+      const finalExs = exs.length
+        ? exs
+        : [
+            ...new Set([...(data.examplesByPos[pos] ?? []), ...exampleSugs, ...data.examples]),
+          ].slice(0, 3)
 
       const card = await CloudApi.createCard(deck.id, {
         word: w,
@@ -493,7 +517,8 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
         pos: pos || undefined,
       })
       setCards((c) => [card, ...c])
-      setForm({ word: '', meaning: '', pos: '' })
+      setForm({ word: '', pos: '' })
+      setMeans([])
       setCols([])
       setPats([])
       setExs([])
@@ -573,6 +598,7 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
                       return
                     }
                     setForm((f) => ({ ...f, word: w.text, pos: '' }))
+                    setMeans([])
                     setCols([])
                     setPats([])
                     setExs([])
@@ -595,44 +621,21 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
           )}
         </div>
 
-        {/* Nghĩa tiếng Việt + gợi ý nghĩa của từ đang tra */}
-        <div className="field-wrap">
-          <input
-            placeholder="Nghĩa tiếng Việt"
-            value={form.meaning}
-            onChange={(e) => {
-              setForm({ ...form, meaning: e.target.value })
-              openDrop('meaning')
-            }}
-            onFocus={() => {
-              openDrop('meaning')
-              fetchMeaning()
-            }}
-            onBlur={closeDrop}
-          />
-          {open === 'meaning' && (meaningSugs.length > 0 || loadingMeaning) && (
-            <div className="suggest-dropdown">
-              {meaningSugs.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  className="suggest-option"
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    setForm((f) => ({ ...f, meaning: m }))
-                    setOpen(null)
-                  }}
-                >
-                  <span>{m}</span>
-                </button>
-              ))}
-              {loadingMeaning && <div className="suggest-loading">Đang tra nghĩa…</div>}
-              {!loadingMeaning && meaningSugs.length === 0 && (
-                <div className="suggest-loading">Không có gợi ý</div>
-              )}
-            </div>
-          )}
-        </div>
+        {/* Nghĩa tiếng Việt — chọn NHIỀU nghĩa (offline + đa nghĩa online) */}
+        <MultiField
+          placeholder="Nghĩa tiếng Việt"
+          values={means}
+          onChange={setMeans}
+          suggestions={meaningSugs}
+          loading={loadingMeaning}
+          isOpen={open === 'meaning'}
+          onOpen={() => {
+            openDrop('meaning')
+            fetchMeaning()
+          }}
+          onClose={closeDrop}
+          tag="nghĩa"
+        />
 
         {/* Collocation — chọn nhiều (offline n-gram + online Datamuse) */}
         <MultiField

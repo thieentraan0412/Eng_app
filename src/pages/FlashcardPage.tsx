@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CloudApi, type Deck, type Card } from '../services/cloud/CloudApiClient'
 import { previewInterval, type Rating } from '../services/srs'
 
@@ -48,6 +48,15 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   const [practice, setPractice] = useState(false)
   // Chiều thẻ: false = Anh→Việt (mặc định); true = Việt→Anh (mặt trước hiện nghĩa)
   const [frontVi, setFrontVi] = useState(() => localStorage.getItem('fc_front_vi') === '1')
+  // Câu ví dụ của riêng bạn — nhập ở mặt sau thẻ, lưu thêm vào ví dụ của thẻ
+  const [myEx, setMyEx] = useState('')
+  const [savingEx, setSavingEx] = useState(false)
+  // Chế độ Việt→Anh: gõ từ tiếng Anh; đúng thì tự sang từ mới
+  const [typed, setTyped] = useState('')
+  const [answerState, setAnswerState] = useState<'idle' | 'correct' | 'wrong'>('idle')
+  // Số chữ cái đã được gợi ý (lộ dần từ đầu từ)
+  const [hintLevel, setHintLevel] = useState(0)
+  const answerRef = useRef<HTMLInputElement>(null)
 
   const toggleFront = () => {
     setFrontVi((v) => {
@@ -65,6 +74,82 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   }, [deck.id])
 
   const current = queue?.[idx]
+
+  // Sang thẻ khác -> xóa nội dung đang nhập dở
+  useEffect(() => {
+    setMyEx('')
+    setTyped('')
+    setAnswerState('idle')
+    setHintLevel(0)
+  }, [idx])
+
+  // Chế độ Việt→Anh: tự focus vào ô gõ từ tiếng Anh mỗi khi qua thẻ mới
+  useEffect(() => {
+    if (frontVi && !flipped && current) answerRef.current?.focus()
+  }, [idx, frontVi, flipped, current])
+
+  // So khớp đáp án tiếng Anh (bỏ hoa/thường, khoảng trắng thừa)
+  const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
+
+  // Người dùng gõ từ tiếng Anh (chế độ Việt→Anh). Gõ đúng -> tự sang từ mới.
+  const onTypeAnswer = (value: string) => {
+    setTyped(value)
+    if (!current) return
+    if (norm(value) && norm(value) === norm(current.word)) {
+      setAnswerState('correct')
+      setTimeout(() => goNext(), 700)
+    } else if (answerState === 'wrong') {
+      setAnswerState('idle')
+    }
+  }
+
+  // Nhấn Enter mà chưa đúng -> báo sai để người dùng thử lại
+  const checkAnswer = () => {
+    if (!current || !typed.trim()) return
+    if (norm(typed) === norm(current.word)) {
+      setAnswerState('correct')
+      setTimeout(() => goNext(), 700)
+    } else {
+      setAnswerState('wrong')
+    }
+  }
+
+  // Gợi ý: lộ thêm một chữ cái từ đầu từ mỗi lần bấm
+  const revealHint = () => {
+    if (!current) return
+    setHintLevel((n) => Math.min(n + 1, current.word.length))
+    answerRef.current?.focus()
+  }
+
+  // Chuỗi che: chữ đã lộ hiển thị, còn lại là "_", giữ nguyên khoảng trắng
+  const maskedWord = current
+    ? current.word
+        .split('')
+        .map((ch, i) => (ch === ' ' ? ' ' : i < hintLevel ? ch : '_'))
+        .join(' ')
+    : ''
+
+  // Lưu câu ví dụ tự nhập: nối thêm vào danh sách ví dụ của thẻ hiện tại
+  const saveExample = async () => {
+    if (!current) return
+    const t = myEx.trim()
+    if (!t) return
+    const lines = (current.example ?? '').split('\n').filter(Boolean)
+    if (lines.includes(t)) {
+      setMyEx('')
+      return
+    }
+    setSavingEx(true)
+    try {
+      const updated = await CloudApi.updateCardExample(current.id, [...lines, t].join('\n'))
+      setQueue((q) => (q ? q.map((c) => (c.id === updated.id ? updated : c)) : q))
+      setMyEx('')
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSavingEx(false)
+    }
+  }
 
   const rate = async (rating: Rating) => {
     if (!current) return
@@ -112,6 +197,9 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (!current) return
+      // Đang gõ trong ô nhập (VD: ô câu ví dụ) -> không kích hoạt phím tắt
+      const t = e.target as HTMLElement
+      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return
       if (e.code === 'Space') {
         e.preventDefault()
         setFlipped((f) => !f)
@@ -158,6 +246,27 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   const total = queue.length
   const pct = total ? Math.round((done / total) * 100) : 0
 
+  // Form tự viết câu ví dụ — dùng ở cả mặt trước lẫn mặt sau thẻ
+  const exampleForm = (
+    <form
+      className="fc-add-example"
+      onClick={(e) => e.stopPropagation()}
+      onSubmit={(e) => {
+        e.preventDefault()
+        saveExample()
+      }}
+    >
+      <input
+        placeholder="Viết câu ví dụ của bạn với từ này…"
+        value={myEx}
+        onChange={(e) => setMyEx(e.target.value)}
+      />
+      <button className="btn small" type="submit" disabled={savingEx || !myEx.trim()}>
+        {savingEx ? 'Đang lưu…' : '+ Lưu ví dụ'}
+      </button>
+    </form>
+  )
+
   return (
     <div className="review-page">
       <div className="review-bar">
@@ -194,9 +303,52 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
           </div>
 
           {!flipped && (
-            <div className="fc-hint">
-              Bấm (hoặc phím Space) để xem {frontVi ? 'từ tiếng Anh' : 'nghĩa'}
-            </div>
+            <>
+              {frontVi && (
+                <form
+                  className={`fc-answer-form ${answerState}`}
+                  onClick={(e) => e.stopPropagation()}
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    checkAnswer()
+                  }}
+                >
+                  <input
+                    ref={answerRef}
+                    key={current.id}
+                    autoFocus
+                    placeholder="Gõ từ tiếng Anh…"
+                    value={typed}
+                    readOnly={answerState === 'correct'}
+                    onChange={(e) => onTypeAnswer(e.target.value)}
+                  />
+                  {answerState === 'correct' && <span className="fc-answer-feedback ok">✓ Chính xác!</span>}
+                  {answerState === 'wrong' && <span className="fc-answer-feedback no">✗ Chưa đúng, thử lại</span>}
+
+                  {answerState !== 'correct' && (
+                    <div className="fc-hint-row">
+                      <button
+                        type="button"
+                        className="btn tiny"
+                        onClick={revealHint}
+                        disabled={hintLevel >= current.word.length}
+                      >
+                        💡 Gợi ý
+                      </button>
+                      {hintLevel > 0 && (
+                        <span className="fc-hint-word">
+                          {maskedWord} · {current.word.replace(/\s/g, '').length} chữ cái
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </form>
+              )}
+              <div className="fc-hint">
+                Bấm (hoặc phím Space) để xem {frontVi ? 'từ tiếng Anh' : 'nghĩa'}
+              </div>
+              {exampleForm}
+            </>
           )}
 
           {flipped && (
@@ -223,6 +375,9 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
                     ))}
                 </div>
               )}
+
+              {/* Tự viết câu ví dụ với từ này -> lưu thêm vào thẻ */}
+              {exampleForm}
             </div>
           )}
         </div>
