@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   translate,
   translateOnline,
@@ -12,7 +12,8 @@ import { CloudApi, type Deck } from '../services/cloud/CloudApiClient'
 
 interface PopupState {
   x: number
-  y: number
+  top: number // đỉnh vùng chọn (toạ độ viewport)
+  bottom: number // đáy vùng chọn (toạ độ viewport)
   text: string
 }
 
@@ -47,6 +48,9 @@ export default function TranslatePopup({ onSave }: Props) {
   // Nghĩa gom theo TỪ LOẠI (n, v, adj…) — bấm chip để đổi nghĩa theo loại
   const [posGroups, setPosGroups] = useState<PosSenses[]>([])
   const [posSel, setPosSel] = useState<string | null>(null)
+  // Vị trí top thực tế của popup (đo được sau khi render để lật lên/xuống)
+  const popupRef = useRef<HTMLDivElement>(null)
+  const [posTop, setPosTop] = useState(0)
 
   // Kết quả dịch mới -> đổ vào ô nghĩa để người dùng chỉnh
   useEffect(() => {
@@ -92,7 +96,8 @@ export default function TranslatePopup({ onSave }: Props) {
       if ((e.target as HTMLElement).closest('.translate-popup')) return
       let text = ''
       let x = 0
-      let y = 0
+      let top = 0
+      let bottom = 0
 
       const active = document.activeElement as HTMLTextAreaElement | HTMLInputElement | null
       if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT')) {
@@ -101,7 +106,8 @@ export default function TranslatePopup({ onSave }: Props) {
         if (end > start) {
           text = active.value.substring(start, end).trim()
           x = e.clientX
-          y = e.clientY + 14
+          top = e.clientY
+          bottom = e.clientY + 14
         }
       }
       if (!text) {
@@ -111,18 +117,20 @@ export default function TranslatePopup({ onSave }: Props) {
           const rect = sel.getRangeAt(0).getBoundingClientRect()
           text = t
           x = rect.left + rect.width / 2
-          y = rect.bottom + 8
+          top = rect.top
+          bottom = rect.bottom
         }
       }
 
       if (!text || text.length > 200) return
       setSaved(false)
-      setPopup({ x, y, text })
+      setPopup({ x, top, bottom, text })
     }
 
     function handleMouseDown(e: MouseEvent) {
+      // Bấm vào thanh chọn màu -> KHÔNG đóng popup dịch (cho 2 popup cùng tồn tại)
       const el = e.target as HTMLElement
-      if (!el.closest('.translate-popup')) setPopup(null)
+      if (!el.closest('.translate-popup') && !el.closest('.hl-toolbar')) setPopup(null)
     }
 
     document.addEventListener('mouseup', handleMouseUp)
@@ -159,6 +167,16 @@ export default function TranslatePopup({ onSave }: Props) {
       cancelled = true
     }
   }, [popup?.text])
+
+  // Đặt popup dưới vùng chọn; nếu tràn đáy màn hình -> lật lên trên (đo chiều cao thật)
+  useLayoutEffect(() => {
+    const el = popupRef.current
+    if (!popup || !el) return
+    const h = el.offsetHeight
+    const below = popup.bottom + 8
+    const above = popup.top - 8 - h
+    setPosTop(below + h <= window.innerHeight - 8 ? below : Math.max(8, above))
+  }, [popup, view, vi, posGroups])
 
   if (!popup || !view) return null
 
@@ -232,8 +250,9 @@ export default function TranslatePopup({ onSave }: Props) {
 
   return (
     <div
+      ref={popupRef}
       className="translate-popup"
-      style={{ left: popup.x, top: popup.y, transform: 'translateX(-50%)' }}
+      style={{ left: popup.x, top: posTop, transform: 'translateX(-50%)' }}
     >
       {view.kind === 'loading' && <div className="tp-vi tp-empty">Đang dịch…</div>}
 
