@@ -1,4 +1,6 @@
 import {
+  memo,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -8,9 +10,10 @@ import {
   type KeyboardEvent,
 } from 'react'
 import { type SentenceItem, type CefrLevel } from '../data/sentences'
-import { gradeSentence, type GradeResult, type DiffToken } from '../services/sentencecheck'
+import { gradeSentence, type GradeResult } from '../services/sentencecheck'
 import { suggest, type Suggestion } from '../services/suggestion'
 import {
+  ensureReady,
   listFolders,
   createFolder,
   renameFolder,
@@ -21,10 +24,14 @@ import {
   createSentences,
   updateSentence,
   deleteSentence,
+  loadProgress,
+  saveProgress,
+  clearProgress,
   type Folder,
   type StoredSentence,
   type SentenceInput,
-} from '../services/sentenceStore'
+  type PracticeRecord,
+} from '../services/cloud/sentenceCloud'
 import {
   parseRowsFromExcel,
   downloadSampleExcel,
@@ -34,51 +41,89 @@ import { translateToEnglish } from '../services/translation'
 
 const LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1']
 
+function errMsg(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
 // ================= TRANG CHÉP CÂU =================
 // Bố cục giống Từ vựng: lưới thẻ THƯ MỤC; bấm mở 1 thư mục -> chi tiết
-// (Luyện tập / Quản lý câu bên trong).
+// (Luyện tập / Quản lý câu bên trong). Dữ liệu lưu trên Supabase (đồng bộ đa máy).
 export default function SentencePage() {
   const [folders, setFolders] = useState<Folder[]>([])
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [selected, setSelected] = useState<Folder | null>(null)
   const [newName, setNewName] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   // Đổi tên thư mục ngay trên thẻ
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
 
-  const refresh = () => {
-    setFolders(listFolders())
-    setCounts(countByFolder())
+  const refresh = async () => {
+    const [fs, cs] = await Promise.all([listFolders(), countByFolder()])
+    setFolders(fs)
+    setCounts(cs)
   }
+
+  // Nạp lần đầu: đảm bảo tài khoản có dữ liệu (migrate/seed nếu cần)
   useEffect(() => {
-    refresh()
+    let alive = true
+    ;(async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const fs = await ensureReady()
+        if (!alive) return
+        setFolders(fs)
+        setCounts(await countByFolder())
+      } catch (e) {
+        if (alive) setError(errMsg(e))
+      } finally {
+        if (alive) setLoading(false)
+      }
+    })()
+    return () => {
+      alive = false
+    }
   }, [])
 
-  const addFolder = (e: FormEvent) => {
+  const addFolder = async (e: FormEvent) => {
     e.preventDefault()
     if (!newName.trim()) return
-    createFolder(newName)
-    setNewName('')
-    refresh()
+    try {
+      await createFolder(newName)
+      setNewName('')
+      await refresh()
+    } catch (err) {
+      alert('Không tạo được thư mục: ' + errMsg(err))
+    }
   }
 
   const startRename = (f: Folder) => {
     setEditingId(f.id)
     setEditName(f.name)
   }
-  const saveRename = () => {
+  const saveRename = async () => {
     const id = editingId
     const name = editName.trim()
     setEditingId(null)
     if (!id || !name) return
-    renameFolder(id, name)
-    refresh()
+    try {
+      await renameFolder(id, name)
+      await refresh()
+    } catch (err) {
+      alert('Không đổi được tên: ' + errMsg(err))
+    }
   }
-  const remove = (f: Folder) => {
+  const remove = async (f: Folder) => {
     if (!confirm(`Xóa thư mục "${f.name}" và toàn bộ câu bên trong?`)) return
-    deleteFolder(f.id)
-    if (selected?.id === f.id) setSelected(null)
-    refresh()
+    try {
+      await deleteFolder(f.id)
+      if (selected?.id === f.id) setSelected(null)
+      await refresh()
+    } catch (err) {
+      alert('Không xóa được: ' + errMsg(err))
+    }
   }
 
   if (selected) {
@@ -96,7 +141,7 @@ export default function SentencePage() {
   return (
     <div className="page">
       <h1 className="page-title">Chép câu</h1>
-      <p className="page-sub">Tạo thư mục và quản lý các câu luyện dịch Việt → Anh</p>
+      <p className="page-sub">Tạo thư mục và quản lý các câu luyện dịch Việt → Anh · đồng bộ đám mây</p>
 
       <form className="inline-form" onSubmit={addFolder}>
         <input
@@ -109,7 +154,15 @@ export default function SentencePage() {
         </button>
       </form>
 
-      {folders.length === 0 ? (
+      {loading ? (
+        <p className="muted">Đang tải dữ liệu…</p>
+      ) : error ? (
+        <div className="empty-state">
+          <div className="empty-icon">⚠️</div>
+          <h3>Không tải được dữ liệu</h3>
+          <p className="muted">{error}</p>
+        </div>
+      ) : folders.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">✏️</div>
           <h3>Chưa có thư mục nào</h3>
@@ -219,38 +272,186 @@ function PracticeView({ folder }: { folder: Folder }) {
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [results, setResults] = useState<Record<string, GradeResult>>({})
   const [revealed, setRevealed] = useState<Record<string, boolean>>({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Đổi thư mục -> nạp lại câu và xóa trạng thái làm bài
+  // Bộ đếm số lượt lưu đang chạy -> hiển thị "đang lưu…"
+  const pending = useRef(0)
+  const [saving, setSaving] = useState(false)
+  // Hẹn giờ debounce khi gõ, theo từng câu
+  const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+
+  // Ref giữ trạng thái mới nhất để callback ổn định (không phụ thuộc state)
+  // -> tránh re-render toàn bộ 100 thẻ mỗi lần gõ 1 phím.
+  const itemsRef = useRef(items)
+  itemsRef.current = items
+  const inputsRef = useRef(inputs)
+  inputsRef.current = inputs
+  const resultsRef = useRef(results)
+  resultsRef.current = results
+  const revealedRef = useRef(revealed)
+  revealedRef.current = revealed
+
+  // Đổi thư mục -> nạp câu + bài đã làm từ cloud, dựng lại trạng thái
   useEffect(() => {
-    setItems(listSentences(folder.id))
-    setInputs({})
-    setResults({})
-    setRevealed({})
+    let alive = true
+    ;(async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const list = await listSentences(folder.id)
+        if (!alive) return
+        setItems(list)
+        const prog = await loadProgress(list.map((s) => s.id))
+        if (!alive) return
+        const byId = new Map(list.map((s) => [s.id, s]))
+        const ni: Record<string, string> = {}
+        const nr: Record<string, GradeResult> = {}
+        const nv: Record<string, boolean> = {}
+        for (const [sid, rec] of Object.entries(prog)) {
+          if (rec.answer) ni[sid] = rec.answer
+          if (rec.revealed) nv[sid] = true
+          // Đã chấm trước đó -> chấm lại để dựng đủ diff/chính tả/ngữ pháp
+          if (rec.status && rec.answer && byId.has(sid)) {
+            nr[sid] = gradeSentence(byId.get(sid)!, rec.answer)
+          }
+        }
+        setInputs(ni)
+        setResults(nr)
+        setRevealed(nv)
+      } catch (e) {
+        if (alive) setError(errMsg(e))
+      } finally {
+        if (alive) setLoading(false)
+      }
+    })()
+    return () => {
+      alive = false
+    }
   }, [folder.id])
+
+  // Dọn hẹn giờ khi rời trang
+  useEffect(() => {
+    const timers = saveTimers.current
+    return () => {
+      Object.values(timers).forEach(clearTimeout)
+    }
+  }, [])
+
+  // Lưu bài 1 câu lên cloud (best-effort, có chỉ báo "đang lưu…"). Ổn định.
+  const persist = useCallback((id: string, rec: PracticeRecord) => {
+    pending.current += 1
+    setSaving(true)
+    saveProgress(id, rec)
+      .catch(() => {
+        /* lỗi mạng -> bỏ qua, lần thao tác sau sẽ ghi lại */
+      })
+      .finally(() => {
+        pending.current -= 1
+        if (pending.current <= 0) {
+          pending.current = 0
+          setSaving(false)
+        }
+      })
+  }, [])
 
   const correctCount = useMemo(
     () => Object.values(results).filter((r) => r.status === 'correct').length,
     [results],
   )
 
-  const setInput = (id: string, value: string) => setInputs((m) => ({ ...m, [id]: value }))
-  const checkOne = (item: SentenceItem) => {
-    const val = (inputs[item.id] ?? '').trim()
-    if (!val) return
-    setResults((m) => ({ ...m, [item.id]: gradeSentence(item, val) }))
-  }
+  // Gõ 1 câu: chỉ cập nhật input của câu đó + hẹn giờ lưu. Callback ổn định
+  // nên chỉ thẻ đang gõ re-render, 99 thẻ còn lại bỏ qua (React.memo).
+  const setInput = useCallback(
+    (id: string, value: string) => {
+      setInputs((m) => ({ ...m, [id]: value }))
+      const prev = saveTimers.current[id]
+      if (prev) clearTimeout(prev)
+      saveTimers.current[id] = setTimeout(() => {
+        persist(id, {
+          answer: value,
+          status: resultsRef.current[id]?.status ?? null,
+          score: resultsRef.current[id]?.score ?? null,
+          revealed: !!revealedRef.current[id],
+        })
+      }, 800)
+    },
+    [persist],
+  )
+
+  const checkOne = useCallback(
+    (id: string) => {
+      const item = itemsRef.current.find((s) => s.id === id)
+      if (!item) return
+      const val = (inputsRef.current[id] ?? '').trim()
+      if (!val) return
+      const gr = gradeSentence(item, val)
+      setResults((m) => ({ ...m, [id]: gr }))
+      const t = saveTimers.current[id]
+      if (t) clearTimeout(t)
+      persist(id, {
+        answer: inputsRef.current[id] ?? '',
+        status: gr.status,
+        score: gr.score,
+        revealed: !!revealedRef.current[id],
+      })
+    },
+    [persist],
+  )
+
   const checkAll = () => {
     const next: Record<string, GradeResult> = {}
+    const toSave: { id: string; rec: PracticeRecord }[] = []
     for (const item of items) {
       const val = (inputs[item.id] ?? '').trim()
-      if (val) next[item.id] = gradeSentence(item, val)
+      if (!val) continue
+      const gr = gradeSentence(item, val)
+      next[item.id] = gr
+      toSave.push({
+        id: item.id,
+        rec: {
+          answer: inputs[item.id] ?? '',
+          status: gr.status,
+          score: gr.score,
+          revealed: !!revealed[item.id],
+        },
+      })
     }
     setResults(next)
+    toSave.forEach(({ id, rec }) => persist(id, rec))
   }
-  const reveal = (id: string) => setRevealed((m) => ({ ...m, [id]: true }))
+
+  const reveal = useCallback(
+    (id: string) => {
+      setRevealed((m) => ({ ...m, [id]: true }))
+      persist(id, {
+        answer: inputsRef.current[id] ?? '',
+        status: resultsRef.current[id]?.status ?? null,
+        score: resultsRef.current[id]?.score ?? null,
+        revealed: true,
+      })
+    },
+    [persist],
+  )
+
+  const resetProgress = async () => {
+    if (!confirm('Làm lại từ đầu? Toàn bộ câu đã gõ và kết quả của thư mục này sẽ bị xóa.')) return
+    try {
+      await clearProgress(items.map((s) => s.id))
+      Object.values(saveTimers.current).forEach(clearTimeout)
+      saveTimers.current = {}
+      setInputs({})
+      setResults({})
+      setRevealed({})
+    } catch (e) {
+      alert('Không xóa được bài: ' + errMsg(e))
+    }
+  }
 
   const pct = items.length ? Math.round((correctCount / items.length) * 100) : 0
 
+  if (loading) return <p className="muted">Đang tải bài luyện tập…</p>
+  if (error) return <p className="muted">⚠️ {error}</p>
   if (items.length === 0) {
     return (
       <p className="muted">
@@ -268,8 +469,12 @@ function PracticeView({ folder }: { folder: Folder }) {
         <div className="sp-bar">
           <div className="sp-bar-fill" style={{ width: `${pct}%` }} />
         </div>
+        {saving && <span className="muted sp-saving">đang lưu…</span>}
         <button className="btn primary" onClick={checkAll}>
           Kiểm tra tất cả
+        </button>
+        <button className="btn tiny" onClick={resetProgress} title="Xóa bài đã làm và bắt đầu lại">
+          Làm lại
         </button>
       </div>
 
@@ -282,9 +487,9 @@ function PracticeView({ folder }: { folder: Folder }) {
             value={inputs[item.id] ?? ''}
             result={results[item.id]}
             revealed={!!revealed[item.id]}
-            onChange={(v) => setInput(item.id, v)}
-            onCheck={() => checkOne(item)}
-            onReveal={() => reveal(item.id)}
+            onChange={setInput}
+            onCheck={checkOne}
+            onReveal={reveal}
           />
         ))}
       </div>
@@ -305,7 +510,8 @@ const STATUS_TEXT: Record<GradeResult['status'], string> = {
 }
 
 // ================= THẺ MỘT CÂU (luyện tập) =================
-function SentenceCard({
+// Bọc memo + callback ổn định (nhận id) -> gõ ở 1 thẻ không re-render 99 thẻ kia.
+const SentenceCard = memo(function SentenceCard({
   index,
   item,
   value,
@@ -320,22 +526,25 @@ function SentenceCard({
   value: string
   result?: GradeResult
   revealed: boolean
-  onChange: (v: string) => void
-  onCheck: () => void
-  onReveal: () => void
+  onChange: (id: string, v: string) => void
+  onCheck: (id: string) => void
+  onReveal: (id: string) => void
 }) {
   const suggestEnabled = localStorage.getItem('suggest_enabled') !== '0'
   const taRef = useRef<HTMLTextAreaElement>(null)
   const pendingCaret = useRef<number | null>(null)
 
   const [caret, setCaret] = useState(0)
+  const [focused, setFocused] = useState(false)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [active, setActive] = useState(0)
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    if (!suggestEnabled) {
+    // Chỉ tính gợi ý cho ô ĐANG focus (không chạy nền cho hàng trăm thẻ)
+    if (!suggestEnabled || !focused) {
       setSuggestions([])
+      setOpen(false)
       return
     }
     const h = setTimeout(() => {
@@ -345,7 +554,7 @@ function SentenceCard({
       setOpen(list.length > 0)
     }, 120)
     return () => clearTimeout(h)
-  }, [value, caret, suggestEnabled])
+  }, [value, caret, suggestEnabled, focused])
 
   useEffect(() => {
     if (pendingCaret.current != null && taRef.current) {
@@ -369,14 +578,14 @@ function SentenceCard({
     const newBefore = base + s.text + ' '
     pendingCaret.current = newBefore.length
     setOpen(false)
-    onChange(newBefore + after)
+    onChange(item.id, newBefore + after)
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault()
       setOpen(false)
-      onCheck()
+      onCheck(item.id)
       return
     }
     if (!open || suggestions.length === 0) return
@@ -425,13 +634,17 @@ function SentenceCard({
           rows={2}
           value={value}
           onChange={(e) => {
-            onChange(e.target.value)
+            onChange(item.id, e.target.value)
             setCaret(e.target.selectionStart)
           }}
           onKeyUp={syncCaret}
           onClick={syncCaret}
           onKeyDown={onKeyDown}
-          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false)
+            setTimeout(() => setOpen(false), 120)
+          }}
         />
         {suggestEnabled && open && suggestions.length > 0 && (
           <ul className="sc-suggest" role="listbox">
@@ -456,10 +669,10 @@ function SentenceCard({
       </div>
 
       <div className="sc-actions">
-        <button type="button" className="btn tiny" onClick={onReveal}>
+        <button type="button" className="btn tiny" onClick={() => onReveal(item.id)}>
           Xem đáp án
         </button>
-        <button type="button" className="btn primary" onClick={onCheck}>
+        <button type="button" className="btn primary" onClick={() => onCheck(item.id)}>
           Kiểm tra
         </button>
       </div>
@@ -470,13 +683,24 @@ function SentenceCard({
         </div>
       )}
 
-      {result && <ResultBox item={item} result={result} />}
+      {result && <ResultBox item={item} result={result} revealed={revealed} />}
     </div>
   )
-}
+})
 
 // ---------- Khối kết quả sau khi chấm ----------
-function ResultBox({ item, result }: { item: SentenceItem; result: GradeResult }) {
+// Chỉ gợi ý MỘT từ kế tiếp — người học tự nghĩ ra phần còn lại.
+// Cả câu chỉ hiện khi người dùng chủ động bấm "Xem đáp án".
+function ResultBox({
+  item,
+  result,
+  revealed,
+}: {
+  item: SentenceItem
+  result: GradeResult
+  revealed: boolean
+}) {
+  const hint = result.nextWord
   return (
     <div className={`sc-result is-${result.status}`}>
       <div className="sc-status">
@@ -487,17 +711,25 @@ function ResultBox({ item, result }: { item: SentenceItem; result: GradeResult }
       {result.status !== 'correct' && (
         <div className="sc-compare">
           <span className="sc-compare-label">Gợi ý:</span>
-          <span className="sc-diff">
-            {result.diff.map((t, i) => (
-              <DiffChunk key={i} token={t} />
-            ))}
+          <span className="sc-next-word">
+            {!hint ? (
+              'Câu của bạn đủ ý nhưng đang thừa từ — hãy bỏ bớt.'
+            ) : hint.okCount > 0 ? (
+              <>
+                Đúng {hint.okCount} từ đầu · từ tiếp theo là <strong>{hint.word}</strong>
+              </>
+            ) : (
+              <>
+                Câu bắt đầu bằng <strong>{hint.word}</strong>
+              </>
+            )}
           </span>
         </div>
       )}
 
-      {result.status !== 'correct' && result.bestAnswer !== item.en && (
+      {revealed && (
         <div className="sc-answer">
-          Đáp án mẫu: <strong>{item.en}</strong>
+          Đáp án: <strong>{item.en}</strong>
         </div>
       )}
 
@@ -528,12 +760,6 @@ function ResultBox({ item, result }: { item: SentenceItem; result: GradeResult }
   )
 }
 
-function DiffChunk({ token }: { token: DiffToken }) {
-  if (token.op === 'same') return <span className="d-same">{token.text} </span>
-  if (token.op === 'del') return <span className="d-del">{token.text} </span>
-  return <span className="d-add">{token.text} </span>
-}
-
 // ================= CHẾ ĐỘ QUẢN LÝ =================
 const EMPTY_FORM: SentenceInput = { vi: '', en: '', altAnswers: [], hints: [], level: undefined, topic: '' }
 
@@ -541,20 +767,33 @@ function ManageView({ folder, onChanged }: { folder: Folder; onChanged: () => vo
   const [items, setItems] = useState<StoredSentence[]>([])
   const [editingId, setEditingId] = useState<string | 'new' | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [importMsg, setImportMsg] = useState<string | null>(null)
 
-  const load = () => setItems(listSentences(folder.id))
+  const load = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      setItems(await listSentences(folder.id))
+    } catch (e) {
+      setError(errMsg(e))
+    } finally {
+      setLoading(false)
+    }
+  }
   useEffect(() => {
     load()
     setEditingId(null)
     setSelected(new Set())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [folder.id])
 
-  const afterMutate = () => {
-    load()
+  const afterMutate = async () => {
+    await load()
     onChanged()
     setEditingId(null)
     setSelected(new Set())
@@ -570,27 +809,39 @@ function ManageView({ folder, onChanged }: { folder: Folder; onChanged: () => vo
     })
   const toggleAll = () =>
     setSelected((prev) => (prev.size === items.length ? new Set() : new Set(items.map((s) => s.id))))
-  const deleteSelected = () => {
+  const deleteSelected = async () => {
     if (selected.size === 0) return
     if (!confirm(`Xóa ${selected.size} câu đã chọn?`)) return
-    selected.forEach((id) => deleteSentence(id))
-    afterMutate()
+    try {
+      for (const id of selected) await deleteSentence(id)
+      await afterMutate()
+    } catch (e) {
+      alert('Xóa thất bại: ' + errMsg(e))
+    }
   }
 
-  const save = (data: SentenceInput, id?: string) => {
+  const save = async (data: SentenceInput, id?: string) => {
     if (!data.vi.trim() || !data.en.trim()) {
       alert('Cần nhập cả câu tiếng Việt và đáp án tiếng Anh.')
       return
     }
-    if (id) updateSentence(id, data)
-    else createSentence(folder.id, data)
-    afterMutate()
+    try {
+      if (id) await updateSentence(id, data)
+      else await createSentence(folder.id, data)
+      await afterMutate()
+    } catch (e) {
+      alert('Lưu câu thất bại: ' + errMsg(e))
+    }
   }
 
-  const remove = (s: StoredSentence) => {
+  const remove = async (s: StoredSentence) => {
     if (!confirm(`Xóa câu:\n"${s.vi}"?`)) return
-    deleteSentence(s.id)
-    afterMutate()
+    try {
+      await deleteSentence(s.id)
+      await afterMutate()
+    } catch (e) {
+      alert('Xóa thất bại: ' + errMsg(e))
+    }
   }
 
   // Import Excel: bắt buộc cột tiếng Việt; các cột khác nếu có thì lấy,
@@ -648,22 +899,27 @@ function ManageView({ folder, onChanged }: { folder: Folder; onChanged: () => vo
       rows.push({
         vi: r.vi,
         en,
-        altAnswers: r.altAnswers,
-        hints: r.hints,
+        altAnswers: r.altAnswers ?? [],
+        hints: r.hints ?? [],
         level: (r.level as CefrLevel | undefined) || undefined,
         topic: r.topic,
       })
       setProgress({ done: i + 1, total: parsed.length })
     }
-    const added = createSentences(folder.id, rows)
-    const missing = rows.filter((r) => !r.en.trim()).length
-    setImporting(false)
-    setImportMsg(
-      `✅ Đã thêm ${added} câu` +
-        (needTranslate > 0 ? ` · tự dịch ${translated}/${needTranslate} câu thiếu đáp án` : '') +
-        (missing > 0 ? ` · còn ${missing} câu chưa có đáp án (hãy sửa thủ công).` : '.'),
-    )
-    afterMutate()
+    try {
+      const added = await createSentences(folder.id, rows)
+      const missing = rows.filter((r) => !r.en.trim()).length
+      setImportMsg(
+        `✅ Đã thêm ${added} câu` +
+          (needTranslate > 0 ? ` · tự dịch ${translated}/${needTranslate} câu thiếu đáp án` : '') +
+          (missing > 0 ? ` · còn ${missing} câu chưa có đáp án (hãy sửa thủ công).` : '.'),
+      )
+      await afterMutate()
+    } catch (err) {
+      setImportMsg('❌ Lưu lên đám mây thất bại: ' + errMsg(err))
+    } finally {
+      setImporting(false)
+    }
   }
 
   return (
@@ -717,7 +973,11 @@ function ManageView({ folder, onChanged }: { folder: Folder; onChanged: () => vo
         />
       )}
 
-      {items.length === 0 && editingId !== 'new' ? (
+      {loading ? (
+        <p className="muted">Đang tải câu…</p>
+      ) : error ? (
+        <p className="muted">⚠️ {error}</p>
+      ) : items.length === 0 && editingId !== 'new' ? (
         <p className="muted">Chưa có câu nào. Bấm “+ Thêm câu”.</p>
       ) : (
         <>

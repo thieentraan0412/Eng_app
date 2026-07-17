@@ -1,9 +1,20 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { bumpRequest } from '../usageStats'
 
 // Khởi tạo client Supabase từ biến môi trường (.env).
 // Đây là điểm kết nối duy nhất tới Cloud (Auth + Postgres + Storage).
 const url = import.meta.env.VITE_SUPABASE_URL
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+// Bọc fetch để ĐẾM mọi request client gửi đi (cho trang Thống kê)
+const countingFetch: typeof fetch = (input, init) => {
+  try {
+    bumpRequest()
+  } catch {
+    /* đếm lỗi không được làm hỏng request */
+  }
+  return fetch(input, init)
+}
 
 if (!url || !anonKey) {
   // Cảnh báo sớm khi chưa cấu hình .env (xem supabase/HUONG_DAN_SETUP.md)
@@ -19,6 +30,7 @@ export const supabase: SupabaseClient = createClient(url ?? '', anonKey ?? '', {
     autoRefreshToken: true,
     detectSessionInUrl: false, // app desktop, không dùng redirect URL
   },
+  global: { fetch: countingFetch },
 })
 
 // Cờ tiện dụng: đã cấu hình cloud chưa

@@ -1,7 +1,7 @@
 // Chấm câu "Chép câu": so câu người dùng nhập với đáp án tham chiếu.
 //  • Chuẩn hóa khoan dung (bỏ dấu câu, gộp khoảng trắng, thường hóa)
 //  • Điểm tương đồng = kết hợp trùng token (Jaccard) + tỉ lệ Levenshtein ký tự
-//  • Diff theo từ (LCS) để tô phần thiếu / thừa
+//  • Diff theo từ (LCS) -> suy ra từ đúng kế tiếp cần gõ (không lộ cả câu)
 //  • Nối chính tả (spellcheck) + ngữ pháp cục bộ (localgrammar)
 // (thiết kế: chepcau.md — Mục 6)
 
@@ -22,11 +22,17 @@ export interface SpellHint {
   suggestions: string[]
 }
 
+export interface NextWordHint {
+  word: string // từ đúng kế tiếp cần gõ (giữ nguyên dạng gốc trong đáp án)
+  okCount: number // số từ đầu câu người dùng đã gõ khớp đáp án
+}
+
 export interface GradeResult {
   status: SentenceStatus
   score: number // 0..1 (độ giống đáp án gần nhất)
   bestAnswer: string // đáp án tham chiếu khớp nhất (để hiển thị)
   diff: DiffToken[] // so người dùng ↔ đáp án khớp nhất
+  nextWord: NextWordHint | null // gợi ý 1 từ kế tiếp (null: không còn từ nào thiếu)
   spell: SpellHint[] // lỗi chính tả trong câu người dùng
   grammar: GrammarMatch[] // gợi ý ngữ pháp (offline)
 }
@@ -130,6 +136,30 @@ function wordDiff(userToks: string[], refToks: string[]): DiffToken[] {
   return out
 }
 
+// Tách từ giống hệt normalize() nhưng giữ nguyên dạng gốc (hoa/thường)
+// -> cùng số lượng, cùng thứ tự với tokens(), nên chỉ số dùng chung được.
+function rawTokens(text: string): string[] {
+  return text.split(/[.,!?;:"“”'’()\-\s]+/).filter(Boolean)
+}
+
+// Từ đúng kế tiếp = token 'del' đầu tiên trong diff: LCS đảm bảo mọi thứ
+// trước nó đã khớp đáp án, nên đây chính là chỗ người dùng đang mắc.
+// Trả null khi câu người dùng không thiếu từ nào (chỉ thừa / chỉ sai dấu câu).
+function nextWordHint(diff: DiffToken[], ref: string): NextWordHint | null {
+  const raw = rawTokens(ref)
+  let refIdx = 0 // vị trí đang xét trong đáp án
+  let okCount = 0 // số từ người dùng đã gõ khớp
+  for (const t of diff) {
+    if (t.op === 'same') {
+      refIdx++
+      okCount++
+    } else if (t.op === 'del') {
+      return { word: raw[refIdx] ?? t.text, okCount }
+    }
+  }
+  return null
+}
+
 // Lỗi chính tả trong câu người dùng
 function spellHints(text: string): SpellHint[] {
   const uniq = [...new Set(tokenizeWords(text))]
@@ -160,11 +190,14 @@ export function gradeSentence(item: SentenceItem, userInput: string): GradeResul
   else if (score >= CLOSE_THRESHOLD) status = 'close'
   else status = 'wrong'
 
+  const diff = wordDiff(tokens(userInput), tokens(best))
+
   return {
     status,
     score,
     bestAnswer: best,
-    diff: wordDiff(tokens(userInput), tokens(best)),
+    diff,
+    nextWord: nextWordHint(diff, best),
     spell: spellHints(userInput),
     grammar: checkLocalGrammar(userInput).slice(0, 8),
   }

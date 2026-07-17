@@ -102,8 +102,78 @@ export interface Writing {
   updated_at: string
 }
 
+// ---------- Chép câu: thư mục / câu / bài làm ----------
+export interface CloudSentenceFolder {
+  id: string
+  user_id: string
+  name: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CloudSentence {
+  id: string
+  user_id: string
+  folder_id: string
+  vi: string
+  en: string | null
+  alt_answers: string[] | null
+  hints: string[] | null
+  level: string | null
+  topic: string | null
+  created_at: string
+}
+
+export interface NewCloudSentence {
+  vi: string
+  en?: string
+  alt_answers?: string[]
+  hints?: string[]
+  level?: string
+  topic?: string
+}
+
+export type SentenceStatus = 'correct' | 'close' | 'wrong'
+
+export interface CloudSentenceProgress {
+  id: string
+  user_id: string
+  sentence_id: string
+  answer: string
+  status: SentenceStatus | null
+  score: number | null
+  revealed: boolean
+  updated_at: string
+}
+
+export interface ProgressInput {
+  answer: string
+  status?: SentenceStatus | null
+  score?: number | null
+  revealed?: boolean
+}
+
+export interface DbStats {
+  db_size_bytes: number
+  tables: Record<string, number>
+}
+
 function today(): string {
   return new Date().toISOString().slice(0, 10)
+}
+
+// Chuẩn hóa 1 câu (app) -> hàng insert vào bảng sentences
+function toSentenceRow(userId: string, folderId: string, s: NewCloudSentence) {
+  return {
+    user_id: userId,
+    folder_id: folderId,
+    vi: s.vi,
+    en: s.en ?? null,
+    alt_answers: s.alt_answers ?? null,
+    hints: s.hints ?? null,
+    level: s.level ?? null,
+    topic: s.topic ?? null,
+  }
 }
 
 export const CloudApi = {
@@ -409,6 +479,171 @@ export const CloudApi = {
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
     if (error) throw error
+  },
+
+  // ---------- Chép câu: thư mục ----------
+  async listSentenceFolders(): Promise<CloudSentenceFolder[]> {
+    const { data, error } = await supabase
+      .from('sentence_folders')
+      .select('*')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    return data as CloudSentenceFolder[]
+  },
+
+  async createSentenceFolder(name: string): Promise<CloudSentenceFolder> {
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { data, error } = await supabase
+      .from('sentence_folders')
+      .insert({ user_id: user.id, name })
+      .select()
+      .single()
+    if (error) throw error
+    return data as CloudSentenceFolder
+  },
+
+  async renameSentenceFolder(id: string, name: string): Promise<CloudSentenceFolder> {
+    const { data, error } = await supabase
+      .from('sentence_folders')
+      .update({ name, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data as CloudSentenceFolder
+  },
+
+  async deleteSentenceFolder(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('sentence_folders')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  // ---------- Chép câu: câu ----------
+  async listSentences(folderId: string): Promise<CloudSentence[]> {
+    const { data, error } = await supabase
+      .from('sentences')
+      .select('*')
+      .eq('folder_id', folderId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    return data as CloudSentence[]
+  },
+
+  async createSentence(folderId: string, s: NewCloudSentence): Promise<CloudSentence> {
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { data, error } = await supabase
+      .from('sentences')
+      .insert(toSentenceRow(user.id, folderId, s))
+      .select()
+      .single()
+    if (error) throw error
+    return data as CloudSentence
+  },
+
+  // Thêm nhiều câu 1 lần (dùng khi nhập Excel) -> trả về số câu đã thêm
+  async createSentences(folderId: string, rows: NewCloudSentence[]): Promise<number> {
+    if (rows.length === 0) return 0
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const payload = rows.map((s) => toSentenceRow(user.id, folderId, s))
+    const { data, error } = await supabase.from('sentences').insert(payload).select('id')
+    if (error) throw error
+    return data?.length ?? 0
+  },
+
+  async updateSentence(id: string, s: NewCloudSentence): Promise<CloudSentence> {
+    const { data, error } = await supabase
+      .from('sentences')
+      .update({
+        vi: s.vi,
+        en: s.en ?? null,
+        alt_answers: s.alt_answers ?? null,
+        hints: s.hints ?? null,
+        level: s.level ?? null,
+        topic: s.topic ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data as CloudSentence
+  },
+
+  async deleteSentence(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('sentences')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  // Đếm số câu theo từng thư mục (cho lưới thẻ ngoài trang chính)
+  async countSentencesByFolder(): Promise<Record<string, number>> {
+    const { data, error } = await supabase
+      .from('sentences')
+      .select('folder_id')
+      .is('deleted_at', null)
+    if (error) throw error
+    const counts: Record<string, number> = {}
+    for (const row of data as { folder_id: string }[]) {
+      counts[row.folder_id] = (counts[row.folder_id] ?? 0) + 1
+    }
+    return counts
+  },
+
+  // ---------- Chép câu: bài đã làm (tab Luyện tập) ----------
+  async listProgress(sentenceIds: string[]): Promise<CloudSentenceProgress[]> {
+    if (sentenceIds.length === 0) return []
+    const { data, error } = await supabase
+      .from('sentence_progress')
+      .select('*')
+      .in('sentence_id', sentenceIds)
+    if (error) throw error
+    return data as CloudSentenceProgress[]
+  },
+
+  // Lưu/ghi đè bài làm 1 câu (upsert theo user + sentence_id)
+  async saveProgress(sentenceId: string, p: ProgressInput): Promise<void> {
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { error } = await supabase.from('sentence_progress').upsert(
+      {
+        user_id: user.id,
+        sentence_id: sentenceId,
+        answer: p.answer,
+        status: p.status ?? null,
+        score: p.score ?? null,
+        revealed: p.revealed ?? false,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,sentence_id' },
+    )
+    if (error) throw error
+  },
+
+  async clearProgress(sentenceIds: string[]): Promise<void> {
+    if (sentenceIds.length === 0) return
+    const { error } = await supabase
+      .from('sentence_progress')
+      .delete()
+      .in('sentence_id', sentenceIds)
+    if (error) throw error
+  },
+
+  // ---------- Thống kê dung lượng DB (trang Thống kê) ----------
+  async getDbStats(): Promise<DbStats> {
+    const { data, error } = await supabase.rpc('get_db_stats')
+    if (error) throw error
+    const d = (data ?? {}) as Partial<DbStats>
+    return { db_size_bytes: d.db_size_bytes ?? 0, tables: d.tables ?? {} }
   },
 
   // ---------- Thống kê nhanh cho Dashboard ----------

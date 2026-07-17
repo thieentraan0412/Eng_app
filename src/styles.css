@@ -2532,16 +2532,15 @@ textarea::placeholder {
   color: var(--muted);
   margin-right: 0.4rem;
 }
-.sc-diff .d-same {
-  color: var(--text);
+.sc-next-word {
+  color: var(--text-soft);
 }
-.sc-diff .d-del {
+.sc-next-word strong {
   color: var(--success);
-  font-weight: 600;
-}
-.sc-diff .d-add {
-  color: var(--danger);
-  text-decoration: line-through;
+  font-weight: 700;
+  padding: 0.05rem 0.35rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--success) 12%, transparent);
 }
 .sc-notes {
   display: flex;
@@ -2860,4 +2859,107 @@ textarea::placeholder {
   .content {
     padding: 1.4rem;
   }
+}
+
+/* ============ TRANG THỐNG KÊ (Usage) ============ */
+.usage-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.usage-error {
+  margin: 0.8rem 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--danger);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+.usage-card {
+  margin-top: 1rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-xs);
+}
+.usage-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+.usage-card-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.usage-big {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+.usage-big .muted {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.usage-req-nums {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.usage-bar {
+  height: 12px;
+  margin: 0.2rem 0 0.5rem;
+}
+.usage-bar .sp-bar-fill.is-warn {
+  background: var(--warn);
+}
+.usage-bar .sp-bar-fill.is-danger {
+  background: var(--danger);
+}
+.usage-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+}
+.usage-rows {
+  display: flex;
+  flex-direction: column;
+}
+.usage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.usage-row:first-child {
+  border-top: none;
+}
+.usage-row-name {
+  color: var(--text);
+}
+.usage-row-count {
+  font-weight: 700;
+  color: var(--text);
+}
+.usage-note {
+  font-weight: 400;
+  font-style: normal;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.usage-foot {
+  margin: 0.8rem 0 0;
+  font-size: 0.82rem;
 }

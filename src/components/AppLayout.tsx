@@ -12,6 +12,7 @@ import ReadingPage from '../pages/ReadingPage'
 import GrammarPage from '../pages/GrammarPage'
 import WritingPage from '../pages/WritingPage'
 import SentencePage from '../pages/SentencePage'
+import UsagePage from '../pages/UsagePage'
 import SettingsPage from '../pages/SettingsPage'
 
 const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
@@ -118,6 +119,8 @@ export default function AppLayout() {
         return <WritingPage />
       case 'sentence':
         return <SentencePage />
+      case 'usage':
+        return <UsagePage />
     }
   }
 
