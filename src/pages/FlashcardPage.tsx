@@ -347,7 +347,6 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
               <div className="fc-hint">
                 Bấm (hoặc phím Space) để xem {frontVi ? 'từ tiếng Anh' : 'nghĩa'}
               </div>
-              {exampleForm}
             </>
           )}
 

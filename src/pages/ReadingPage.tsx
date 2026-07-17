@@ -58,7 +58,9 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
   useEffect(() => {
     if (!bar) return
     const close = (e: MouseEvent) => {
-      if (!(e.target as HTMLElement).closest('.hl-toolbar')) setBar(null)
+      // Bấm vào popup dịch/lưu từ -> KHÔNG đóng thanh màu (cho 2 popup cùng tồn tại)
+      const t = e.target as HTMLElement
+      if (!t.closest('.hl-toolbar') && !t.closest('.translate-popup')) setBar(null)
     }
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
