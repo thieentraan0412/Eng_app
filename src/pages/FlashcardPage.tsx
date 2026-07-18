@@ -1,6 +1,43 @@
 import { useEffect, useRef, useState, type TouchEvent } from 'react'
 import { CloudApi, type Deck, type Card } from '../services/cloud/CloudApiClient'
 import { previewInterval, type Rating } from '../services/srs'
+import { speak, stopSpeaking, ttsSupported } from '../services/tts'
+
+// Nút 🔊 phát âm 1 lần (câu ví dụ) — dừng nổi bọt để không lật thẻ khi bấm
+function SpeakButton({ text }: { text: string }) {
+  if (!ttsSupported) return null
+  return (
+    <button
+      type="button"
+      className="fc-speak"
+      title="Phát âm"
+      onClick={(e) => {
+        e.stopPropagation()
+        speak(text)
+      }}
+    >
+      🔊
+    </button>
+  )
+}
+
+// Nút loa cạnh TỪ: bật/tắt chế độ TỰ PHÁT ÂM (🔊 đang bật, 🔇 đã tắt)
+function SpeakToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  if (!ttsSupported) return null
+  return (
+    <button
+      type="button"
+      className={on ? 'fc-speak' : 'fc-speak off'}
+      title={on ? 'Đang tự phát âm — bấm để tắt' : 'Tự phát âm đang tắt — bấm để bật'}
+      onClick={(e) => {
+        e.stopPropagation()
+        onToggle()
+      }}
+    >
+      {on ? '🔊' : '🔇'}
+    </button>
+  )
+}
 
 export default function FlashcardPage() {
   const [decks, setDecks] = useState<Deck[]>([])
@@ -56,6 +93,8 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   const [answerState, setAnswerState] = useState<'idle' | 'correct' | 'wrong'>('idle')
   // Số chữ cái đã được gợi ý (lộ dần từ đầu từ)
   const [hintLevel, setHintLevel] = useState(0)
+  // Tự phát âm từ tiếng Anh khi từ xuất hiện (mặc định BẬT; bấm loa để tắt)
+  const [autoSpeak, setAutoSpeak] = useState(() => localStorage.getItem('fc_autospeak') !== '0')
   const answerRef = useRef<HTMLInputElement>(null)
   // Vuốt ngang (mobile) để chuyển thẻ
   const touchStart = useRef<{ x: number; y: number } | null>(null)
@@ -86,10 +125,33 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
     setHintLevel(0)
   }, [idx])
 
-  // Chế độ Việt→Anh: tự focus vào ô gõ từ tiếng Anh mỗi khi qua thẻ mới
+  // Tự focus vào ô gõ từ tiếng Anh mỗi khi qua thẻ mới (cả 2 chiều học)
   useEffect(() => {
-    if (frontVi && !flipped && current) answerRef.current?.focus()
+    if (!flipped && current) answerRef.current?.focus()
   }, [idx, frontVi, flipped, current])
+
+  // Tự phát âm khi SANG THẺ MỚI ở chiều Anh→Việt (từ hiện ngay mặt trước).
+  // Không phụ thuộc `flipped` để lật đi lật lại không đọc lại.
+  useEffect(() => {
+    if (autoSpeak && !frontVi && current) speak(current.word)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, frontVi, autoSpeak, current?.id])
+
+  // Chiều Việt→Anh: chỉ phát khi LẬT ra đáp án (phát sớm hơn sẽ lộ đáp án)
+  useEffect(() => {
+    if (autoSpeak && frontVi && flipped && current) speak(current.word)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flipped, frontVi, autoSpeak, current?.id])
+
+  // Bật/tắt tự phát âm (nhớ lựa chọn); tắt thì ngừng đọc ngay,
+  // bật lại thì đọc luôn từ đang thấy (nếu từ đang hiển thị)
+  const toggleAutoSpeak = () => {
+    const next = !autoSpeak
+    setAutoSpeak(next)
+    localStorage.setItem('fc_autospeak', next ? '1' : '0')
+    if (!next) stopSpeaking()
+    else if (current && (!frontVi || flipped)) speak(current.word)
+  }
 
   // So khớp đáp án tiếng Anh (bỏ hoa/thường, khoảng trắng thừa)
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
@@ -232,6 +294,10 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
       if (e.code === 'Space') {
         e.preventDefault()
         setFlipped((f) => !f)
+      } else if (e.key === 'Tab') {
+        // Tab cũng lật thẻ (đồng bộ với Tab trong ô nhập — xem onKeyDown của input)
+        e.preventDefault()
+        setFlipped((f) => !f)
       } else if (e.key === 'ArrowRight') {
         e.preventDefault()
         goNext()
@@ -324,6 +390,9 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
               swiped.current = false
               return
             }
+            // Đang bôi chữ (để dịch/copy) -> không lật thẻ, để popup dịch hiện lên
+            const sel = window.getSelection()
+            if (sel && !sel.isCollapsed && sel.toString().trim()) return
             setFlipped((f) => !f)
           }}
         >
@@ -334,54 +403,66 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
               <>
                 <span className="fc-word">{current.word}</span>
                 {current.pos && <span className="fc-pos">{current.pos}</span>}
+                <SpeakToggle on={autoSpeak} onToggle={toggleAutoSpeak} />
               </>
             )}
           </div>
 
           {!flipped && (
             <>
-              {frontVi && (
-                <form
-                  className={`fc-answer-form ${answerState}`}
-                  onClick={(e) => e.stopPropagation()}
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    checkAnswer()
+              {/* Ô gõ từ tiếng Anh — cả 2 chiều học:
+                  · Việt→Anh: nhớ lại từ theo nghĩa (có gợi ý lộ dần chữ cái)
+                  · Anh→Việt: gõ lại từ đang thấy để nhớ mặt chữ/chính tả
+                  Gõ đúng (hoặc Enter khi đúng) -> tự sang từ khác */}
+              <form
+                className={`fc-answer-form ${answerState}`}
+                onClick={(e) => e.stopPropagation()}
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  checkAnswer()
+                }}
+              >
+                <input
+                  ref={answerRef}
+                  key={current.id}
+                  autoFocus
+                  placeholder={frontVi ? 'Gõ từ tiếng Anh…' : 'Gõ lại từ để nhớ chính tả…'}
+                  value={typed}
+                  readOnly={answerState === 'correct'}
+                  onChange={(e) => onTypeAnswer(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Đang gõ trong ô nhập: Tab = lật thẻ xem nghĩa (lật lại bằng Tab lần nữa —
+                    // khi đó focus đã rời input nên phím tắt toàn trang xử lý)
+                    if (e.key === 'Tab') {
+                      e.preventDefault()
+                      setFlipped((f) => !f)
+                    }
                   }}
-                >
-                  <input
-                    ref={answerRef}
-                    key={current.id}
-                    autoFocus
-                    placeholder="Gõ từ tiếng Anh…"
-                    value={typed}
-                    readOnly={answerState === 'correct'}
-                    onChange={(e) => onTypeAnswer(e.target.value)}
-                  />
-                  {answerState === 'correct' && <span className="fc-answer-feedback ok">✓ Chính xác!</span>}
-                  {answerState === 'wrong' && <span className="fc-answer-feedback no">✗ Chưa đúng, thử lại</span>}
+                />
+                {answerState === 'correct' && <span className="fc-answer-feedback ok">✓ Chính xác!</span>}
+                {answerState === 'wrong' && <span className="fc-answer-feedback no">✗ Chưa đúng, thử lại</span>}
 
-                  {answerState !== 'correct' && (
-                    <div className="fc-hint-row">
-                      <button
-                        type="button"
-                        className="btn tiny"
-                        onClick={revealHint}
-                        disabled={hintLevel >= current.word.length}
-                      >
-                        💡 Gợi ý
-                      </button>
-                      {hintLevel > 0 && (
-                        <span className="fc-hint-word">
-                          {maskedWord} · {current.word.replace(/\s/g, '').length} chữ cái
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </form>
-              )}
+                {/* Gợi ý chỉ có nghĩa ở chiều Việt→Anh (chiều Anh→Việt từ đã hiện sẵn) */}
+                {frontVi && answerState !== 'correct' && (
+                  <div className="fc-hint-row">
+                    <button
+                      type="button"
+                      className="btn tiny"
+                      onClick={revealHint}
+                      disabled={hintLevel >= current.word.length}
+                    >
+                      💡 Gợi ý
+                    </button>
+                    {hintLevel > 0 && (
+                      <span className="fc-hint-word">
+                        {maskedWord} · {current.word.replace(/\s/g, '').length} chữ cái
+                      </span>
+                    )}
+                  </div>
+                )}
+              </form>
               <div className="fc-hint">
-                Bấm (hoặc phím Space) để xem {frontVi ? 'từ tiếng Anh' : 'nghĩa'}
+                Bấm thẻ hoặc phím Tab để xem {frontVi ? 'từ tiếng Anh' : 'nghĩa'}
               </div>
             </>
           )}
@@ -392,6 +473,7 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
                 <div className="fc-answer">
                   <span className="fc-answer-word">{current.word}</span>
                   {current.pos && <span className="fc-pos">{current.pos}</span>}
+                  <SpeakToggle on={autoSpeak} onToggle={toggleAutoSpeak} />
                 </div>
               ) : (
                 <div className="fc-meaning">{current.meaning || '(chưa có nghĩa)'}</div>
@@ -405,7 +487,7 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
                     .filter(Boolean)
                     .map((ex, i) => (
                       <div className="fc-example" key={i}>
-                        “{ex}”
+                        “{ex}” <SpeakButton text={ex} />
                       </div>
                     ))}
                 </div>

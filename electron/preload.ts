@@ -34,6 +34,14 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('vocab:quick-save', h)
     return () => ipcRenderer.removeListener('vocab:quick-save', h)
   },
+  // (Cửa sổ chính) Đặt phím tắt toàn cục bật/tắt dịch nhanh (accel rỗng = gỡ bỏ)
+  setTranslateHotkey: (accel: string): Promise<boolean> => ipcRenderer.invoke('hotkey:set', accel),
+  // (Cửa sổ chính) Nghe trạng thái dịch nhanh đổi do phím tắt (để lưu cài đặt + toast)
+  onDesktopTranslateState: (cb: (enabled: boolean) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, on: boolean) => cb(on)
+    ipcRenderer.on('desktop-translate:state', h)
+    return () => ipcRenderer.removeListener('desktop-translate:state', h)
+  },
 
   // (Cửa sổ popup) Nhận đoạn chữ cần dịch từ main
   onDesktopTranslateText: (cb: (text: string) => void): (() => void) => {

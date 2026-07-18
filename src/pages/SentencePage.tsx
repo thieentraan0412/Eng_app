@@ -291,6 +291,9 @@ function PracticeView({ folder }: { folder: Folder }) {
   const [revealed, setRevealed] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Chỉ số câu hiện tại (chế độ tập trung) + id thẻ cần cuộn tới sau khi nạp
+  const [cur, setCur] = useState(0)
+  const [jumpId, setJumpId] = useState<string | null>(null)
 
   // Bộ đếm số lượt lưu đang chạy -> hiển thị "đang lưu…"
   const pending = useRef(0)
@@ -336,6 +339,22 @@ function PracticeView({ folder }: { folder: Folder }) {
         setInputs(ni)
         setResults(nr)
         setRevealed(nv)
+        // Nhảy tới câu làm gần nhất (updated_at mới nhất) thay vì luôn ở câu 1
+        let lastSid: string | null = null
+        let lastAt = 0
+        for (const [sid, rec] of Object.entries(prog)) {
+          if (byId.has(sid) && (rec.updatedAt ?? 0) > lastAt) {
+            lastAt = rec.updatedAt ?? 0
+            lastSid = sid
+          }
+        }
+        if (lastSid) {
+          const li = list.findIndex((s) => s.id === lastSid)
+          if (li > 0) {
+            setCur(li) // chế độ tập trung (mobile)
+            setJumpId(lastSid) // chế độ danh sách (desktop): cuộn tới thẻ
+          }
+        }
       } catch (e) {
         if (alive) setError(errMsg(e))
       } finally {
@@ -379,11 +398,17 @@ function PracticeView({ folder }: { folder: Folder }) {
 
   // Chế độ tập trung (mobile): chỉ trỏ 1 câu/màn
   const narrow = useIsNarrow()
-  const [cur, setCur] = useState(0)
   // Giữ chỉ số hợp lệ khi danh sách đổi (nạp xong / xóa câu)
   useEffect(() => {
     setCur((c) => Math.min(Math.max(0, c), Math.max(0, items.length - 1)))
   }, [items.length])
+
+  // Cuộn tới thẻ của câu làm gần nhất sau khi nạp xong (chế độ danh sách)
+  useEffect(() => {
+    if (loading || !jumpId) return
+    document.getElementById(`sc-${jumpId}`)?.scrollIntoView({ block: 'center' })
+    setJumpId(null)
+  }, [loading, jumpId])
 
   // Gõ 1 câu: chỉ cập nhật input của câu đó + hẹn giờ lưu. Callback ổn định
   // nên chỉ thẻ đang gõ re-render, 99 thẻ còn lại bỏ qua (React.memo).
@@ -713,7 +738,7 @@ const SentenceCard = memo(function SentenceCard({
   const statusClass = result ? `is-${result.status}` : ''
 
   return (
-    <div className={`sentence-card ${statusClass}`}>
+    <div id={`sc-${item.id}`} className={`sentence-card ${statusClass}`}>
       <div className="sc-vi">
         <span className="sc-index">{index}</span>
         <span className="sc-flag">🇻🇳</span>

@@ -97,6 +97,15 @@ export default function AppLayout() {
     if (localStorage.getItem('desktop_translate_enabled') === '1') {
       window.api.setDesktopTranslate(true)
     }
+    // Phím tắt toàn cục bật/tắt dịch nhanh (mặc định Ctrl+Alt+D, đổi được ở Cài đặt)
+    window.api.setTranslateHotkey(localStorage.getItem('desktop_translate_hotkey') ?? 'Ctrl+Alt+D')
+    // Phím tắt được nhấn -> main đã đổi trạng thái -> lưu cài đặt + toast + báo trang Cài đặt
+    const offState = window.api.onDesktopTranslateState((on) => {
+      localStorage.setItem('desktop_translate_enabled', on ? '1' : '0')
+      window.dispatchEvent(new CustomEvent('desktop-translate-changed', { detail: on }))
+      setToast(on ? '🖱️ Dịch nhanh toàn màn hình: BẬT' : 'Dịch nhanh toàn màn hình: TẮT')
+      window.setTimeout(() => setToast(null), 2600)
+    })
     const off = window.api.onQuickSave(async ({ entry, deckId }) => {
       try {
         await handleSaveWord(entry, deckId)
@@ -106,7 +115,10 @@ export default function AppLayout() {
       }
       window.setTimeout(() => setToast(null), 2600)
     })
-    return off
+    return () => {
+      off()
+      offState()
+    }
   }, [])
 
   const renderPage = () => {

@@ -41,6 +41,8 @@ export interface PracticeRecord {
   status: SentenceStatus | null
   score: number | null
   revealed: boolean
+  /** Thời điểm lưu lần cuối (ms) — chỉ có khi đọc từ cloud, dùng để nhảy tới câu làm gần nhất */
+  updatedAt?: number
 }
 
 // ---------- Ánh xạ DB -> app ----------
@@ -135,6 +137,7 @@ export async function loadProgress(sentenceIds: string[]): Promise<Record<string
       status: r.status,
       score: r.score,
       revealed: r.revealed,
+      updatedAt: Date.parse(r.updated_at) || 0,
     }
   }
   return map

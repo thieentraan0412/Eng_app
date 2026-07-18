@@ -22,6 +22,8 @@ export interface EngMasterApi {
 
   // Dịch nhanh toàn màn hình
   setDesktopTranslate: (enabled: boolean) => Promise<boolean>
+  setTranslateHotkey: (accel: string) => Promise<boolean>
+  onDesktopTranslateState: (cb: (enabled: boolean) => void) => () => void
   onQuickSave: (cb: (payload: { entry: SaveEntry; deckId?: string }) => void) => () => void
   onDesktopTranslateText: (cb: (text: string) => void) => () => void
   requestDesktopText: () => Promise<string>

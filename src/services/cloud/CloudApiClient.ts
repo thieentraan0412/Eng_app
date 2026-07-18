@@ -277,6 +277,27 @@ export const CloudApi = {
     return data as Card
   },
 
+  // Sửa toàn bộ nội dung một thẻ (trang Từ vựng — nút Sửa)
+  async updateCard(cardId: string, fields: NewCard): Promise<Card> {
+    const { data, error } = await supabase
+      .from('cards')
+      .update({
+        word: fields.word,
+        meaning: fields.meaning ?? null,
+        phonetic: fields.phonetic ?? null,
+        example: fields.example ?? null,
+        collocation: fields.collocation ?? null,
+        pattern: fields.pattern ?? null,
+        pos: fields.pos ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', cardId)
+      .select()
+      .single()
+    if (error) throw error
+    return data as Card
+  },
+
   // Cập nhật câu ví dụ của một thẻ (dùng khi thêm ví dụ lúc ôn tập)
   async updateCardExample(cardId: string, example: string): Promise<Card> {
     const { data, error } = await supabase

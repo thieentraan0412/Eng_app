@@ -287,6 +287,109 @@ function MultiField(props: MultiFieldProps) {
   )
 }
 
+// ---------- Sửa thẻ từ: form inline thay chỗ nội dung thẻ ----------
+function CardEditor({
+  card,
+  onSave,
+  onCancel,
+}: {
+  card: Card
+  onSave: (updated: Card) => void
+  onCancel: () => void
+}) {
+  // ',' là sentinel "không có" của collocation/pattern -> hiển thị rỗng khi sửa
+  const clean = (v: string | null) => (!v || v === ',' ? '' : v)
+  const [word, setWord] = useState(card.word)
+  const [pos, setPos] = useState(card.pos ?? '')
+  const [meaning, setMeaning] = useState(card.meaning ?? '')
+  const [colloc, setColloc] = useState(clean(card.collocation))
+  const [pattern, setPattern] = useState(clean(card.pattern))
+  const [example, setExample] = useState(card.example ?? '')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const save = async () => {
+    const w = word.trim()
+    if (!w) return
+    setSaving(true)
+    setErr(null)
+    // Nhiều giá trị mỗi ô = mỗi dòng một mục; bỏ dòng trống
+    const norm = (s: string) =>
+      s
+        .split('\n')
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .join('\n')
+    try {
+      const updated = await CloudApi.updateCard(card.id, {
+        word: w,
+        meaning: meaning.trim() || undefined,
+        pos: pos.trim() || undefined,
+        // Giữ quy ước sẵn có: trống -> ',' (đánh dấu "không có")
+        collocation: norm(colloc) || ',',
+        pattern: norm(pattern) || ',',
+        example: norm(example) || undefined,
+      })
+      onSave(updated)
+    } catch (e) {
+      setErr((e as Error).message)
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="wc-edit">
+      {err && <div className="alert error">{err}</div>}
+      <div className="wc-edit-row">
+        <input
+          className="wc-edit-word"
+          autoFocus
+          value={word}
+          onChange={(e) => setWord(e.target.value)}
+          placeholder="Từ tiếng Anh *"
+        />
+        <input
+          className="wc-edit-pos"
+          value={pos}
+          onChange={(e) => setPos(e.target.value)}
+          placeholder="Từ loại (n, v…)"
+        />
+      </div>
+      <input
+        value={meaning}
+        onChange={(e) => setMeaning(e.target.value)}
+        placeholder="Nghĩa tiếng Việt"
+      />
+      <textarea
+        rows={2}
+        value={colloc}
+        onChange={(e) => setColloc(e.target.value)}
+        placeholder="Collocation — mỗi dòng một cụm"
+      />
+      <textarea
+        rows={2}
+        value={pattern}
+        onChange={(e) => setPattern(e.target.value)}
+        placeholder="Pattern — mỗi dòng một mẫu"
+      />
+      <textarea
+        rows={3}
+        value={example}
+        onChange={(e) => setExample(e.target.value)}
+        placeholder="Câu ví dụ — mỗi dòng một câu"
+      />
+      <div className="wc-edit-actions">
+        <button className="btn primary small" onClick={save} disabled={saving || !word.trim()}>
+          {saving ? 'Đang lưu…' : '💾 Lưu'}
+        </button>
+        <button className="btn small" onClick={onCancel} disabled={saving}>
+          Hủy
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ---------- Chi tiết một bộ: danh sách thẻ + thêm thẻ ----------
 type DropKey = 'word' | 'meaning' | 'collocation' | 'pattern' | 'example' | null
 
@@ -539,6 +642,9 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
     setCards((c) => c.filter((x) => x.id !== id))
   }
 
+  // Thẻ đang được sửa (mở form inline thay chỗ nội dung)
+  const [editingCard, setEditingCard] = useState<string | null>(null)
+
   // Ô "Từ tiếng Anh" kiêm ô tìm kiếm: gõ vào lọc luôn thẻ đã có (theo từ/nghĩa)
   const filteredCards = useMemo(() => {
     const q = form.word.trim().toLowerCase()
@@ -701,7 +807,19 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
         </p>
       )}
       <div className="card-list">
-        {filteredCards.map((card) => (
+        {filteredCards.map((card) =>
+          editingCard === card.id ? (
+            <div key={card.id} className="word-card editing">
+              <CardEditor
+                card={card}
+                onSave={(u) => {
+                  setCards((c) => c.map((x) => (x.id === u.id ? u : x)))
+                  setEditingCard(null)
+                }}
+                onCancel={() => setEditingCard(null)}
+              />
+            </div>
+          ) : (
           <div key={card.id} className="word-card">
             <div className="wc-main">
               <span className="wc-word">{card.word}</span>
@@ -747,11 +865,19 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
                     “{ex}”
                   </div>
                 ))}
+            <button
+              className="btn tiny wc-edit-btn"
+              title="Sửa thẻ"
+              onClick={() => setEditingCard(card.id)}
+            >
+              Sửa
+            </button>
             <button className="btn tiny danger" onClick={() => removeCard(card.id)}>
               Xóa
             </button>
           </div>
-        ))}
+          ),
+        )}
       </div>
     </div>
   )

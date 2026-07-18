@@ -1,8 +1,13 @@
-import { app, BrowserWindow, ipcMain, safeStorage, Menu } from 'electron'
+import { app, BrowserWindow, globalShortcut, ipcMain, safeStorage, Menu } from 'electron'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
 import path from 'node:path'
-import { initGlobalTranslate, disposeGlobalTranslate } from './globalTranslate'
+import {
+  initGlobalTranslate,
+  disposeGlobalTranslate,
+  setDesktopTranslateEnabled,
+  isDesktopTranslateEnabled,
+} from './globalTranslate'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -62,6 +67,39 @@ ipcMain.handle('net:status', () => {
   return { online: true }
 })
 
+// ---------- Phím tắt toàn cục: bật/tắt Dịch nhanh toàn màn hình ----------
+let translateHotkey = '' // accelerator đang đăng ký ('' = chưa có)
+
+function toggleDesktopTranslate() {
+  const next = !isDesktopTranslateEnabled()
+  setDesktopTranslateEnabled(next)
+  // Báo cửa sổ chính: lưu cài đặt + hiện toast + đồng bộ nút trong trang Cài đặt
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('desktop-translate:state', next)
+  }
+}
+
+// Đăng ký phím tắt toàn cục (accel rỗng = gỡ bỏ). Trả về true nếu thành công.
+// Renderer gọi khi mở app (theo cài đặt đã lưu) và khi người dùng đổi phím tắt.
+ipcMain.handle('hotkey:set', (_e, accel: string): boolean => {
+  if (translateHotkey) {
+    try {
+      globalShortcut.unregister(translateHotkey)
+    } catch {
+      /* bỏ qua */
+    }
+    translateHotkey = ''
+  }
+  if (!accel) return true
+  try {
+    const ok = globalShortcut.register(accel, toggleDesktopTranslate)
+    if (ok) translateHotkey = accel
+    return ok // false = tổ hợp đã bị app khác chiếm
+  } catch {
+    return false // accelerator không hợp lệ
+  }
+})
+
 // ---------- Lưu thông tin đăng nhập (mã hóa bằng safeStorage/DPAPI) ----------
 const credFile = () => path.join(app.getPath('userData'), 'cred.dat')
 
@@ -118,6 +156,10 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   disposeGlobalTranslate()
+})
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
 })
 
 app.on('activate', () => {
