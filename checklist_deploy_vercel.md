@@ -1,25 +1,20 @@
-# Checklist — CI/CD Deploy Web lên Vercel bằng GitHub Actions
+# Checklist — Deploy Web lên Vercel (Git Integration)
 
-> Mục tiêu: mỗi lần push lên nhánh `main`, GitHub Actions tự build bản web
-> (`npm run build:web` → `dist-web/`) và deploy lên Vercel.
+> Mục tiêu: kết nối repo GitHub với Vercel. Sau đó **mỗi lần push code lên GitHub,
+> Vercel tự động build & deploy lại** — không cần GitHub Action, không cần token/secrets.
 >
-> Chỉ deploy **bản web**; app desktop (Electron) không liên quan.
+> Chỉ deploy **bản web** (`npm run build:web` → `dist-web/`). App desktop (Electron)
+> không liên quan.
 
-Phương án dùng ở đây: **GitHub Actions gọi Vercel CLI** (`vercel build` +
-`vercel deploy --prebuilt`). Biến môi trường Supabase lấy từ chính project Vercel
-(qua `vercel pull`), nên **không cần** nhét key Supabase vào GitHub.
-
-> 💡 **Có cách đơn giản hơn không cần Action:** vào vercel.com → Add New Project →
-> import repo GitHub → Vercel tự deploy mỗi lần push. Nếu chọn cách này thì bỏ qua
-> phần GitHub Actions, chỉ cần làm **Bước 1 (vercel.json)** + **Bước 5 (env vars)** +
-> cấu hình Build Command / Output Directory trong dashboard. Bên dưới là cách dùng
-> Action theo đúng yêu cầu.
+**Cách này gọn hơn nhiều so với GitHub Actions:** chỉ import repo + đặt vài biến môi
+trường trên dashboard là xong. Không cần `vercel link`, không cần token, không cần
+`.github/workflows`.
 
 ---
 
-## Bước 1 — Thêm `vercel.json` vào repo
+## Bước 1 — `vercel.json` (ĐÃ XONG ✅, và BẮT BUỘC phải có)
 
-Tạo file `vercel.json` ở **gốc repo** với nội dung:
+File `vercel.json` ở gốc repo:
 
 ```json
 {
@@ -29,161 +24,116 @@ Tạo file `vercel.json` ở **gốc repo** với nội dung:
 }
 ```
 
-- `buildCommand` / `outputDirectory`: chỉ cho Vercel build đúng target web.
-- `rewrites`: SPA fallback — mọi route trả về `index.html` (app không bị 404 khi F5).
-
 - [x] Đã tạo `vercel.json` ở gốc repo.
-- [ ] Commit `vercel.json` lên git (chưa commit — làm cùng lúc đẩy code lên GitHub).
+- [x] Đã commit & push `vercel.json` lên GitHub.
+
+**Vì sao bắt buộc:** mặc định Vercel chạy `npm run build` — nhưng lệnh đó build bản
+**desktop/Electron** (ra `dist/`), sai cho web. `vercel.json` ép Vercel:
+- `buildCommand: npm run build:web` → build đúng bản web.
+- `outputDirectory: dist-web` → lấy đúng thư mục output.
+- `rewrites` → SPA fallback, mọi route trả về `index.html` (không 404 khi F5).
 
 ---
 
-## Bước 2 — Tạo project trên Vercel + lấy ORG_ID / PROJECT_ID
+## Bước 2 — Import repo vào Vercel
 
-Cần Vercel CLI ở máy (chạy 1 lần để lấy ID, không phải để deploy tay).
-
-```bash
-npm i -g vercel
-vercel login
-vercel link        # chọn/khởi tạo project cho repo này
-```
-
-Sau `vercel link` sẽ có file `.vercel/project.json` chứa `orgId` và `projectId`.
-
-- [ ] Đã `vercel link` → mở `.vercel/project.json`, ghi lại `orgId` và `projectId`.
-- [ ] Đảm bảo `.vercel` đã nằm trong `.gitignore` (KHÔNG commit thư mục này).
+- [ ] Đăng nhập **vercel.com** (nên đăng nhập bằng chính tài khoản GitHub để thấy repo).
+- [ ] **Add New… → Project**.
+- [ ] Ở danh sách **Import Git Repository**, chọn repo `Eng_app`.
+  - Lần đầu Vercel sẽ xin quyền truy cập GitHub → cho phép (có thể giới hạn đúng 1 repo).
 
 ---
 
-## Bước 3 — Tạo Vercel Access Token
+## Bước 3 — Cấu hình build (thường Vercel tự đọc `vercel.json`)
 
-- [ ] Vào **vercel.com → Account Settings → Tokens → Create Token**.
-- [ ] Đặt tên (vd `github-actions`), scope đủ để deploy, copy token (chỉ hiện 1 lần).
+Ở màn hình **Configure Project** trước khi Deploy:
 
----
+- [ ] **Framework Preset**: để `Vite` hoặc `Other` đều được (vì đã có `vercel.json`).
+- [ ] Kiểm tra **Build Command** = `npm run build:web` và **Output Directory** = `dist-web`.
+  - Vercel thường tự lấy từ `vercel.json`. Nếu ô đang trống/khác → nhập tay đúng 2 giá trị này.
+- [ ] **Install Command**: để mặc định (`npm install`).
 
-## Bước 4 — Thêm GitHub Secrets
-
-Repo GitHub → **Settings → Secrets and variables → Actions → New repository secret**.
-Thêm 3 secret:
-
-| Tên secret | Giá trị |
-|---|---|
-| `VERCEL_TOKEN` | token vừa tạo ở Bước 3 |
-| `VERCEL_ORG_ID` | `orgId` trong `.vercel/project.json` |
-| `VERCEL_PROJECT_ID` | `projectId` trong `.vercel/project.json` |
-
-- [ ] Đã thêm đủ 3 secret.
+> Nếu build lỗi vì cài gói native (`uiohook-napi`) hoặc tải Electron: xem mục
+> "Xử lý sự cố" bên dưới.
 
 ---
 
-## Bước 5 — Đặt biến môi trường Supabase trên Vercel
+## Bước 4 — Thêm biến môi trường Supabase
 
-Vercel project → **Settings → Environment Variables** → thêm cho môi trường
-**Production** (và Preview nếu muốn deploy nhánh khác):
+Vercel project → **Settings → Environment Variables** (hoặc điền ngay ở màn Configure):
 
-| Biến | Giá trị |
-|---|---|
-| `VITE_SUPABASE_URL` | URL project Supabase (giống `.env` local) |
-| `VITE_SUPABASE_ANON_KEY` | anon key (giống `.env` local) |
+| Biến | Giá trị | Môi trường |
+|---|---|---|
+| `VITE_SUPABASE_URL` | URL project Supabase (giống `.env` local) | Production + Preview |
+| `VITE_SUPABASE_ANON_KEY` | anon key (giống `.env` local) | Production + Preview |
 
-> Biến `VITE_*` được nhúng vào bundle **lúc build**. `vercel pull` sẽ kéo các biến
-> này về cho `vercel build` dùng — nên đặt ở đây, không cần bỏ vào GitHub.
+- [ ] Đã thêm 2 biến cho **Production**.
+- [ ] Đã thêm 2 biến cho **Preview** (để deploy thử ở nhánh/PR cũng chạy được).
 
-- [ ] Đã thêm 2 biến cho môi trường Production.
-
----
-
-## Bước 6 — Tạo workflow GitHub Actions
-
-Tạo file `.github/workflows/deploy-web.yml`:
-
-```yaml
-name: Deploy Web to Vercel
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'web/**'
-      - 'vite.web.config.ts'
-      - 'vercel.json'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/deploy-web.yml'
-  workflow_dispatch: {}   # cho phép bấm chạy tay trong tab Actions
-
-env:
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'   # khỏi tải binary Electron (không cần cho web)
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install Vercel CLI
-        run: npm i -g vercel@latest
-
-      - name: Pull Vercel project settings + env
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build (Vite web) trên hạ tầng Vercel
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy prebuilt lên Production
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
-```
-
-- [ ] Đã tạo file workflow và commit.
+> `VITE_*` được nhúng vào bundle **lúc build**, nên phải đặt trước khi build. File `.env`
+> local đang bị gitignore (không lên GitHub) → **bắt buộc** khai báo lại ở đây.
 
 ---
 
-## Bước 7 — Chạy thử & kiểm tra
+## Bước 5 — Deploy lần đầu & kiểm tra
 
-- [ ] Commit + push tất cả (`vercel.json`, workflow) lên `main`.
-- [ ] Mở tab **Actions** trên GitHub → xem job "Deploy Web to Vercel" chạy xanh.
-- [ ] Lấy URL production Vercel in ra ở bước Deploy (hoặc trong Vercel dashboard).
-- [ ] Mở URL → giao diện EngMaster hiện đúng, đăng nhập được, thấy đúng dữ liệu (chung DB).
-- [ ] F5 ở một trang bất kỳ → không bị 404 (xác nhận SPA rewrite hoạt động).
-- [ ] (Tùy chọn) Cập nhật **Site URL** trong Supabase → Auth = domain Vercel vừa có.
+- [ ] Bấm **Deploy**, chờ build xong.
+- [ ] Mở URL production Vercel cấp (dạng `ten-project.vercel.app`).
+- [ ] Giao diện EngMaster hiện đúng, đăng nhập được, thấy đúng dữ liệu (chung DB Supabase).
+- [ ] F5 ở một trang bất kỳ → không 404 (xác nhận SPA rewrite hoạt động).
+- [ ] (Tùy chọn) Vào Supabase → Auth → URL Configuration, đặt **Site URL** = domain Vercel.
+
+---
+
+## Bước 6 — Xác nhận auto-deploy
+
+Từ giờ Git integration tự lo việc deploy:
+
+- [ ] Sửa một thứ nhỏ trong `src/`, commit & **push lên `main`**.
+- [ ] Vào Vercel → tab **Deployments** thấy một bản build mới tự chạy.
+- [ ] Build xong → domain production cập nhật theo.
+
+**Quy tắc auto-deploy của Vercel:**
+- Push lên nhánh **`main`** (nhánh production) → deploy **Production** (cập nhật domain chính).
+- Push lên nhánh khác / mở Pull Request → deploy **Preview** (URL riêng để xem thử, không đụng production).
+
+---
+
+## (Tùy chọn) Bước 7 — Tên miền riêng
+
+- [ ] Vercel project → **Settings → Domains** → thêm domain của bạn, làm theo hướng dẫn trỏ DNS.
+- [ ] Cập nhật lại **Site URL** trong Supabase = domain thật.
 
 ---
 
 ## Xử lý sự cố thường gặp
 
-- **Build fail khi cài dependency native (`uiohook-napi`) hoặc tải Electron:**
-  các gói này chỉ cho desktop. `ELECTRON_SKIP_BINARY_DOWNLOAD=1` đã xử lý Electron.
-  Nếu vẫn lỗi vì `uiohook-napi`, cân nhắc chuyển nó sang `optionalDependencies`
-  trong `package.json` (web không import tới nó nên không ảnh hưởng).
+- **Build fail khi cài `uiohook-napi` hoặc tải Electron:** các gói này chỉ cho desktop,
+  web không dùng. Nếu build đỏ vì chúng, cân nhắc chuyển `uiohook-napi` sang
+  `optionalDependencies` trong `package.json` (web không import nên không ảnh hưởng);
+  và/hoặc thêm env `ELECTRON_SKIP_BINARY_DOWNLOAD=1` trong Vercel để bỏ tải binary Electron.
 
 - **Trang trắng / lỗi thiếu Supabase:** kiểm tra đã đặt `VITE_SUPABASE_URL` +
-  `VITE_SUPABASE_ANON_KEY` cho môi trường **Production** trên Vercel (Bước 5) chưa;
-  nhớ `VITE_*` phải có **lúc build**, không phải lúc chạy.
+  `VITE_SUPABASE_ANON_KEY` cho **Production** (Bước 4) chưa. Đổi env xong phải **redeploy**
+  mới có hiệu lực (Deployments → … → Redeploy).
 
-- **404 khi refresh trang con:** thiếu/ sai `rewrites` trong `vercel.json` (Bước 1).
+- **404 khi refresh trang con:** thiếu/sai `rewrites` trong `vercel.json` (Bước 1).
 
-- **Action đỏ ở `vercel pull`:** sai `VERCEL_TOKEN` / `VERCEL_ORG_ID` /
-  `VERCEL_PROJECT_ID` (Bước 4), hoặc token hết hạn.
+- **Vercel build ra sai (chạy `npm run build` bản desktop):** kiểm tra Build Command đã là
+  `npm run build:web` và Output Directory là `dist-web` chưa (Bước 3 / `vercel.json`).
 
-- **Muốn deploy bản xem trước cho nhánh khác (Preview):** bỏ `--prod` ở bước build &
-  deploy, và mở rộng `on.push.branches`.
+- **KHÔNG bật đồng thời GitHub Actions deploy:** dự án này đi theo Git integration; đừng
+  thêm workflow `vercel deploy` nữa kẻo **deploy 2 lần** mỗi push.
 
 ---
 
-## Tóm tắt secrets & biến cần có
+## Tóm tắt
 
-| Nơi | Tên | Dùng để |
+| Việc | Ở đâu | Bắt buộc? |
 |---|---|---|
-| GitHub Secrets | `VERCEL_TOKEN` | CLI xác thực với Vercel |
-| GitHub Secrets | `VERCEL_ORG_ID` | trỏ đúng org |
-| GitHub Secrets | `VERCEL_PROJECT_ID` | trỏ đúng project |
-| Vercel Env (Production) | `VITE_SUPABASE_URL` | build bản web |
-| Vercel Env (Production) | `VITE_SUPABASE_ANON_KEY` | build bản web |
+| `vercel.json` (build:web + dist-web + rewrites) | trong repo | ✅ (đã xong) |
+| Import repo | vercel.com | ✅ |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | Vercel → Env Vars | ✅ |
+| `vercel link`, token, GitHub Secrets, workflow | — | ❌ không cần (đó là cách Actions) |
+
+Sau khi làm xong Bước 2–5, **push code lên GitHub là web tự deploy lại** — đúng mục tiêu.
