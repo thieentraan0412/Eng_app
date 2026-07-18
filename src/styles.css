@@ -227,6 +227,7 @@ textarea::placeholder {
   padding: 2.8rem 2.4rem;
   width: 100%;
   max-width: 410px;
+  min-width: 0; /* cho phép co lại trên màn hình hẹp (flex item) */
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
@@ -351,6 +352,7 @@ textarea::placeholder {
 .app-root {
   display: flex;
   height: 100vh;
+  height: 100dvh; /* mobile: trừ thanh địa chỉ động, không bị cắt đáy */
   overflow: hidden;
 }
 .sidebar {
@@ -507,6 +509,70 @@ textarea::placeholder {
   background:
     radial-gradient(1200px 400px at 100% -10%, var(--primary-tint), transparent 60%),
     var(--bg);
+}
+
+/* ---------- Mobile chrome (ẩn trên desktop, chỉ hiện ở màn nhỏ) ---------- */
+.mobile-topbar {
+  display: none; /* bật lại trong media query mobile */
+  align-items: center;
+  gap: 0.75rem;
+  height: 54px;
+  flex-shrink: 0;
+  padding: 0 0.9rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 750;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.hamburger {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 42px;
+  height: 42px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  cursor: pointer;
+}
+.hamburger span {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--text);
+}
+.sidebar-close {
+  display: none; /* chỉ hiện trong drawer mobile */
+  margin-left: auto;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.sidebar-close:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.nav-overlay {
+  display: none; /* chỉ hiện khi drawer mở trên mobile */
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(1px);
 }
 
 /* ---------- Pages ---------- */
@@ -2573,6 +2639,61 @@ textarea::placeholder {
   max-width: 240px;
 }
 
+/* ---------- Chép câu: chế độ TẬP TRUNG (1 câu/màn, mobile) ---------- */
+.practice-focus {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.pf-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.92rem;
+  color: var(--text-soft);
+}
+.pf-count strong {
+  color: var(--primary);
+  font-size: 1.05rem;
+}
+.pf-correct strong {
+  color: var(--success);
+}
+.pf-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.pf-bar-fill {
+  height: 100%;
+  background: var(--grad-brand);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+/* Thẻ câu duy nhất: cho "thoáng" hơn khi đứng một mình */
+.practice-focus .sentence-card {
+  padding: 1.15rem 1.15rem 1.25rem;
+}
+.pf-nav {
+  display: flex;
+  gap: 0.6rem;
+}
+.pf-nav .btn {
+  flex: 1;
+  min-height: 46px;
+  font-size: 1rem;
+  font-weight: 650;
+}
+.pf-tools {
+  display: flex;
+  gap: 0.6rem;
+}
+.pf-tools .btn {
+  flex: 1;
+}
+
 /* ---------- Chép câu: chế độ quản lý ---------- */
 .manage-head {
   display: flex;
@@ -2833,31 +2954,177 @@ textarea::placeholder {
 }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 720px) {
-  .sidebar {
-    width: 68px;
-    padding: 1.15rem 0.6rem 1rem;
+
+/* ====== TABLET & MOBILE: sidebar thành drawer trượt ====== */
+@media (max-width: 860px) {
+  /* Xếp dọc: thanh top trên, nội dung dưới */
+  .app-root {
+    flex-direction: column;
   }
-  .brand-text,
-  .sidebar-foot,
-  .nav-item span:last-child {
-    display: none;
+  .mobile-topbar {
+    display: flex;
   }
-  .sidebar-head {
-    justify-content: center;
-    padding: 0.3rem 0 0.2rem;
-  }
-  .nav-item {
-    justify-content: center;
-  }
-  .nav-item.active::before {
-    display: none;
-  }
-  .stat-grid {
-    grid-template-columns: repeat(2, 1fr);
+  /* QUAN TRỌNG: cho phép .content cuộn được trong layout cột.
+     Không có min-height:0, .main-area phình theo nội dung cao (vd 100 câu)
+     và tràn khỏi .app-root (overflow:hidden) → không cuộn được. */
+  .main-area {
+    min-height: 0;
   }
   .content {
-    padding: 1.4rem;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Sidebar off-canvas (ẩn bên trái, trượt vào khi mở) */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 82vw;
+    max-width: 300px;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: var(--shadow-lg);
+    overflow-y: auto;
+  }
+  .app-root.nav-open .sidebar {
+    transform: translateX(0);
+  }
+  .app-root.nav-open .nav-overlay {
+    display: block;
+  }
+  .sidebar-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Mục menu to hơn cho dễ chạm */
+  .nav-item {
+    padding: 0.7rem 0.8rem;
+    font-size: 0.98rem;
+  }
+
+  /* Nội dung: bỏ padding rộng của desktop */
+  .content {
+    padding: 1.15rem 1rem 1.6rem;
+  }
+  .page {
+    max-width: 100%;
+  }
+
+  /* Lưới co lại */
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.7rem;
+    margin: 1.1rem 0;
+  }
+  .deck-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  .deck-detail .card-list {
+    grid-template-columns: 1fr;
+  }
+
+  /* Các thanh tiêu đề/công cụ: cho xuống dòng thay vì tràn ngang */
+  .toolbar,
+  .hl-toolbar,
+  .manage-toolbar,
+  .manage-head,
+  .sentence-head,
+  .usage-head,
+  .wl-header,
+  .list-header,
+  .editor-head {
+    flex-wrap: wrap;
+  }
+
+  /* Vùng cuộn ngang cho bảng/nội dung rộng để không đẩy cả trang */
+  .usage-card {
+    overflow-x: auto;
+  }
+
+  /* Tiêu đề trang gọn hơn trên mobile */
+  .page-title {
+    font-size: 1.55rem;
+  }
+
+  /* ===== Chép câu — bố cục mobile ===== */
+  /* Tiêu đề chiếm cả dòng, 2 tab chia đôi bên dưới cho dễ chạm */
+  .sentence-head .page-title {
+    flex: 1 1 100%;
+    margin-bottom: 0.1rem;
+  }
+  .sentence-head .tabs {
+    flex: 1 1 100%;
+    display: flex;
+  }
+  .sentence-head .tab {
+    flex: 1;
+    text-align: center;
+  }
+
+  /* Thanh tiến độ: đưa lên 1 dòng riêng, 2 nút chia đôi bên dưới */
+  .practice-bar {
+    flex-wrap: wrap;
+    gap: 0.55rem 0.6rem;
+  }
+  .practice-bar .sp-count {
+    order: -2;
+  }
+  .practice-bar .sp-bar {
+    order: -1;
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .practice-bar .btn {
+    flex: 1;
+  }
+
+  /* Nút trong thẻ câu: chia đều, đủ lớn để bấm */
+  .sc-actions .btn {
+    flex: 1;
+  }
+  /* Bớt thụt lề gợi ý để tận dụng bề ngang hẹp */
+  .sc-hints {
+    margin-left: 0;
+  }
+}
+
+/* ====== ĐIỆN THOẠI HẸP: tinh chỉnh thêm ====== */
+@media (max-width: 480px) {
+  .content {
+    padding: 0.9rem 0.8rem 1.4rem;
+  }
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .deck-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Nút & ô nhập cỡ chạm thoải mái (>=40px) */
+  .btn,
+  button.btn,
+  .nav-item {
+    min-height: 40px;
+  }
+
+  /* Tránh iOS tự phóng to khi focus input (font < 16px sẽ bị zoom) */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* Thẻ đăng nhập gọn lại cho vừa màn hình hẹp */
+  .auth-card {
+    padding: 1.9rem 1.3rem;
+  }
+  .auth-sub {
+    font-size: 0.86rem;
   }
 }
 

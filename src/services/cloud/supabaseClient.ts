@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { bumpRequest } from '../usageStats'
+import { isWeb } from '../../platform'
 
 // Khởi tạo client Supabase từ biến môi trường (.env).
 // Đây là điểm kết nối duy nhất tới Cloud (Auth + Postgres + Storage).
@@ -28,7 +29,8 @@ export const supabase: SupabaseClient = createClient(url ?? '', anonKey ?? '', {
   auth: {
     persistSession: true, // ghi nhớ đăng nhập giữa các lần mở app
     autoRefreshToken: true,
-    detectSessionInUrl: false, // app desktop, không dùng redirect URL
+    // Web dùng redirect URL (xác nhận email / magic link); desktop thì không
+    detectSessionInUrl: isWeb,
   },
   global: { fetch: countingFetch },
 })

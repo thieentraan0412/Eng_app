@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type TouchEvent } from 'react'
 import { CloudApi, type Deck, type Card } from '../services/cloud/CloudApiClient'
 import { previewInterval, type Rating } from '../services/srs'
 
@@ -57,6 +57,9 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   // Số chữ cái đã được gợi ý (lộ dần từ đầu từ)
   const [hintLevel, setHintLevel] = useState(0)
   const answerRef = useRef<HTMLInputElement>(null)
+  // Vuốt ngang (mobile) để chuyển thẻ
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
+  const swiped = useRef(false)
 
   const toggleFront = () => {
     setFrontVi((v) => {
@@ -178,6 +181,32 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
     setIdx((i) => Math.max(0, i - 1))
   }
 
+  // Vuốt ngang trên vùng thẻ: trái = từ sau, phải = từ trước.
+  // Bỏ qua nếu bắt đầu vuốt trên ô nhập/nút/form (để gõ, bấm bình thường).
+  const onStageTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    swiped.current = false // xóa cờ cũ mỗi lần chạm mới (phòng khi click không phát)
+    if ((e.target as HTMLElement).closest('input, textarea, button, form')) {
+      touchStart.current = null
+      return
+    }
+    const t = e.touches[0]
+    touchStart.current = { x: t.clientX, y: t.clientY }
+  }
+  const onStageTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
+    const start = touchStart.current
+    touchStart.current = null
+    if (!start) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - start.x
+    const dy = t.clientY - start.y
+    // Ngang đủ dài và trội hơn dọc -> coi là vuốt chuyển thẻ (không lật thẻ)
+    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+      swiped.current = true
+      if (dx < 0) goNext()
+      else goBack()
+    }
+  }
+
   // Học lại toàn bộ thẻ trong bộ (không đụng tới lịch ôn)
   const restudy = async () => {
     setError(null)
@@ -282,14 +311,21 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
         </span>
       </div>
 
-      <div className="review-stage">
+      <div className="review-stage" onTouchStart={onStageTouchStart} onTouchEnd={onStageTouchEnd}>
         <button className="fc-dir-toggle" onClick={toggleFront} title="Đổi chiều học">
           🔁 {frontVi ? 'Việt → Anh' : 'Anh → Việt'}
         </button>
 
         <div
           className={flipped ? 'flashcard flipped' : 'flashcard'}
-          onClick={() => setFlipped((f) => !f)}
+          onClick={() => {
+            // Vừa vuốt xong -> bỏ qua cú click (không lật thẻ)
+            if (swiped.current) {
+              swiped.current = false
+              return
+            }
+            setFlipped((f) => !f)
+          }}
         >
           <div className="fc-top">
             {frontVi ? (

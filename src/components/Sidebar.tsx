@@ -3,9 +3,10 @@ import { NAV, type PageKey } from '../pages/pages'
 interface Props {
   current: PageKey
   onNavigate: (page: PageKey) => void
+  onClose?: () => void // đóng drawer trên mobile
 }
 
-export default function Sidebar({ current, onNavigate }: Props) {
+export default function Sidebar({ current, onNavigate, onClose }: Props) {
   return (
     <nav className="sidebar">
       <div className="sidebar-head">
@@ -14,6 +15,11 @@ export default function Sidebar({ current, onNavigate }: Props) {
           <div className="sidebar-brand">EngMaster</div>
           <div className="sidebar-tag">Học tiếng Anh</div>
         </div>
+        {onClose && (
+          <button className="sidebar-close" onClick={onClose} aria-label="Đóng menu">
+            ✕
+          </button>
+        )}
       </div>
       <ul className="nav-list">
         {NAV.map((item) => (

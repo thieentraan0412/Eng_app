@@ -20,6 +20,13 @@ const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
 export default function AppLayout() {
   const [page, setPage] = useState<PageKey>('dashboard')
   const [toast, setToast] = useState<string | null>(null)
+  const [navOpen, setNavOpen] = useState(false) // drawer menu trên mobile
+
+  // Chọn trang: chuyển trang + đóng drawer (mobile)
+  const goto = (p: PageKey) => {
+    setPage(p)
+    setNavOpen(false)
+  }
 
   // Chọn bộ đích: deckId đã chọn > bộ dùng gần nhất > bộ mới nhất > tạo bộ mặc định
   const resolveDeck = async (deckId?: string): Promise<Deck> => {
@@ -86,6 +93,7 @@ export default function AppLayout() {
   // Đồng bộ trạng thái tính năng "Dịch nhanh toàn màn hình" theo cài đặt đã lưu,
   // và nhận yêu cầu "Lưu vào bộ từ" đến từ popup toàn cục (cửa sổ khác).
   useEffect(() => {
+    if (!window.api) return // web: không có tính năng dịch toàn màn hình / quick-save
     if (localStorage.getItem('desktop_translate_enabled') === '1') {
       window.api.setDesktopTranslate(true)
     }
@@ -125,8 +133,33 @@ export default function AppLayout() {
   }
 
   return (
-    <div className="app-root">
-      <Sidebar current={page} onNavigate={setPage} />
+    <div className={navOpen ? 'app-root nav-open' : 'app-root'}>
+      {/* Thanh trên cùng chỉ hiện trên mobile: nút mở menu + thương hiệu */}
+      <header className="mobile-topbar">
+        <button
+          className="hamburger"
+          onClick={() => setNavOpen(true)}
+          aria-label="Mở menu"
+          aria-expanded={navOpen}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+        <div className="mobile-brand">
+          <span className="brand-badge">E</span>
+          <span>EngMaster</span>
+        </div>
+      </header>
+
+      {/* Nền mờ khi mở drawer — chạm để đóng */}
+      <div
+        className="nav-overlay"
+        onClick={() => setNavOpen(false)}
+        aria-hidden={!navOpen}
+      />
+
+      <Sidebar current={page} onNavigate={goto} onClose={() => setNavOpen(false)} />
       <div className="main-area">
         <main className="content">{renderPage()}</main>
       </div>

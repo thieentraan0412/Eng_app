@@ -45,6 +45,23 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
 }
 
+// Màn hẹp (mobile) -> dùng chế độ luyện tập "tập trung" 1 câu/màn.
+// Màn rộng (desktop) -> giữ danh sách như cũ.
+function useIsNarrow(maxWidth = 860): boolean {
+  const [narrow, setNarrow] = useState(
+    typeof window !== 'undefined'
+      ? window.matchMedia(`(max-width:${maxWidth}px)`).matches
+      : false,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width:${maxWidth}px)`)
+    const onChange = () => setNarrow(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [maxWidth])
+  return narrow
+}
+
 // ================= TRANG CHÉP CÂU =================
 // Bố cục giống Từ vựng: lưới thẻ THƯ MỤC; bấm mở 1 thư mục -> chi tiết
 // (Luyện tập / Quản lý câu bên trong). Dữ liệu lưu trên Supabase (đồng bộ đa máy).
@@ -360,6 +377,14 @@ function PracticeView({ folder }: { folder: Folder }) {
     [results],
   )
 
+  // Chế độ tập trung (mobile): chỉ trỏ 1 câu/màn
+  const narrow = useIsNarrow()
+  const [cur, setCur] = useState(0)
+  // Giữ chỉ số hợp lệ khi danh sách đổi (nạp xong / xóa câu)
+  useEffect(() => {
+    setCur((c) => Math.min(Math.max(0, c), Math.max(0, items.length - 1)))
+  }, [items.length])
+
   // Gõ 1 câu: chỉ cập nhật input của câu đó + hẹn giờ lưu. Callback ổn định
   // nên chỉ thẻ đang gõ re-render, 99 thẻ còn lại bỏ qua (React.memo).
   const setInput = useCallback(
@@ -457,6 +482,66 @@ function PracticeView({ folder }: { folder: Folder }) {
       <p className="muted">
         Thư mục này chưa có câu nào. Chuyển sang tab <strong>Quản lý</strong> để thêm câu.
       </p>
+    )
+  }
+
+  // ===== Chế độ TẬP TRUNG (mobile): 1 câu/màn + điều hướng Trước/Tiếp =====
+  if (narrow) {
+    const idx = Math.min(cur, items.length - 1)
+    const item = items[idx]
+    const done = results[item.id] // đã chấm câu này chưa
+    return (
+      <div className="practice-focus">
+        <div className="pf-top">
+          <span className="pf-count">
+            Câu <strong>{idx + 1}</strong> / {items.length}
+          </span>
+          <span className="pf-correct">
+            Đúng <strong>{correctCount}</strong>
+            {saving && <span className="muted sp-saving"> · đang lưu…</span>}
+          </span>
+        </div>
+        <div className="pf-bar">
+          <div
+            className="pf-bar-fill"
+            style={{ width: `${((idx + 1) / items.length) * 100}%` }}
+          />
+        </div>
+
+        <SentenceCard
+          key={item.id}
+          index={idx + 1}
+          item={item}
+          value={inputs[item.id] ?? ''}
+          result={results[item.id]}
+          revealed={!!revealed[item.id]}
+          onChange={setInput}
+          onCheck={checkOne}
+          onReveal={reveal}
+        />
+
+        <div className="pf-nav">
+          <button className="btn" disabled={idx === 0} onClick={() => setCur(idx - 1)}>
+            ‹ Trước
+          </button>
+          <button
+            className={done ? 'btn primary' : 'btn'}
+            disabled={idx >= items.length - 1}
+            onClick={() => setCur(idx + 1)}
+          >
+            Tiếp ›
+          </button>
+        </div>
+
+        <div className="pf-tools">
+          <button className="btn tiny" onClick={checkAll}>
+            Kiểm tra tất cả
+          </button>
+          <button className="btn tiny" onClick={resetProgress} title="Xóa bài đã làm">
+            Làm lại
+          </button>
+        </div>
+      </div>
     )
   }
 

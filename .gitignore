@@ -6,8 +6,12 @@ node_modules/
 # ===== Build output =====
 dist/
 dist-electron/
+dist-web/
 build/
 out/
+
+# ===== Vercel =====
+.vercel/
 
 # ===== Electron builder output =====
 release/

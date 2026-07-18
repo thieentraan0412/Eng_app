@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { isDesktop } from '../platform'
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
@@ -17,7 +18,7 @@ export default function SettingsPage() {
     const next = !deskTrans
     setDeskTrans(next)
     localStorage.setItem('desktop_translate_enabled', next ? '1' : '0')
-    window.api.setDesktopTranslate(next)
+    window.api?.setDesktopTranslate(next)
   }
 
   const toggleSuggest = () => {
@@ -96,19 +97,22 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      <div className="setting-row">
-        <div>
-          <div className="setting-label">Dịch nhanh toàn màn hình</div>
-          <div className="muted">
-            {deskTrans
-              ? 'Bôi/tô chữ ở BẤT KỲ app nào (trình duyệt, Word, PDF…) để dịch'
-              : 'Đang tắt'}
+      {/* Dịch toàn màn hình là tính năng nền của desktop → ẩn trên web */}
+      {isDesktop && (
+        <div className="setting-row">
+          <div>
+            <div className="setting-label">Dịch nhanh toàn màn hình</div>
+            <div className="muted">
+              {deskTrans
+                ? 'Bôi/tô chữ ở BẤT KỲ app nào (trình duyệt, Word, PDF…) để dịch'
+                : 'Đang tắt'}
+            </div>
           </div>
+          <button className="btn" onClick={toggleDeskTrans}>
+            {deskTrans ? 'Tắt' : 'Bật'}
+          </button>
         </div>
-        <button className="btn" onClick={toggleDeskTrans}>
-          {deskTrans ? 'Tắt' : 'Bật'}
-        </button>
-      </div>
+      )}
     </div>
   )
 }

@@ -10,7 +10,10 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "dist": "npm run build && electron-builder --win"
+    "dist": "npm run build && electron-builder --win",
+    "dev:web": "vite --config vite.web.config.ts",
+    "build:web": "tsc && vite build --config vite.web.config.ts",
+    "preview:web": "vite preview --config vite.web.config.ts"
   },
   "build": {
     "appId": "com.engmaster.app",
