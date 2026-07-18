@@ -581,11 +581,35 @@ const SentenceCard = memo(function SentenceCard({
     onChange(item.id, newBefore + after)
   }
 
+  // Chuyển focus sang ô nhập của câu kế tiếp (dir=1) hoặc trước đó (dir=-1)
+  const focusSibling = (dir: 1 | -1) => {
+    const inputs = Array.from(
+      document.querySelectorAll<HTMLTextAreaElement>('.sc-input')
+    )
+    const cur = taRef.current ? inputs.indexOf(taRef.current) : -1
+    const next = inputs[cur + dir]
+    if (next) next.focus()
+  }
+
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    // Enter (không Shift) → kiểm tra đáp án. Shift+Enter để xuống dòng.
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       setOpen(false)
       onCheck(item.id)
+      return
+    }
+    // Tab → nếu đang mở gợi ý thì nhận gợi ý, ngược lại nhảy sang ô câu kế tiếp
+    // (Shift+Tab quay lại ô trước đó).
+    if (e.key === 'Tab') {
+      if (!e.shiftKey && open && suggestions.length > 0) {
+        e.preventDefault()
+        accept(suggestions[active])
+        return
+      }
+      e.preventDefault()
+      setOpen(false)
+      focusSibling(e.shiftKey ? -1 : 1)
       return
     }
     if (!open || suggestions.length === 0) return
@@ -595,9 +619,6 @@ const SentenceCard = memo(function SentenceCard({
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setActive((i) => (i - 1 + suggestions.length) % suggestions.length)
-    } else if (e.key === 'Tab' || e.key === 'Enter') {
-      e.preventDefault()
-      accept(suggestions[active])
     } else if (e.key === 'Escape') {
       e.preventDefault()
       setOpen(false)
@@ -629,7 +650,7 @@ const SentenceCard = memo(function SentenceCard({
         <textarea
           ref={taRef}
           className="sc-input"
-          placeholder="Nhập câu tiếng Anh của bạn… (Ctrl+Enter để kiểm tra)"
+          placeholder="Nhập câu tiếng Anh của bạn… (Enter để kiểm tra)"
           spellCheck={false}
           rows={2}
           value={value}
