@@ -40,8 +40,8 @@
   - [x] Tự điền các trường trống bằng gợi ý tốt nhất khi lưu
 - [x] Nhập nhiều giá trị dạng chip (MultiField) cho nghĩa/collocation/pattern/ví dụ
 - [x] Tìm kiếm/lọc thẻ ngay trong ô nhập từ (đếm "X / Y thẻ")
-- [ ] ❌ **Sửa thẻ từ** — hiện chỉ thêm/xóa, không sửa được
-- [ ] ❌ Phân trang / virtual scroll khi bộ từ lớn
+- [x] ✅ **Sửa thẻ từ** — nút "Sửa" trên thẻ mở form inline (từ/từ loại/nghĩa/collocation/pattern/ví dụ) qua `CloudApi.updateCard` (19/07)
+- [x] ✅ Phân trang khi bộ từ lớn — render 30 thẻ đầu, cuộn gần đáy tự nạp thêm (IntersectionObserver, rootMargin 400px) + nút "Hiện thêm (N thẻ còn lại)"; đổi bộ/từ khóa lọc thì reset về trang đầu (19/07)
 - [ ] ⚠️ Trường trống collocation/pattern lưu sentinel `','` — hack dễ vỡ, nên chuẩn hóa thành null/mảng rỗng
 
 ### 2.2. Flashcard SRS (FlashcardPage)
@@ -68,16 +68,16 @@
 - [x] CRUD bài đọc
 - [x] **Highlight nhiều màu** (vàng/xanh lá/xanh dương/hồng + tẩy) ⭐ — tách/gộp vùng chồng lấn theo offset ký tự, lưu cloud (jsonb), fallback localStorage khi lỗi mạng
 - [x] Tích hợp bôi màu → dịch (popup dịch toàn app hoạt động trong bài đọc, không xung đột với thanh highlight)
-- [ ] ❌ Trường `level` bài đọc chưa dùng trong UI
-- [ ] ❌ Chưa có: ghi chú theo highlight, thống kê từ đã tra trong bài, TTS đọc bài
+- [x] ✅ Trường `level` bài đọc — chọn A1–C2 khi tạo bài, badge trên thẻ/tiêu đề, chip lọc theo cấp độ ở danh sách (19/07)
+- [x] ✅ Ghi chú theo highlight (bấm vùng bôi màu -> popover nhập ghi chú, lưu chung jsonb `highlights`, gạch chấm + 📝 đánh dấu) · thống kê từ đã tra trong bài (đếm cụm ≤3 từ đã bôi chọn, panel 🔍 + xóa lịch sử, localStorage) · TTS đọc bài (🔊 nghe cả bài chia đoạn ~180 ký tự, tạm dừng/tiếp tục/dừng + nút 🔊 đọc đoạn đang chọn) (19/07)
 
 ### 2.5. Viết (WritingPage)
 - [x] CRUD bài viết, đếm từ/ký tự, lưu Ctrl+S, hiện thời điểm lưu
 - [x] **Kiểm tra chính tả offline** (nspell + từ điển Hunspell đóng gói): gạch đỏ ngay trên textarea (overlay backdrop đồng bộ scroll), gợi ý sửa, "Bỏ qua" (từ điển cá nhân trong localStorage)
 - [x] **Kiểm tra ngữ pháp 2 tầng** ⭐: rule offline tức thì (to + V sai dạng, a/an theo âm, lặp từ) + **LanguageTool online** (level picky, lọc trùng, tối đa 15 lỗi), nút "✓ Sửa cả câu (N)"
 - [x] **Gợi ý từ real-time** ⭐: autocomplete (Trie), next-word (n-gram), synonym (thesaurus) — toàn bộ offline, Tab chèn gợi ý đầu
-- [ ] ❌ Trường `topic` có trong DB nhưng UI chưa dùng; chưa có gợi ý đề bài
-- [ ] ❌ Chưa có tự động lưu nháp (autosave) — phải bấm lưu
+- [x] ✅ Trường `topic` + gợi ý đề bài — ô Chủ đề (datalist gợi ý), nút 🎲 lấy ngẫu nhiên từ kho 18 đề theo chủ đề (điền chủ đề + tiêu đề), badge chủ đề trên thẻ danh sách (19/07)
+- [x] ✅ Autosave — ngừng gõ 2.5s có thay đổi là tự lưu ngầm (hiện "Đã lưu HH:MM · tự động"); chặn lưu song song tránh tạo trùng bài; autosave lỗi mạng thì im lặng thử lại lần sau; Ctrl+S vẫn lưu tay được (19/07)
 - [ ] ❌ Chưa có AI nhận xét/sửa diễn đạt (WritingAssistProvider trong thiết kế)
 
 ### 2.6. Chép câu (SentencePage) ⭐ tính năng lớn nhất
@@ -91,8 +91,8 @@
 - [x] Gợi ý từ khi gõ (⌨ autocomplete / → next-word / ≈ synonym), Tab chèn hoặc nhảy câu
 - [x] Responsive: màn hẹp → chế độ focus 1 câu/màn hình
 - [x] **Nhập/Xuất Excel** ⭐ (.xlsx/.xls/.csv): nhận diện cột theo tên không dấu, cột VI bắt buộc, **thiếu EN tự dịch máy** (Google→MyMemory), preview + progress + báo cáo kết quả; xuất Excel + file mẫu
-- [ ] ❌ Chưa có mức C2 (chỉ A1–C1); trường hints/level/topic nhập được nhưng chưa dùng để lọc/luyện theo cấp độ
-- [ ] ❌ Chưa có chế độ luyện nghe-chép (dictation bằng TTS)
+- [x] ✅ Mức C2 (CefrLevel A1–C2) + tab Luyện tập lọc được theo CẤP ĐỘ (chip A1–C2) và CHỦ ĐỀ (dropdown); bộ đếm/thanh tiến độ/Kiểm tra tất cả chạy theo danh sách đã lọc (19/07)
+- [x] ✅ Chế độ NGHE-CHÉP (dictation bằng TTS) — toggle "✍️ Dịch / 🎧 Nghe-chép" (nhớ lựa chọn): giấu đề tiếng Việt, nút 🔊 Nghe + 🐢 Chậm đọc câu tiếng Anh, gõ lại và chấm bằng bộ chấm mờ sẵn có; đề/gợi ý lộ ra sau khi chấm hoặc xem đáp án (19/07)
 
 ### 2.7. Dịch (2 tầng — trong app + toàn hệ điều hành)
 - [x] **TranslatePopup trong app**: bôi đen bất kỳ chữ nào (kể cả trong input/textarea) → popup dịch; 1 từ tra từ điển offline tức thì, câu dài dịch online (Google gtx → MyMemory fallback); chip từ loại (n/v/adj/adv) chọn nghĩa; sửa nghĩa trước khi lưu; chọn bộ từ đích; "➕ Lưu vào bộ từ"

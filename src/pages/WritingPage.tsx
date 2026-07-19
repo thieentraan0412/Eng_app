@@ -32,6 +32,28 @@ interface SpellItem {
   suggestions: string[]
 }
 
+// Kho gợi ý ĐỀ BÀI luyện viết — bấm 🎲 lấy ngẫu nhiên (điền chủ đề + tiêu đề)
+const WRITING_PROMPTS: { topic: string; title: string }[] = [
+  { topic: 'Daily life', title: 'Describe your typical morning routine' },
+  { topic: 'Daily life', title: 'What did you do last weekend?' },
+  { topic: 'Travel', title: 'Describe a place you want to visit and why' },
+  { topic: 'Travel', title: 'The most memorable trip you have ever taken' },
+  { topic: 'Work & Study', title: 'Why are you learning English?' },
+  { topic: 'Work & Study', title: 'Describe your dream job' },
+  { topic: 'Technology', title: 'How has technology changed the way we live?' },
+  { topic: 'Technology', title: 'Do social networks bring people closer together?' },
+  { topic: 'Food', title: 'Describe your favorite Vietnamese dish to a foreigner' },
+  { topic: 'Food', title: 'Is it better to cook at home or eat out?' },
+  { topic: 'Family & Friends', title: 'Describe a person who influenced you the most' },
+  { topic: 'Family & Friends', title: 'What makes a good friend?' },
+  { topic: 'Environment', title: 'What can individuals do to protect the environment?' },
+  { topic: 'Health', title: 'How do you keep yourself healthy?' },
+  { topic: 'Opinion', title: 'Is it better to live in the city or the countryside?' },
+  { topic: 'Opinion', title: 'Should students wear uniforms at school?' },
+  { topic: 'Story', title: 'Write a short story beginning with “It was raining heavily…”' },
+  { topic: 'Culture', title: 'Describe a Vietnamese festival to a foreign friend' },
+]
+
 function countWords(text: string): number {
   const t = text.trim()
   return t ? t.split(/\s+/).length : 0
@@ -104,7 +126,10 @@ export default function WritingPage() {
         <div className="deck-grid">
           {writings.map((w) => (
             <div key={w.id} className="deck-card" onClick={() => setSel(w.id)}>
-              <div className="deck-name">{w.title || '(chưa có tiêu đề)'}</div>
+              <div className="deck-name">
+                {w.title || '(chưa có tiêu đề)'}
+                {w.topic && <span className="level-badge">{w.topic}</span>}
+              </div>
               <span className="muted">{w.word_count} từ</span>
               <button
                 className="btn tiny danger"
@@ -135,6 +160,7 @@ function Editor({
 }) {
   const [id, setId] = useState<string | null>(writing?.id ?? null)
   const [title, setTitle] = useState(writing?.title ?? '')
+  const [topic, setTopic] = useState(writing?.topic ?? '')
   const [content, setContent] = useState(writing?.content ?? '')
   const [caret, setCaret] = useState(0)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
@@ -277,22 +303,35 @@ function Editor({
   }
   const fixableCount = grammar.filter((m) => m.replacements.length > 0).length
 
-  const save = async (e?: FormEvent) => {
+  // Nội dung đã lưu lần cuối — để autosave biết có thay đổi hay không
+  const lastSaved = useRef({
+    title: writing?.title ?? '',
+    topic: writing?.topic ?? '',
+    content: writing?.content ?? '',
+  })
+  const savingRef = useRef(false) // chặn 2 lượt lưu chạy song song (tránh tạo trùng bài)
+
+  const save = async (e?: FormEvent, auto = false) => {
     e?.preventDefault()
+    if (savingRef.current) return
+    savingRef.current = true
     setSaving(true)
     setError(null)
     try {
       const wc = countWords(content)
       if (id) {
-        await CloudApi.updateWriting(id, title, content, wc)
+        await CloudApi.updateWriting(id, title, content, wc, topic)
       } else {
-        const created = await CloudApi.createWriting(title, content, wc)
+        const created = await CloudApi.createWriting(title, content, wc, topic)
         setId(created.id)
       }
-      setSavedAt(new Date().toLocaleTimeString('vi-VN'))
+      lastSaved.current = { title, topic, content }
+      setSavedAt(`${new Date().toLocaleTimeString('vi-VN')}${auto ? ' · tự động' : ''}`)
     } catch (err) {
-      setError((err as Error).message)
+      // Autosave lỗi (mất mạng…) thì im lặng, lần gõ tiếp theo sẽ thử lại
+      if (!auto) setError((err as Error).message)
     } finally {
+      savingRef.current = false
       setSaving(false)
     }
   }
@@ -310,6 +349,25 @@ function Editor({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  // TỰ ĐỘNG LƯU NHÁP: ngừng gõ 2.5s và có thay đổi -> lưu ngầm (không cần Ctrl+S)
+  useEffect(() => {
+    const changed =
+      title !== lastSaved.current.title ||
+      topic !== lastSaved.current.topic ||
+      content !== lastSaved.current.content
+    if (!changed || (!title.trim() && !content.trim())) return
+    const h = setTimeout(() => void saveRef.current(undefined, true), 2500)
+    return () => clearTimeout(h)
+  }, [title, topic, content])
+
+  // Chọn ngẫu nhiên 1 đề bài (khác đề đang hiện) -> điền chủ đề + tiêu đề
+  const rollPrompt = () => {
+    const pool = WRITING_PROMPTS.filter((p) => p.title !== title)
+    const p = pool[Math.floor(Math.random() * pool.length)]
+    setTitle(p.title)
+    setTopic(p.topic)
+  }
 
   const typeLabel: Record<Suggestion['type'], string> = {
     auto: 'gợi ý',
@@ -341,6 +399,25 @@ function Editor({
             Xóa
           </button>
         )}
+      </div>
+
+      {/* Chủ đề bài viết + gợi ý đề ngẫu nhiên */}
+      <div className="writing-meta-row">
+        <input
+          className="writing-topic"
+          placeholder="Chủ đề (VD: Travel, Daily life…)"
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          list="writing-topics"
+        />
+        <datalist id="writing-topics">
+          {[...new Set(WRITING_PROMPTS.map((p) => p.topic))].map((t) => (
+            <option key={t} value={t} />
+          ))}
+        </datalist>
+        <button type="button" className="btn small" onClick={rollPrompt} title="Lấy đề bài ngẫu nhiên">
+          🎲 Gợi ý đề bài
+        </button>
       </div>
 
       {error && <div className="alert error">{error}</div>}

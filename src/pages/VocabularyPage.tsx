@@ -287,7 +287,7 @@ function MultiField(props: MultiFieldProps) {
   )
 }
 
-// ---------- Sửa thẻ từ: form inline thay chỗ nội dung thẻ ----------
+// ---------- Sửa thẻ từ: MODAL nổi giữa màn hình, nhãn rõ từng ô ----------
 function CardEditor({
   card,
   onSave,
@@ -337,54 +337,107 @@ function CardEditor({
     }
   }
 
+  // Esc để đóng modal
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onCancel])
+
   return (
-    <div className="wc-edit">
-      {err && <div className="alert error">{err}</div>}
-      <div className="wc-edit-row">
-        <input
-          className="wc-edit-word"
-          autoFocus
-          value={word}
-          onChange={(e) => setWord(e.target.value)}
-          placeholder="Từ tiếng Anh *"
-        />
-        <input
-          className="wc-edit-pos"
-          value={pos}
-          onChange={(e) => setPos(e.target.value)}
-          placeholder="Từ loại (n, v…)"
-        />
-      </div>
-      <input
-        value={meaning}
-        onChange={(e) => setMeaning(e.target.value)}
-        placeholder="Nghĩa tiếng Việt"
-      />
-      <textarea
-        rows={2}
-        value={colloc}
-        onChange={(e) => setColloc(e.target.value)}
-        placeholder="Collocation — mỗi dòng một cụm"
-      />
-      <textarea
-        rows={2}
-        value={pattern}
-        onChange={(e) => setPattern(e.target.value)}
-        placeholder="Pattern — mỗi dòng một mẫu"
-      />
-      <textarea
-        rows={3}
-        value={example}
-        onChange={(e) => setExample(e.target.value)}
-        placeholder="Câu ví dụ — mỗi dòng một câu"
-      />
-      <div className="wc-edit-actions">
-        <button className="btn primary small" onClick={save} disabled={saving || !word.trim()}>
-          {saving ? 'Đang lưu…' : '💾 Lưu'}
-        </button>
-        <button className="btn small" onClick={onCancel} disabled={saving}>
-          Hủy
-        </button>
+    // Bấm nền mờ bên ngoài -> đóng (chỉ khi bấm đúng nền, không phải nội dung)
+    <div
+      className="modal-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onCancel()
+      }}
+    >
+      <div className="modal" role="dialog" aria-modal="true">
+        <div className="modal-head">
+          <div className="modal-title">
+            ✏️ Sửa thẻ · <strong>{card.word}</strong>
+          </div>
+          <button className="modal-close" onClick={onCancel} title="Đóng (Esc)">
+            ✕
+          </button>
+        </div>
+
+        {err && <div className="alert error">{err}</div>}
+
+        <div className="modal-body">
+          <div className="m-row">
+            <label className="m-field grow">
+              <span className="m-label">
+                Từ tiếng Anh <em>*</em>
+              </span>
+              <input autoFocus value={word} onChange={(e) => setWord(e.target.value)} />
+            </label>
+            <label className="m-field m-pos">
+              <span className="m-label">Từ loại</span>
+              <input
+                value={pos}
+                onChange={(e) => setPos(e.target.value)}
+                placeholder="n / v / adj…"
+              />
+            </label>
+          </div>
+
+          <label className="m-field">
+            <span className="m-label">Nghĩa tiếng Việt</span>
+            <input
+              value={meaning}
+              onChange={(e) => setMeaning(e.target.value)}
+              placeholder="Nhiều nghĩa cách nhau bằng dấu ;"
+            />
+          </label>
+
+          <label className="m-field">
+            <span className="m-label">
+              Collocation <small>· mỗi dòng một cụm</small>
+            </span>
+            <textarea
+              rows={3}
+              value={colloc}
+              onChange={(e) => setColloc(e.target.value)}
+              placeholder={'great blessing\nblessing upon'}
+            />
+          </label>
+
+          <label className="m-field">
+            <span className="m-label">
+              Pattern (mẫu câu) <small>· mỗi dòng một mẫu</small>
+            </span>
+            <textarea
+              rows={3}
+              value={pattern}
+              onChange={(e) => setPattern(e.target.value)}
+              placeholder={'blessing of sth\nblessing to do sth'}
+            />
+          </label>
+
+          <label className="m-field">
+            <span className="m-label">
+              Câu ví dụ <small>· mỗi dòng một câu</small>
+            </span>
+            <textarea
+              rows={4}
+              value={example}
+              onChange={(e) => setExample(e.target.value)}
+              placeholder="Mỗi dòng một câu ví dụ…"
+            />
+          </label>
+        </div>
+
+        <div className="modal-foot">
+          <button className="btn" onClick={onCancel} disabled={saving}>
+            Hủy
+          </button>
+          <button className="btn primary" onClick={save} disabled={saving || !word.trim()}>
+            {saving ? 'Đang lưu…' : '💾 Lưu thay đổi'}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -655,6 +708,32 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
     )
   }, [cards, form.word])
 
+  // ----- Phân trang khi bộ từ lớn: chỉ render PAGE_SIZE thẻ đầu,
+  // cuộn tới cuối tự nạp thêm (IntersectionObserver) hoặc bấm "Hiện thêm" -----
+  const PAGE_SIZE = 30
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+
+  // Đổi bộ / đổi từ khóa lọc -> quay về trang đầu
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [deck.id, form.word])
+
+  const visibleCards = filteredCards.slice(0, visibleCount)
+  const hasMore = filteredCards.length > visibleCount
+
+  useEffect(() => {
+    if (!hasMore || !sentinelRef.current) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) setVisibleCount((n) => n + PAGE_SIZE)
+      },
+      { rootMargin: '400px' }, // nạp sớm trước khi chạm đáy cho mượt
+    )
+    io.observe(sentinelRef.current)
+    return () => io.disconnect()
+  }, [hasMore, visibleCount])
+
   return (
     <div className="page deck-detail">
       <button className="btn tiny" onClick={onBack}>
@@ -807,19 +886,7 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
         </p>
       )}
       <div className="card-list">
-        {filteredCards.map((card) =>
-          editingCard === card.id ? (
-            <div key={card.id} className="word-card editing">
-              <CardEditor
-                card={card}
-                onSave={(u) => {
-                  setCards((c) => c.map((x) => (x.id === u.id ? u : x)))
-                  setEditingCard(null)
-                }}
-                onCancel={() => setEditingCard(null)}
-              />
-            </div>
-          ) : (
+        {visibleCards.map((card) => (
           <div key={card.id} className="word-card">
             <div className="wc-main">
               <span className="wc-word">{card.word}</span>
@@ -876,9 +943,30 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
               Xóa
             </button>
           </div>
-          ),
+        ))}
+        {hasMore && (
+          <div ref={sentinelRef} className="load-more">
+            <button className="btn" onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}>
+              Hiện thêm ({filteredCards.length - visibleCount} thẻ còn lại)
+            </button>
+          </div>
         )}
       </div>
+
+      {/* Modal sửa thẻ — nổi giữa màn hình, nền mờ phía sau */}
+      {(() => {
+        const editing = cards.find((c) => c.id === editingCard)
+        return editing ? (
+          <CardEditor
+            card={editing}
+            onSave={(u) => {
+              setCards((c) => c.map((x) => (x.id === u.id ? u : x)))
+              setEditingCard(null)
+            }}
+            onCancel={() => setEditingCard(null)}
+          />
+        ) : null
+      })()}
     </div>
   )
 }

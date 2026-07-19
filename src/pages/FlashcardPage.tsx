@@ -39,33 +39,116 @@ function SpeakToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   )
 }
 
+// Ngày hôm nay theo GIỜ ĐỊA PHƯƠNG (yyyy-mm-dd) — so với srs_due_date để đếm thẻ đến hạn
+function todayLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate(),
+  ).padStart(2, '0')}`
+}
+
 export default function FlashcardPage() {
-  const [decks, setDecks] = useState<Deck[]>([])
+  // Kèm danh sách thẻ từng bộ để hiện tiến độ: đã học bao nhiêu / đến hạn bao nhiêu
+  const [decks, setDecks] = useState<{ deck: Deck; cards: Card[] }[] | null>(null)
   const [session, setSession] = useState<Deck | null>(null)
+  // Tiến độ ôn trên cloud (chứa danh sách thẻ đã học qua của từng bộ)
+  const [rvMap, setRvMap] = useState<Map<string, ReviewSaved>>(() => new Map())
 
   useEffect(() => {
-    CloudApi.listDecks().then(setDecks)
-  }, [])
+    ;(async () => {
+      const ds = await CloudApi.listDecks()
+      const withCards = await Promise.all(
+        ds.map(async (deck) => ({ deck, cards: await CloudApi.listCards(deck.id) })),
+      )
+      setDecks(withCards)
+    })().catch(() => setDecks([]))
+    CloudApi.listReviewProgress()
+      .then((rows) => setRvMap(new Map(rows.map((r) => [r.deck_id, r.data as ReviewSaved]))))
+      .catch(() => {
+        /* offline -> dùng bản local trong rvPick */
+      })
+  }, [session]) // quay lại từ phiên ôn -> tải lại số liệu mới nhất
 
   if (session) {
     return <ReviewSession deck={session} onExit={() => setSession(null)} />
   }
 
+  const today = todayLocal()
+
   return (
     <div className="page">
       <h1 className="page-title">Ôn tập (Flashcard)</h1>
       <p className="muted">Chọn một bộ để bắt đầu ôn những thẻ đến hạn hôm nay.</p>
-      {decks.length === 0 && <p className="muted">Chưa có bộ từ. Hãy tạo ở mục Từ vựng.</p>}
-      <div className="deck-grid">
-        {decks.map((deck) => (
-          <button key={deck.id} className="deck-card" onClick={() => setSession(deck)}>
-            <div className="deck-name">{deck.name}</div>
-            <span className="muted">Bấm để ôn →</span>
-          </button>
-        ))}
-      </div>
+      {!decks ? (
+        <p className="muted">Đang tải…</p>
+      ) : decks.length === 0 ? (
+        <p className="muted">Chưa có bộ từ. Hãy tạo ở mục Từ vựng.</p>
+      ) : (
+        <div className="deck-grid">
+          {decks.map(({ deck, cards }) => {
+            // "Đã học" = thẻ đã ĐI QUA trong phiên ôn (danh sách `s` lưu cloud/local)
+            // hoặc đã bấm đánh giá SRS ít nhất 1 lần (srs_reps > 0)
+            const saved = rvPick(deck.id, rvMap.get(deck.id) ?? null)
+            const seenSet = new Set(saved?.s ?? [])
+            const learned = cards.filter((c) => c.srs_reps > 0 || seenSet.has(c.id)).length
+            const due = cards.filter((c) => c.srs_due_date <= today).length
+            const pct = cards.length ? Math.round((learned / cards.length) * 100) : 0
+            return (
+              <button key={deck.id} className="deck-card" onClick={() => setSession(deck)}>
+                <div className="deck-name">{deck.name}</div>
+                <span className="muted">
+                  Đã học {learned}/{cards.length} từ · {pct}%
+                </span>
+                <div className="ex-deck-bar" title={`${pct}% đã học`}>
+                  <div style={{ width: `${pct}%` }} />
+                </div>
+                <div className="fc-deck-meta">
+                  {cards.length === 0 ? (
+                    <span className="fc-due-badge idle">Chưa có thẻ</span>
+                  ) : due > 0 ? (
+                    <span className="fc-due-badge due">🔔 {due} thẻ đến hạn</span>
+                  ) : (
+                    <span className="fc-due-badge ok">✓ Xong hôm nay</span>
+                  )}
+                  <span className="deck-arrow">→</span>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
+}
+
+// ---------- Lưu phiên ôn đang dở (localStorage + Supabase) ----------
+// Lưu thứ tự thẻ + thẻ đang học, ghi song song 2 nơi; khi vào đọc bản có `t` mới hơn
+// -> app / web PC / điện thoại đều mở đúng thẻ gần nhất đang ôn.
+interface ReviewSaved {
+  q: string[] // thứ tự id thẻ trong phiên
+  cur: string | null // id thẻ đang học
+  i: number // vị trí dự phòng (khi thẻ đang học bị xóa)
+  d: number // số thẻ đã ôn
+  p: boolean // true = chế độ "học lại cả bộ"
+  t?: number // thời điểm lưu (ms)
+  s?: string[] // id các thẻ ĐÃ HỌC QUA (giữ vĩnh viễn, không xóa khi xong phiên)
+}
+
+const rvKey = (deckId: string) => `rv_progress_${deckId}`
+
+function rvLocal(deckId: string): ReviewSaved | null {
+  try {
+    return JSON.parse(localStorage.getItem(rvKey(deckId)) ?? '') as ReviewSaved
+  } catch {
+    return null
+  }
+}
+
+// Gộp tiến độ local vs cloud: lấy bản lưu sau cùng
+function rvPick(deckId: string, cloud: ReviewSaved | null): ReviewSaved | null {
+  const local = rvLocal(deckId)
+  if (local && cloud) return (cloud.t ?? 0) > (local.t ?? 0) ? cloud : local
+  return cloud ?? local
 }
 
 const RATINGS: { key: Rating; label: string; cls: string }[] = [
@@ -129,13 +212,88 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
     setFlipped(false)
   }
 
+  // Vào phiên: có phiên đang dở (local/cloud) -> khôi phục đúng thẻ đang học;
+  // không có -> lấy thẻ đến hạn hôm nay như bình thường.
   useEffect(() => {
-    CloudApi.getDueCards(deck.id)
-      .then(setQueue)
-      .catch((e) => setError((e as Error).message))
+    let alive = true
+    ;(async () => {
+      try {
+        let cloud: ReviewSaved | null = null
+        try {
+          cloud = (await CloudApi.getReviewProgress(deck.id)) as ReviewSaved | null
+        } catch {
+          /* offline / chưa chạy migration -> dùng bản local */
+        }
+        const saved = rvPick(deck.id, cloud)
+        // Khôi phục danh sách thẻ ĐÃ HỌC QUA (kể cả khi phiên cũ đã xong)
+        if (saved?.s?.length) seen.current = new Set(saved.s)
+        if (saved && saved.q?.length) {
+          const all = await CloudApi.listCards(deck.id)
+          const byId = new Map(all.map((c) => [c.id, c]))
+          // Giữ nguyên thứ tự phiên cũ; thẻ đã bị xóa thì loại khỏi hàng
+          const restored = saved.q
+            .map((id) => byId.get(id))
+            .filter((c): c is Card => Boolean(c))
+          let pos = saved.cur ? restored.findIndex((c) => c.id === saved.cur) : -1
+          if (pos === -1) pos = Math.min(saved.i ?? 0, restored.length)
+          // Các thẻ ĐỨNG TRƯỚC vị trí đang dở chắc chắn đã học qua
+          // (bù cho phiên lưu từ phiên bản cũ chưa có danh sách `s`)
+          restored.slice(0, pos + 1).forEach((c) => seen.current.add(c.id))
+          // Phiên còn thẻ chưa ôn -> tiếp tục đúng chỗ dở
+          if (restored.length > 0 && pos < restored.length) {
+            if (!alive) return
+            setPractice(!!saved.p)
+            setDone(saved.d ?? 0)
+            setQueue(restored)
+            setIdx(pos)
+            return
+          }
+        }
+        const due = await CloudApi.getDueCards(deck.id)
+        if (alive) setQueue(due)
+      } catch (e) {
+        if (alive) setError((e as Error).message)
+      }
+    })()
+    return () => {
+      alive = false
+    }
   }, [deck.id])
 
   const current = queue?.[idx]
+
+  // Các thẻ đã học qua trong bộ này (tích lũy vĩnh viễn — hiện "Đã học x/y" ở danh sách)
+  const seen = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (current) seen.current.add(current.id)
+  }, [current])
+
+  // Lưu phiên sau mỗi thao tác: localStorage ngay, cloud debounce 800ms.
+  // Hết phiên -> xóa hàng thẻ (lần sau vào lấy thẻ đến hạn mới) nhưng GIỮ danh sách đã học.
+  const rvTimer = useRef<number | undefined>(undefined)
+  useEffect(() => {
+    if (!queue || queue.length === 0) return
+    window.clearTimeout(rvTimer.current)
+    const data: ReviewSaved = current
+      ? {
+          q: queue.map((c) => c.id),
+          cur: current.id,
+          i: idx,
+          d: done,
+          p: practice,
+          t: Date.now(),
+          s: [...seen.current],
+        }
+      : { q: [], cur: null, i: 0, d: done, p: practice, t: Date.now(), s: [...seen.current] }
+    try {
+      localStorage.setItem(rvKey(deck.id), JSON.stringify(data))
+    } catch {
+      /* localStorage đầy -> bỏ qua */
+    }
+    rvTimer.current = window.setTimeout(() => {
+      CloudApi.saveReviewProgress(deck.id, data).catch(() => {})
+    }, 800)
+  }, [deck.id, queue, idx, done, practice, current])
 
   // Sang thẻ khác -> xóa nội dung đang nhập dở
   useEffect(() => {
@@ -384,16 +542,16 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
 
   return (
     <div className="review-page">
-      <div className="review-bar">
-        <button className="btn tiny" onClick={onExit}>
-          ← Thoát
+      <div className="ex-top">
+        <button className="ex-exit" onClick={onExit} title="Thoát">
+          ✕
         </button>
-        <div className="review-progress" title={`${done}/${total}`}>
-          <div className="review-progress-fill" style={{ width: `${pct}%` }} />
+        <div className="ex-bar" title={`Còn lại ${total - idx} thẻ`}>
+          <div className="ex-bar-fill" style={{ width: `${pct}%` }} />
         </div>
-        <span className="review-count">
-          {practice && <span className="review-mode">Học lại</span>}
-          Còn lại {total - idx} · Đã ôn {done}
+        {practice && <span className="review-mode">Học lại</span>}
+        <span className="ex-score" title="Đã ôn / tổng số thẻ">
+          ✓ {done}/{total}
         </span>
       </div>
 

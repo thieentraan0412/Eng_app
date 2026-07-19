@@ -76,6 +76,7 @@ export interface NewQuestion {
 
 // Vùng bôi màu trong bài đọc — tính theo offset ký tự trong content
 export interface ReadingHighlight {
+  note?: string // ghi chú gắn với vùng bôi (lưu chung trong jsonb highlights)
   start: number
   end: number
   color: string
@@ -466,12 +467,17 @@ export const CloudApi = {
     return data as Writing[]
   },
 
-  async createWriting(title: string, content: string, wordCount: number): Promise<Writing> {
+  async createWriting(
+    title: string,
+    content: string,
+    wordCount: number,
+    topic = '',
+  ): Promise<Writing> {
     const user = await this.currentUser()
     if (!user) throw new Error('Chưa đăng nhập')
     const { data, error } = await supabase
       .from('writings')
-      .insert({ user_id: user.id, title, content, word_count: wordCount })
+      .insert({ user_id: user.id, title, content, word_count: wordCount, topic: topic || null })
       .select()
       .single()
     if (error) throw error
@@ -483,10 +489,17 @@ export const CloudApi = {
     title: string,
     content: string,
     wordCount: number,
+    topic = '',
   ): Promise<Writing> {
     const { data, error } = await supabase
       .from('writings')
-      .update({ title, content, word_count: wordCount, updated_at: new Date().toISOString() })
+      .update({
+        title,
+        content,
+        word_count: wordCount,
+        topic: topic || null,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', id)
       .select()
       .single()
@@ -620,6 +633,22 @@ export const CloudApi = {
     return counts
   },
 
+  // Đếm số câu ĐÃ LÀM (đã chấm điểm) theo từng thư mục — cho lưới thẻ trang chính
+  async countProgressByFolder(): Promise<Record<string, number>> {
+    const { data, error } = await supabase
+      .from('sentence_progress')
+      .select('sentence_id, sentences!inner(folder_id)')
+      .not('status', 'is', null)
+      .is('sentences.deleted_at', null)
+    if (error) throw error
+    const counts: Record<string, number> = {}
+    for (const row of data as unknown as { sentences: { folder_id: string } }[]) {
+      const fid = row.sentences?.folder_id
+      if (fid) counts[fid] = (counts[fid] ?? 0) + 1
+    }
+    return counts
+  },
+
   // ---------- Chép câu: bài đã làm (tab Luyện tập) ----------
   async listProgress(sentenceIds: string[]): Promise<CloudSentenceProgress[]> {
     if (sentenceIds.length === 0) return []
@@ -684,6 +713,43 @@ export const CloudApi = {
 
   async clearExerciseProgress(deckId: string): Promise<void> {
     const { error } = await supabase.from('exercise_progress').delete().eq('deck_id', deckId)
+    if (error) throw error
+  },
+
+  // ---------- Ôn tập: phiên flashcard đang dở theo bộ từ (đồng bộ mọi thiết bị) ----------
+  async listReviewProgress(): Promise<{ deck_id: string; data: unknown }[]> {
+    const { data, error } = await supabase.from('review_progress').select('deck_id, data')
+    if (error) throw error
+    return data as { deck_id: string; data: unknown }[]
+  },
+
+  async getReviewProgress(deckId: string): Promise<unknown | null> {
+    const { data, error } = await supabase
+      .from('review_progress')
+      .select('data')
+      .eq('deck_id', deckId)
+      .maybeSingle()
+    if (error) throw error
+    return data?.data ?? null
+  },
+
+  async saveReviewProgress(deckId: string, payload: unknown): Promise<void> {
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { error } = await supabase.from('review_progress').upsert(
+      {
+        user_id: user.id,
+        deck_id: deckId,
+        data: payload,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,deck_id' },
+    )
+    if (error) throw error
+  },
+
+  async clearReviewProgress(deckId: string): Promise<void> {
+    const { error } = await supabase.from('review_progress').delete().eq('deck_id', deckId)
     if (error) throw error
   },
 

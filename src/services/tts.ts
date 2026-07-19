@@ -56,3 +56,9 @@ export function speak(text: string, rate = 0.95): void {
 export function stopSpeaking(): void {
   if (ttsSupported) window.speechSynthesis.cancel()
 }
+
+// Giọng tiếng Anh tốt nhất hiện có — cho nơi cần TỰ xếp hàng đọc dài
+// (VD: đọc cả bài đọc theo từng đoạn, speak() thường sẽ ngắt lượt trước)
+export function bestEnglishVoice(): SpeechSynthesisVoice | null {
+  return pickVoice()
+}

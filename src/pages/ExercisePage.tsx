@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CloudApi, type Card, type Deck } from '../services/cloud/CloudApiClient'
 import { speak, ttsSupported } from '../services/tts'
 
@@ -208,14 +208,18 @@ export default function ExercisePage() {
           {decks.map((d) => {
             const saved = pickSaved(d.deck.id, cloudProg.get(d.deck.id) ?? null)
             const done = Math.min(answeredCount(saved), d.cards.length)
+            const pct = d.cards.length ? Math.round((done / d.cards.length) * 100) : 0
             return (
               <button key={d.deck.id} className="deck-card" onClick={() => setSession(d)}>
                 <div className="deck-name">{d.deck.name}</div>
                 <span className="muted">
                   {d.cards.length} từ · {d.cards.length} câu hỏi
                 </span>
+                <div className="ex-deck-bar" title={`${pct}%`}>
+                  <div style={{ width: `${pct}%` }} />
+                </div>
                 <span className="muted">
-                  {done > 0 ? `Đã làm ${done}/${d.cards.length} · Làm tiếp →` : 'Bấm để làm →'}
+                  {done > 0 ? `Đã làm ${done}/${d.cards.length} · Làm tiếp →` : 'Bắt đầu →'}
                 </span>
               </button>
             )
@@ -279,18 +283,39 @@ function VocabQuiz({
   // Số câu đúng tính từ toàn bộ đáp án đã chọn
   const right = questions.filter((x) => answers[x.card.id] === x.card.id).length
 
+  // Hẹn giờ tự sang câu khi chọn ĐÚNG (hủy nếu người dùng tự bấm chuyển trước)
+  const autoNext = useRef<number | null>(null)
+  useEffect(() => {
+    if (autoNext.current) {
+      window.clearTimeout(autoNext.current)
+      autoNext.current = null
+    }
+  }, [idx])
+  useEffect(
+    () => () => {
+      if (autoNext.current) window.clearTimeout(autoNext.current)
+    },
+    [],
+  )
+
   const choose = (c: Card) => {
     if (answered || !q) return
     setAnswers((a) => ({ ...a, [q.card.id]: c.id }))
     // Chọn xong mới đọc từ tiếng Anh (chiều Việt→Anh đọc sớm sẽ lộ đáp án)
     if (ttsSupported) speak(q.card.word)
+    // Chọn ĐÚNG -> tự nhảy sang câu mới; chọn sai thì đứng lại để xem đáp án
+    if (c.id === q.card.id) {
+      autoNext.current = window.setTimeout(() => {
+        setIdx((i) => Math.min(i + 1, questions.length))
+      }, 900)
+    }
   }
 
   // 2 nút qua / lùi — qua được cả khi chưa trả lời (bỏ qua câu khó)
   const goNext = () => setIdx((i) => Math.min(i + 1, questions.length))
   const goBack = () => setIdx((i) => Math.max(0, i - 1))
 
-  // Phím ← / → cũng chuyển câu
+  // Phím tắt: ← / → chuyển câu · 1-4 chọn đáp án · Enter sang câu kế
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'ArrowRight') {
@@ -299,11 +324,18 @@ function VocabQuiz({
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault()
         setIdx((i) => Math.max(0, i - 1))
+      } else if (!answered && q && ['1', '2', '3', '4'].includes(e.key)) {
+        const opt = q.options[Number(e.key) - 1]
+        if (opt) choose(opt)
+      } else if (answered && e.key === 'Enter') {
+        e.preventDefault()
+        setIdx((i) => Math.min(i + 1, questions.length))
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [questions.length])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questions, idx, answers])
 
   // Làm lại từ đầu: xóa tiến độ đã lưu (cả local lẫn cloud) + trộn đề mới
   const restart = () => {
@@ -317,53 +349,106 @@ function VocabQuiz({
   // Hết câu -> màn kết quả + ôn lại các câu sai / bỏ trống
   if (!q) {
     const wrongCards = questions.filter((x) => answers[x.card.id] !== x.card.id).map((x) => x.card)
+    // Vòng mới CHỈ gồm các từ sai/bỏ trống (đề + đáp án trộn lại); tiến độ lưu theo vòng này
+    const retryWrong = () => {
+      setQuestions(buildQuiz(wrongCards, pool))
+      setIdx(0)
+      setAnswers({})
+    }
+    // Vòng tròn điểm số: % đúng, đổi màu theo mức (xanh / vàng / đỏ)
+    const pctRight = questions.length ? Math.round((right / questions.length) * 100) : 0
+    const ringCls = pctRight >= 80 ? 'good' : pctRight >= 50 ? 'mid' : 'bad'
+    const R = 52
+    const CIRC = 2 * Math.PI * R
     return (
-      <div className="page center">
-        <h1 className="page-title">🎉 Hoàn thành!</h1>
+      <div className="page center ex-result">
+        <h1 className="page-title">
+          {pctRight >= 80 ? '🎉 Tuyệt vời!' : pctRight >= 50 ? '👍 Khá lắm!' : '💪 Cố lên!'}
+        </h1>
         <p className="muted">
-          Bộ “{deck.name}” ({en2vi ? 'Anh → Việt' : 'Việt → Anh'}): đúng{' '}
-          <strong>{right}</strong> / {questions.length} câu.
+          Bộ “{deck.name}” · {en2vi ? 'Anh → Việt' : 'Việt → Anh'}
         </p>
-        {wrongCards.length > 0 && (
-          <div className="ex-wrong-list">
-            <div className="ex-wrong-title">Các từ trả lời sai / bỏ trống:</div>
-            {wrongCards.map((c) => (
-              <div key={c.id} className="word-card q-wrong">
-                <div className="wc-word">
-                  {c.word} {c.pos && <span className="fc-pos">{c.pos}</span>}
-                </div>
-                <div className="muted">{c.meaning}</div>
-                {exampleOf(c) && <div className="wc-example">“{exampleOf(c)}”</div>}
-              </div>
-            ))}
+
+        <svg className={`ex-ring ${ringCls}`} viewBox="0 0 120 120">
+          <circle className="ex-ring-track" cx="60" cy="60" r={R} />
+          <circle
+            className="ex-ring-fill"
+            cx="60"
+            cy="60"
+            r={R}
+            strokeDasharray={`${(pctRight / 100) * CIRC} ${CIRC}`}
+          />
+          <text className="ex-ring-pct" x="60" y="58">
+            {pctRight}%
+          </text>
+          <text className="ex-ring-sub" x="60" y="78">
+            chính xác
+          </text>
+        </svg>
+
+        <div className="ex-stats">
+          <div className="ex-stat ok">
+            <strong>{right}</strong>
+            <span>Đúng</span>
           </div>
-        )}
+          <div className="ex-stat no">
+            <strong>{wrongCards.length}</strong>
+            <span>Sai / bỏ trống</span>
+          </div>
+          <div className="ex-stat">
+            <strong>{questions.length}</strong>
+            <span>Tổng số câu</span>
+          </div>
+        </div>
+
         <div className="review-actions">
-          <button className="btn primary" onClick={restart}>
-            🔁 Làm lại
+          {wrongCards.length > 0 && (
+            <button className="btn primary" onClick={retryWrong}>
+              ✍️ Làm lại {wrongCards.length} câu sai
+            </button>
+          )}
+          <button className={wrongCards.length > 0 ? 'btn' : 'btn primary'} onClick={restart}>
+            🔁 Làm lại toàn bộ
           </button>
           <button className="btn" onClick={onExit}>
             Chọn bộ khác
           </button>
         </div>
+
+        {wrongCards.length > 0 && (
+          <div className="ex-wrong-list">
+            <div className="ex-wrong-title">Ôn lại các từ sai / bỏ trống</div>
+            {wrongCards.map((c) => (
+              <div key={c.id} className="ex-wrong-item">
+                <div className="ex-wrong-word">
+                  {c.word} {c.pos && <span className="fc-pos">{c.pos}</span>}
+                  <span className="ex-wrong-meaning">{c.meaning}</span>
+                </div>
+                {exampleOf(c) && <div className="ex-wrong-ex">“{exampleOf(c)}”</div>}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     )
   }
 
+  const isCorrect = answered && picked === q.card.id
   return (
     <div className="page ex-quiz">
-      <div className="review-bar">
-        <button className="btn tiny" onClick={onExit}>
-          ← Thoát
+      {/* Thanh trên: thoát ✕ · tiến độ lớn · điểm đúng */}
+      <div className="ex-top">
+        <button className="ex-exit" onClick={onExit} title="Thoát">
+          ✕
         </button>
-        <div className="review-progress" title={`${idx}/${questions.length}`}>
+        <div className="ex-bar" title={`Câu ${idx + 1}/${questions.length}`}>
           <div
-            className="review-progress-fill"
+            className="ex-bar-fill"
             style={{ width: `${Math.round((idx / questions.length) * 100)}%` }}
           />
         </div>
-        <span className="review-count">
-          Câu {idx + 1}/{questions.length} · Đúng {right}
+        <span className="ex-score" title="Số câu đúng">
+          ✓ {right}
         </span>
       </div>
 
@@ -379,7 +464,7 @@ function VocabQuiz({
       {/* Đề bài */}
       <div className="ex-prompt">
         <div className="ex-prompt-label">
-          {en2vi ? 'Chọn nghĩa tiếng Việt đúng' : 'Chọn từ tiếng Anh đúng'}
+          Câu {idx + 1}/{questions.length} · {en2vi ? 'Chọn nghĩa tiếng Việt đúng' : 'Chọn từ tiếng Anh đúng'}
         </div>
         <div className="ex-word">
           {en2vi ? q.card.word : q.card.meaning}
@@ -397,52 +482,64 @@ function VocabQuiz({
         </div>
       </div>
 
-      {/* 4 đáp án — câu ví dụ chỉ hiện SAU khi chọn (đã biết đúng/sai thì hiện nguyên văn) */}
+      {/* 4 đáp án đánh số (bấm phím 1-4 cũng chọn được) — câu ví dụ chỉ hiện SAU khi chọn */}
       <div className="ex-options">
-        {q.options.map((c) => {
+        {q.options.map((c, i) => {
           const ex = answered ? exampleOf(c) : null
           let cls = 'ex-option'
+          let key: string = String(i + 1)
           if (answered) {
-            if (c.id === q.card.id) cls += ' correct'
-            else if (c.id === picked) cls += ' wrong'
-            else cls += ' dim'
+            if (c.id === q.card.id) {
+              cls += ' correct'
+              key = '✓'
+            } else if (c.id === picked) {
+              cls += ' wrong'
+              key = '✕'
+            } else cls += ' dim'
           }
           return (
             <button key={c.id} className={cls} onClick={() => choose(c)} disabled={answered}>
-              <span className="ex-option-main">
-                {en2vi ? c.meaning : c.word}
-                {!en2vi && c.pos && <span className="fc-pos">{c.pos}</span>}
+              <span className="ex-key">{key}</span>
+              <span className="ex-option-body">
+                <span className="ex-option-main">
+                  {en2vi ? c.meaning : c.word}
+                  {!en2vi && c.pos && <span className="fc-pos">{c.pos}</span>}
+                </span>
+                {ex && <span className="ex-option-ex">“{ex}”</span>}
               </span>
-              {ex && <span className="ex-option-ex">“{ex}”</span>}
             </button>
           )
         })}
       </div>
 
-      {answered && (
-        <div className="ex-feedback">
-          {picked === q.card.id ? (
-            <span className="fc-answer-feedback ok">✓ Chính xác!</span>
-          ) : (
-            <span className="fc-answer-feedback no">
-              ✗ Chưa đúng — đáp án: {en2vi ? q.card.meaning : q.card.word}
-            </span>
-          )}
+      {/* Dưới cùng: chưa trả lời -> điều hướng; trả lời rồi -> banner phản hồi kiểu Duolingo */}
+      {answered ? (
+        <div className={`ex-banner ${isCorrect ? 'ok' : 'no'}`}>
+          <button className="ex-banner-back" onClick={goBack} disabled={idx === 0} title="Câu trước">
+            ←
+          </button>
+          <span className="ex-banner-ico">{isCorrect ? '✓' : '✕'}</span>
+          <div className="ex-banner-text">
+            <strong>{isCorrect ? 'Chính xác!' : 'Chưa đúng'}</strong>
+            {!isCorrect && <span>Đáp án: {en2vi ? q.card.meaning : q.card.word}</span>}
+          </div>
+          <button className="ex-continue" onClick={goNext}>
+            {idx + 1 < questions.length ? 'Tiếp tục →' : 'Xem kết quả'}
+          </button>
+        </div>
+      ) : (
+        <div className="review-nav">
+          <button className="btn" onClick={goBack} disabled={idx === 0}>
+            ← Trước
+          </button>
+          <span className="review-nav-pos">
+            {idx + 1} / {questions.length}
+          </span>
+          <button className="btn" onClick={goNext}>
+            Bỏ qua →
+          </button>
         </div>
       )}
-
-      {/* 2 nút lùi / qua câu (phím ← → cũng dùng được); câu cuối -> xem kết quả */}
-      <div className="review-nav">
-        <button className="btn" onClick={goBack} disabled={idx === 0}>
-          ← Trước
-        </button>
-        <span className="review-nav-pos">
-          {idx + 1} / {questions.length}
-        </span>
-        <button className={answered ? 'btn primary' : 'btn'} onClick={goNext}>
-          {idx + 1 < questions.length ? 'Tiếp →' : 'Xem kết quả'}
-        </button>
-      </div>
     </div>
   )
 }

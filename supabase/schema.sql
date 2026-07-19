@@ -179,11 +179,25 @@ create table if not exists public.exercise_progress (
   unique (user_id, deck_id)
 );
 
+-- ---------- 14. REVIEW_PROGRESS (phiên ôn tập flashcard đang dở theo bộ từ) ----------
+-- Mỗi bộ từ 1 dòng/1 user: thứ tự thẻ trong phiên + thẻ đang học (jsonb),
+-- để app ↔ web ↔ điện thoại vào lại đều hiện đúng thẻ gần nhất đang ôn.
+create table if not exists public.review_progress (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  deck_id    uuid not null references public.decks (id) on delete cascade,
+  data       jsonb not null,                      -- {q: [id...], cur, i, d, p, t}
+  updated_at timestamptz not null default now(),
+  unique (user_id, deck_id)
+);
+
 -- ============================================================
 -- CHỈ MỤC (index) cho truy vấn thường dùng
 -- ============================================================
 create index if not exists idx_exprogress_user   on public.exercise_progress (user_id);
 create index if not exists idx_exprogress_deck   on public.exercise_progress (deck_id);
+create index if not exists idx_rvprogress_user   on public.review_progress (user_id);
+create index if not exists idx_rvprogress_deck   on public.review_progress (deck_id);
 create index if not exists idx_sfolders_user     on public.sentence_folders (user_id);
 create index if not exists idx_sentences_folder   on public.sentences (folder_id);
 create index if not exists idx_sprogress_user     on public.sentence_progress (user_id);
@@ -206,7 +220,7 @@ declare
     'decks','cards','review_logs','lessons','questions',
     'readings','writings','study_stats','settings',
     'sentence_folders','sentences','sentence_progress',
-    'exercise_progress'
+    'exercise_progress','review_progress'
   ];
 begin
   foreach t in array tables loop

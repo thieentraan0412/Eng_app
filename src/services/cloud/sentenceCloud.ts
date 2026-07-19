@@ -104,6 +104,11 @@ export async function countByFolder(): Promise<Record<string, number>> {
   return CloudApi.countSentencesByFolder()
 }
 
+// Số câu ĐÃ LÀM (đã chấm) theo từng thư mục — hiện "đã làm x/y" trên thẻ
+export async function countDoneByFolder(): Promise<Record<string, number>> {
+  return CloudApi.countProgressByFolder()
+}
+
 // ---------- Câu ----------
 export async function listSentences(folderId: string): Promise<StoredSentence[]> {
   const rows = await CloudApi.listSentences(folderId)

@@ -19,6 +19,7 @@ import {
   renameFolder,
   deleteFolder,
   countByFolder,
+  countDoneByFolder,
   listSentences,
   createSentence,
   createSentences,
@@ -38,8 +39,9 @@ import {
   exportFolderExcel,
 } from '../services/excelImport'
 import { translateToEnglish } from '../services/translation'
+import { speak, ttsSupported } from '../services/tts'
 
-const LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1']
+const LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
@@ -68,6 +70,8 @@ function useIsNarrow(maxWidth = 860): boolean {
 export default function SentencePage() {
   const [folders, setFolders] = useState<Folder[]>([])
   const [counts, setCounts] = useState<Record<string, number>>({})
+  // Số câu ĐÃ LÀM (đã chấm) theo thư mục — hiện "Đã làm x/y" trên thẻ
+  const [doneCounts, setDoneCounts] = useState<Record<string, number>>({})
   const [selected, setSelected] = useState<Folder | null>(null)
   const [newName, setNewName] = useState('')
   const [loading, setLoading] = useState(true)
@@ -77,9 +81,14 @@ export default function SentencePage() {
   const [editName, setEditName] = useState('')
 
   const refresh = async () => {
-    const [fs, cs] = await Promise.all([listFolders(), countByFolder()])
+    const [fs, cs, ds] = await Promise.all([
+      listFolders(),
+      countByFolder(),
+      countDoneByFolder().catch(() => ({})), // lỗi -> chỉ ẩn phần "đã làm"
+    ])
     setFolders(fs)
     setCounts(cs)
+    setDoneCounts(ds)
   }
 
   // Nạp lần đầu: đảm bảo tài khoản có dữ liệu (migrate/seed nếu cần)
@@ -92,7 +101,10 @@ export default function SentencePage() {
         const fs = await ensureReady()
         if (!alive) return
         setFolders(fs)
-        setCounts(await countByFolder())
+        const [cs, ds] = await Promise.all([countByFolder(), countDoneByFolder().catch(() => ({}))])
+        if (!alive) return
+        setCounts(cs)
+        setDoneCounts(ds)
       } catch (e) {
         if (alive) setError(errMsg(e))
       } finally {
@@ -234,7 +246,9 @@ export default function SentencePage() {
               ) : (
                 <div className="deck-name">{f.name}</div>
               )}
-              <div className="deck-desc">{counts[f.id] ?? 0} câu</div>
+              <div className="deck-desc">
+                Đã làm {Math.min(doneCounts[f.id] ?? 0, counts[f.id] ?? 0)}/{counts[f.id] ?? 0} câu
+              </div>
               <div className="deck-foot">
                 <span>Mở thư mục</span>
                 <span className="deck-arrow">→</span>
@@ -294,6 +308,15 @@ function PracticeView({ folder }: { folder: Folder }) {
   // Chỉ số câu hiện tại (chế độ tập trung) + id thẻ cần cuộn tới sau khi nạp
   const [cur, setCur] = useState(0)
   const [jumpId, setJumpId] = useState<string | null>(null)
+  // Chế độ NGHE-CHÉP (dictation): nghe TTS đọc câu tiếng Anh rồi gõ lại
+  const [dictation, setDictation] = useState(() => localStorage.getItem('sc_dictation') === '1')
+  const toggleDictation = (on: boolean) => {
+    setDictation(on)
+    localStorage.setItem('sc_dictation', on ? '1' : '0')
+  }
+  // Lọc câu theo cấp độ (A1–C2) / chủ đề
+  const [levelF, setLevelF] = useState('')
+  const [topicF, setTopicF] = useState('')
 
   // Bộ đếm số lượt lưu đang chạy -> hiển thị "đang lưu…"
   const pending = useRef(0)
@@ -391,17 +414,34 @@ function PracticeView({ folder }: { folder: Folder }) {
       })
   }, [])
 
+  // Danh sách sau khi lọc theo cấp độ / chủ đề — dùng cho cả 2 chế độ hiển thị
+  const levels = useMemo(
+    () => LEVELS.filter((l) => items.some((s) => s.level === l)),
+    [items],
+  )
+  const topics = useMemo(
+    () => [...new Set(items.map((s) => s.topic).filter(Boolean))] as string[],
+    [items],
+  )
+  const shown = useMemo(
+    () =>
+      items.filter(
+        (s) => (!levelF || s.level === levelF) && (!topicF || s.topic === topicF),
+      ),
+    [items, levelF, topicF],
+  )
+
   const correctCount = useMemo(
-    () => Object.values(results).filter((r) => r.status === 'correct').length,
-    [results],
+    () => shown.filter((s) => results[s.id]?.status === 'correct').length,
+    [shown, results],
   )
 
   // Chế độ tập trung (mobile): chỉ trỏ 1 câu/màn
   const narrow = useIsNarrow()
-  // Giữ chỉ số hợp lệ khi danh sách đổi (nạp xong / xóa câu)
+  // Giữ chỉ số hợp lệ khi danh sách đổi (nạp xong / xóa câu / đổi bộ lọc)
   useEffect(() => {
-    setCur((c) => Math.min(Math.max(0, c), Math.max(0, items.length - 1)))
-  }, [items.length])
+    setCur((c) => Math.min(Math.max(0, c), Math.max(0, shown.length - 1)))
+  }, [shown.length])
 
   // Cuộn tới thẻ của câu làm gần nhất sau khi nạp xong (chế độ danh sách)
   useEffect(() => {
@@ -452,7 +492,7 @@ function PracticeView({ folder }: { folder: Folder }) {
   const checkAll = () => {
     const next: Record<string, GradeResult> = {}
     const toSave: { id: string; rec: PracticeRecord }[] = []
-    for (const item of items) {
+    for (const item of shown) {
       const val = (inputs[item.id] ?? '').trim()
       if (!val) continue
       const gr = gradeSentence(item, val)
@@ -498,7 +538,7 @@ function PracticeView({ folder }: { folder: Folder }) {
     }
   }
 
-  const pct = items.length ? Math.round((correctCount / items.length) * 100) : 0
+  const pct = shown.length ? Math.round((correctCount / shown.length) * 100) : 0
 
   if (loading) return <p className="muted">Đang tải bài luyện tập…</p>
   if (error) return <p className="muted">⚠️ {error}</p>
@@ -510,16 +550,81 @@ function PracticeView({ folder }: { folder: Folder }) {
     )
   }
 
+  // Hàng chọn chế độ luyện + lọc theo cấp độ / chủ đề (dùng chung 2 bố cục)
+  const filterRow = (
+    <div className="sp-filter">
+      {ttsSupported && (
+        <div className="tabs">
+          <button
+            className={!dictation ? 'tab active' : 'tab'}
+            onClick={() => toggleDictation(false)}
+            title="Nhìn câu tiếng Việt, dịch sang tiếng Anh"
+          >
+            ✍️ Dịch
+          </button>
+          <button
+            className={dictation ? 'tab active' : 'tab'}
+            onClick={() => toggleDictation(true)}
+            title="Nghe máy đọc câu tiếng Anh rồi gõ lại (dictation)"
+          >
+            🎧 Nghe-chép
+          </button>
+        </div>
+      )}
+      {levels.length > 0 && (
+        <div className="sp-chipset">
+          <button className={levelF === '' ? 'tab active' : 'tab'} onClick={() => setLevelF('')}>
+            Tất cả
+          </button>
+          {levels.map((l) => (
+            <button
+              key={l}
+              className={levelF === l ? 'tab active' : 'tab'}
+              onClick={() => setLevelF(l)}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      )}
+      {topics.length > 1 && (
+        <select
+          className="level-select"
+          value={topicF}
+          onChange={(e) => setTopicF(e.target.value)}
+          title="Lọc theo chủ đề"
+        >
+          <option value="">Mọi chủ đề</option>
+          {topics.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+  )
+
+  if (shown.length === 0) {
+    return (
+      <>
+        {filterRow}
+        <p className="muted">Không có câu nào khớp bộ lọc. Chọn cấp độ/chủ đề khác nhé.</p>
+      </>
+    )
+  }
+
   // ===== Chế độ TẬP TRUNG (mobile): 1 câu/màn + điều hướng Trước/Tiếp =====
   if (narrow) {
-    const idx = Math.min(cur, items.length - 1)
-    const item = items[idx]
+    const idx = Math.min(cur, shown.length - 1)
+    const item = shown[idx]
     const done = results[item.id] // đã chấm câu này chưa
     return (
       <div className="practice-focus">
+        {filterRow}
         <div className="pf-top">
           <span className="pf-count">
-            Câu <strong>{idx + 1}</strong> / {items.length}
+            Câu <strong>{idx + 1}</strong> / {shown.length}
           </span>
           <span className="pf-correct">
             Đúng <strong>{correctCount}</strong>
@@ -529,7 +634,7 @@ function PracticeView({ folder }: { folder: Folder }) {
         <div className="pf-bar">
           <div
             className="pf-bar-fill"
-            style={{ width: `${((idx + 1) / items.length) * 100}%` }}
+            style={{ width: `${((idx + 1) / shown.length) * 100}%` }}
           />
         </div>
 
@@ -540,6 +645,7 @@ function PracticeView({ folder }: { folder: Folder }) {
           value={inputs[item.id] ?? ''}
           result={results[item.id]}
           revealed={!!revealed[item.id]}
+          dictation={dictation}
           onChange={setInput}
           onCheck={checkOne}
           onReveal={reveal}
@@ -551,7 +657,7 @@ function PracticeView({ folder }: { folder: Folder }) {
           </button>
           <button
             className={done ? 'btn primary' : 'btn'}
-            disabled={idx >= items.length - 1}
+            disabled={idx >= shown.length - 1}
             onClick={() => setCur(idx + 1)}
           >
             Tiếp ›
@@ -572,9 +678,10 @@ function PracticeView({ folder }: { folder: Folder }) {
 
   return (
     <>
+      {filterRow}
       <div className="practice-bar">
         <span className="sp-count">
-          Đúng <strong>{correctCount}</strong> / {items.length}
+          Đúng <strong>{correctCount}</strong> / {shown.length}
         </span>
         <div className="sp-bar">
           <div className="sp-bar-fill" style={{ width: `${pct}%` }} />
@@ -589,7 +696,7 @@ function PracticeView({ folder }: { folder: Folder }) {
       </div>
 
       <div className="sentence-list">
-        {items.map((item, idx) => (
+        {shown.map((item, idx) => (
           <SentenceCard
             key={item.id}
             index={idx + 1}
@@ -597,6 +704,7 @@ function PracticeView({ folder }: { folder: Folder }) {
             value={inputs[item.id] ?? ''}
             result={results[item.id]}
             revealed={!!revealed[item.id]}
+            dictation={dictation}
             onChange={setInput}
             onCheck={checkOne}
             onReveal={reveal}
@@ -627,6 +735,7 @@ const SentenceCard = memo(function SentenceCard({
   value,
   result,
   revealed,
+  dictation = false,
   onChange,
   onCheck,
   onReveal,
@@ -636,6 +745,7 @@ const SentenceCard = memo(function SentenceCard({
   value: string
   result?: GradeResult
   revealed: boolean
+  dictation?: boolean // nghe-chép: nghe TTS đọc câu tiếng Anh rồi gõ lại
   onChange: (id: string, v: string) => void
   onCheck: (id: string) => void
   onReveal: (id: string) => void
@@ -736,17 +846,40 @@ const SentenceCard = memo(function SentenceCard({
   }
 
   const statusClass = result ? `is-${result.status}` : ''
+  // Nghe-chép chỉ dùng được khi câu CÓ đáp án tiếng Anh để máy đọc
+  const dict = dictation && !!item.en
+  // Đề tiếng Việt bị GIẤU khi nghe-chép, chỉ lộ sau khi chấm / xem đáp án
+  const hidePrompt = dict && !result && !revealed
 
   return (
     <div id={`sc-${item.id}`} className={`sentence-card ${statusClass}`}>
       <div className="sc-vi">
         <span className="sc-index">{index}</span>
-        <span className="sc-flag">🇻🇳</span>
-        <span className="sc-vi-text">{item.vi}</span>
+        <span className="sc-flag">{dict ? '🎧' : '🇻🇳'}</span>
+        {hidePrompt ? (
+          <span className="sc-vi-text muted">Nghe máy đọc rồi gõ lại câu tiếng Anh…</span>
+        ) : (
+          <span className="sc-vi-text">{item.vi}</span>
+        )}
+        {dict && (
+          <span className="sc-listen">
+            <button type="button" className="btn tiny" onClick={() => speak(item.en)}>
+              🔊 Nghe
+            </button>
+            <button
+              type="button"
+              className="btn tiny"
+              title="Đọc chậm"
+              onClick={() => speak(item.en, 0.65)}
+            >
+              🐢 Chậm
+            </button>
+          </span>
+        )}
         {item.level && <span className="sc-level">{item.level}</span>}
       </div>
 
-      {item.hints && item.hints.length > 0 && (
+      {item.hints && item.hints.length > 0 && !hidePrompt && (
         <div className="sc-hints">
           {item.hints.map((h) => (
             <span key={h} className="sc-hint">
@@ -760,7 +893,11 @@ const SentenceCard = memo(function SentenceCard({
         <textarea
           ref={taRef}
           className="sc-input"
-          placeholder="Nhập câu tiếng Anh của bạn… (Enter để kiểm tra)"
+          placeholder={
+            dict
+              ? 'Gõ lại câu bạn nghe được… (Enter để kiểm tra)'
+              : 'Nhập câu tiếng Anh của bạn… (Enter để kiểm tra)'
+          }
           spellCheck={false}
           rows={2}
           value={value}

@@ -1,7 +1,7 @@
 // Ngân hàng câu luyện "Chép câu" (Việt → Anh). Dữ liệu tĩnh, offline.
 // (thiết kế: chepcau.md)
 
-export type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1'
+export type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2'
 
 export interface SentenceItem {
   id: string
