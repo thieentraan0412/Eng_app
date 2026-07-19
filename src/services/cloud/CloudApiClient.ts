@@ -159,8 +159,58 @@ export interface DbStats {
   tables: Record<string, number>
 }
 
+// Một ngày trong bảng study_stats (thống kê học tập theo ngày)
+export interface StudyStat {
+  date: string
+  cards_reviewed: number
+  minutes_studied: number
+  new_words: number
+  quizzes_done: number
+}
+
+// Cộng dồn thống kê cho HÔM NAY (gọi bump_study_stats)
+export interface StatsDelta {
+  cards?: number
+  minutes?: number
+  newWords?: number
+  quizzes?: number
+}
+
+// Tỷ lệ nhớ (retention) tính từ review_logs trong N ngày
+export interface Retention {
+  total: number // tổng lượt ôn
+  kept: number // lượt KHÔNG bấm "Lại" (again)
+  rate: number // kept / total (0..1); 0 khi chưa có lượt nào
+  byRating: Record<Rating, number>
+}
+
+// Số thẻ đến hạn theo từng ngày (dự báo lịch ôn)
+export interface DueBucket {
+  date: string // YYYY-MM-DD; '' = đã quá hạn (gộp)
+  label: string // nhãn hiển thị (Quá hạn / Hôm nay / T4…)
+  count: number
+}
+
+// Thống kê 1 bộ từ cho trang Thống kê
+export interface DeckStat {
+  deck_id: string
+  name: string
+  total: number // tổng số thẻ
+  learned: number // số thẻ đã ôn ≥ 1 lần (srs_reps > 0)
+  due: number // số thẻ đến hạn hôm nay
+}
+
 function today(): string {
   return new Date().toISOString().slice(0, 10)
+}
+
+// Ngày YYYY-MM-DD theo GIỜ ĐỊA PHƯƠNG cách hôm nay `offset` ngày
+function localDay(offset = 0): string {
+  const d = new Date()
+  d.setDate(d.getDate() + offset)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate(),
+  ).padStart(2, '0')}`
 }
 
 // Chuẩn hóa 1 câu (app) -> hàng insert vào bảng sentences
@@ -803,6 +853,133 @@ export const CloudApi = {
       result.push({ date: key, count: counts.get(key) ?? 0 })
     }
     return result
+  },
+
+  // ---------- Thống kê học tập theo ngày (study_stats) ----------
+  // Cộng dồn cho HÔM NAY qua RPC bump_study_stats (nguyên tử, không đọc-sửa-ghi).
+  async bumpStats(delta: StatsDelta): Promise<void> {
+    const d_cards = Math.max(0, Math.round(delta.cards ?? 0))
+    const d_minutes = Math.max(0, Math.round(delta.minutes ?? 0))
+    const d_new_words = Math.max(0, Math.round(delta.newWords ?? 0))
+    const d_quizzes = Math.max(0, Math.round(delta.quizzes ?? 0))
+    if (!d_cards && !d_minutes && !d_new_words && !d_quizzes) return
+    const { error } = await supabase.rpc('bump_study_stats', {
+      d_cards,
+      d_minutes,
+      d_new_words,
+      d_quizzes,
+    })
+    if (error) throw error
+  },
+
+  // Đọc study_stats N ngày gần nhất, trả về ĐỦ mọi ngày (ngày trống = 0).
+  async studyStatsByDay(days = 30): Promise<StudyStat[]> {
+    const fromDate = localDay(-(days - 1))
+    const { data, error } = await supabase
+      .from('study_stats')
+      .select('date, cards_reviewed, minutes_studied, new_words, quizzes_done')
+      .gte('date', fromDate)
+      .order('date', { ascending: true })
+    if (error) throw error
+
+    const byDate = new Map<string, StudyStat>()
+    for (const r of (data ?? []) as StudyStat[]) byDate.set(r.date, r)
+
+    const result: StudyStat[] = []
+    for (let i = days - 1; i >= 0; i--) {
+      const key = localDay(-i)
+      result.push(
+        byDate.get(key) ?? {
+          date: key,
+          cards_reviewed: 0,
+          minutes_studied: 0,
+          new_words: 0,
+          quizzes_done: 0,
+        },
+      )
+    }
+    return result
+  },
+
+  // Tỷ lệ nhớ (retention) từ review_logs trong `days` ngày gần nhất:
+  // % lượt ôn KHÔNG bấm "Lại" (again) — càng cao càng nhớ tốt.
+  async retention(days = 30): Promise<Retention> {
+    const fromDate = localDay(-(days - 1))
+    const { data, error } = await supabase
+      .from('review_logs')
+      .select('rating')
+      .gte('reviewed_at', fromDate)
+    if (error) throw error
+
+    const byRating: Record<Rating, number> = { again: 0, hard: 0, good: 0, easy: 0 }
+    for (const r of (data ?? []) as { rating: Rating }[]) {
+      if (r.rating in byRating) byRating[r.rating]++
+    }
+    const total = byRating.again + byRating.hard + byRating.good + byRating.easy
+    const kept = total - byRating.again
+    return { total, kept, rate: total ? kept / total : 0, byRating }
+  },
+
+  // Dự báo số thẻ đến hạn từng ngày trong `days` ngày tới (+ gộp phần quá hạn).
+  async dueForecast(days = 7): Promise<DueBucket[]> {
+    const todayStr = today()
+    const untilStr = localDay(days - 1)
+    const { data, error } = await supabase
+      .from('cards')
+      .select('srs_due_date')
+      .is('deleted_at', null)
+      .lte('srs_due_date', untilStr)
+    if (error) throw error
+
+    const counts = new Map<string, number>()
+    let overdue = 0
+    for (const r of (data ?? []) as { srs_due_date: string }[]) {
+      if (r.srs_due_date < todayStr) overdue++
+      else counts.set(r.srs_due_date, (counts.get(r.srs_due_date) ?? 0) + 1)
+    }
+
+    const WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
+    const buckets: DueBucket[] = [{ date: '', label: 'Quá hạn', count: overdue }]
+    for (let i = 0; i < days; i++) {
+      const key = localDay(i)
+      const d = new Date()
+      d.setDate(d.getDate() + i)
+      const label = i === 0 ? 'Hôm nay' : i === 1 ? 'Mai' : WD[d.getDay()]
+      buckets.push({ date: key, label, count: counts.get(key) ?? 0 })
+    }
+    return buckets
+  },
+
+  // Thống kê theo từng bộ từ: tổng thẻ / đã ôn ≥1 lần / đến hạn hôm nay.
+  async statsByDeck(): Promise<DeckStat[]> {
+    const todayStr = today()
+    const [decks, cardsRes] = await Promise.all([
+      this.listDecks(),
+      supabase
+        .from('cards')
+        .select('deck_id, srs_reps, srs_due_date')
+        .is('deleted_at', null),
+    ])
+    if (cardsRes.error) throw cardsRes.error
+    const cards = (cardsRes.data ?? []) as {
+      deck_id: string
+      srs_reps: number
+      srs_due_date: string
+    }[]
+
+    const agg = new Map<string, { total: number; learned: number; due: number }>()
+    for (const c of cards) {
+      const a = agg.get(c.deck_id) ?? { total: 0, learned: 0, due: 0 }
+      a.total++
+      if (c.srs_reps > 0) a.learned++
+      if (c.srs_due_date <= todayStr) a.due++
+      agg.set(c.deck_id, a)
+    }
+
+    return decks.map((d) => {
+      const a = agg.get(d.id) ?? { total: 0, learned: 0, due: 0 }
+      return { deck_id: d.id, name: d.name, total: a.total, learned: a.learned, due: a.due }
+    })
   },
 }
 

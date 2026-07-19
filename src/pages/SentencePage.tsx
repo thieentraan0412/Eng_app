@@ -8,9 +8,10 @@ import {
   type ChangeEvent,
   type FormEvent,
   type KeyboardEvent,
+  type UIEvent,
 } from 'react'
 import { type SentenceItem, type CefrLevel } from '../data/sentences'
-import { gradeSentence, type GradeResult } from '../services/sentencecheck'
+import { gradeSentence, wrongWordSegments, type GradeResult } from '../services/sentencecheck'
 import { suggest, type Suggestion } from '../services/suggestion'
 import {
   ensureReady,
@@ -308,6 +309,8 @@ function PracticeView({ folder }: { folder: Folder }) {
   // Chỉ số câu hiện tại (chế độ tập trung) + id thẻ cần cuộn tới sau khi nạp
   const [cur, setCur] = useState(0)
   const [jumpId, setJumpId] = useState<string | null>(null)
+  // Sau khi gõ Enter ĐÚNG -> id câu kế tiếp cần cuộn ra giữa + focus
+  const [advanceTo, setAdvanceTo] = useState<string | null>(null)
   // Chế độ NGHE-CHÉP (dictation): nghe TTS đọc câu tiếng Anh rồi gõ lại
   const [dictation, setDictation] = useState(() => localStorage.getItem('sc_dictation') === '1')
   const toggleDictation = (on: boolean) => {
@@ -430,6 +433,8 @@ function PracticeView({ folder }: { folder: Folder }) {
       ),
     [items, levelF, topicF],
   )
+  const shownRef = useRef(shown)
+  shownRef.current = shown
 
   const correctCount = useMemo(
     () => shown.filter((s) => results[s.id]?.status === 'correct').length,
@@ -438,10 +443,34 @@ function PracticeView({ folder }: { folder: Folder }) {
 
   // Chế độ tập trung (mobile): chỉ trỏ 1 câu/màn
   const narrow = useIsNarrow()
+  const narrowRef = useRef(narrow)
+  narrowRef.current = narrow
   // Giữ chỉ số hợp lệ khi danh sách đổi (nạp xong / xóa câu / đổi bộ lọc)
   useEffect(() => {
     setCur((c) => Math.min(Math.max(0, c), Math.max(0, shown.length - 1)))
   }, [shown.length])
+
+  // Chuyển sang câu KẾ TIẾP (sau khi gõ Enter đúng): chế độ tập trung thì đổi
+  // chỉ số câu, chế độ danh sách thì đặt id để effect cuộn ra giữa + focus.
+  const goToNext = useCallback((fromId: string) => {
+    const list = shownRef.current
+    const i = list.findIndex((s) => s.id === fromId)
+    if (i < 0 || i + 1 >= list.length) return
+    const next = list[i + 1]
+    if (narrowRef.current) setCur(i + 1)
+    setAdvanceTo(next.id)
+  }, [])
+
+  // Cuộn câu kế tiếp ra GIỮA màn hình + focus ô nhập. Chạy sau khi DOM đã cập
+  // nhật (câu vừa đúng đã hiện khối kết quả) nên căn giữa mới chính xác.
+  useEffect(() => {
+    if (!advanceTo) return
+    const card = document.getElementById(`sc-${advanceTo}`)
+    setAdvanceTo(null)
+    if (!card) return
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    card.querySelector<HTMLTextAreaElement>('.sc-input')?.focus({ preventScroll: true })
+  }, [advanceTo])
 
   // Cuộn tới thẻ của câu làm gần nhất sau khi nạp xong (chế độ danh sách)
   useEffect(() => {
@@ -470,7 +499,7 @@ function PracticeView({ folder }: { folder: Folder }) {
   )
 
   const checkOne = useCallback(
-    (id: string) => {
+    (id: string, advance = false) => {
       const item = itemsRef.current.find((s) => s.id === id)
       if (!item) return
       const val = (inputsRef.current[id] ?? '').trim()
@@ -485,8 +514,10 @@ function PracticeView({ folder }: { folder: Folder }) {
         score: gr.score,
         revealed: !!revealedRef.current[id],
       })
+      // Gõ Enter mà ĐÚNG -> tự nhảy sang câu kế tiếp (cuộn ra giữa + focus)
+      if (advance && gr.status === 'correct') goToNext(id)
     },
-    [persist],
+    [persist, goToNext],
   )
 
   const checkAll = () => {
@@ -747,12 +778,21 @@ const SentenceCard = memo(function SentenceCard({
   revealed: boolean
   dictation?: boolean // nghe-chép: nghe TTS đọc câu tiếng Anh rồi gõ lại
   onChange: (id: string, v: string) => void
-  onCheck: (id: string) => void
+  onCheck: (id: string, advance?: boolean) => void
   onReveal: (id: string) => void
 }) {
   const suggestEnabled = localStorage.getItem('suggest_enabled') !== '0'
   const taRef = useRef<HTMLTextAreaElement>(null)
+  const backdropRef = useRef<HTMLDivElement>(null)
   const pendingCaret = useRef<number | null>(null)
+
+  // Sau khi chấm (sai/gần đúng): tô ĐỎ các từ gõ sai vị trí ngay trong ô nhập.
+  // Tính lại theo văn bản hiện tại nên tự cập nhật khi người dùng sửa từ.
+  const wrongSegs = useMemo(() => {
+    if (!result || result.status === 'correct') return null
+    return wrongWordSegments(value, result.bestAnswer)
+  }, [result, value])
+  const showOverlay = !!wrongSegs && wrongSegs.some((s) => s.wrong)
 
   const [caret, setCaret] = useState(0)
   const [focused, setFocused] = useState(false)
@@ -789,6 +829,13 @@ const SentenceCard = memo(function SentenceCard({
   const syncCaret = () => {
     if (taRef.current) setCaret(taRef.current.selectionStart)
   }
+  // Cuộn ô nhập -> cuộn lớp phủ theo để chữ đỏ luôn khớp vị trí
+  const syncScroll = (e: UIEvent<HTMLTextAreaElement>) => {
+    if (backdropRef.current) {
+      backdropRef.current.scrollTop = e.currentTarget.scrollTop
+      backdropRef.current.scrollLeft = e.currentTarget.scrollLeft
+    }
+  }
 
   const accept = (s: Suggestion) => {
     const before = value.slice(0, caret)
@@ -812,11 +859,12 @@ const SentenceCard = memo(function SentenceCard({
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enter (không Shift) → kiểm tra đáp án. Shift+Enter để xuống dòng.
+    // Enter (không Shift) → kiểm tra đáp án; đúng thì tự nhảy sang câu kế tiếp.
+    // Shift+Enter để xuống dòng.
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       setOpen(false)
-      onCheck(item.id)
+      onCheck(item.id, true)
       return
     }
     // Tab → nếu đang mở gợi ý thì nhận gợi ý, ngược lại nhảy sang ô câu kế tiếp
@@ -890,9 +938,23 @@ const SentenceCard = memo(function SentenceCard({
       )}
 
       <div className="sc-input-wrap">
+        {showOverlay && wrongSegs && (
+          <div className="sc-backdrop" ref={backdropRef} aria-hidden="true">
+            {wrongSegs.map((s, i) =>
+              s.wrong ? (
+                <mark className="sc-wrong" key={i}>
+                  {s.text}
+                </mark>
+              ) : (
+                <span key={i}>{s.text}</span>
+              ),
+            )}
+            {'\n'}
+          </div>
+        )}
         <textarea
           ref={taRef}
-          className="sc-input"
+          className={`sc-input${showOverlay ? ' has-overlay' : ''}`}
           placeholder={
             dict
               ? 'Gõ lại câu bạn nghe được… (Enter để kiểm tra)'
@@ -908,6 +970,7 @@ const SentenceCard = memo(function SentenceCard({
           onKeyUp={syncCaret}
           onClick={syncCaret}
           onKeyDown={onKeyDown}
+          onScroll={syncScroll}
           onFocus={() => setFocused(true)}
           onBlur={() => {
             setFocused(false)
@@ -940,7 +1003,7 @@ const SentenceCard = memo(function SentenceCard({
         <button type="button" className="btn tiny" onClick={() => onReveal(item.id)}>
           Xem đáp án
         </button>
-        <button type="button" className="btn primary" onClick={() => onCheck(item.id)}>
+        <button type="button" className="btn primary" onClick={() => onCheck(item.id, true)}>
           Kiểm tra
         </button>
       </div>

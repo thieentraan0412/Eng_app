@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CloudApi, computeStreak } from '../services/cloud/CloudApiClient'
+import { CloudApi, computeStreak, type StudyStat } from '../services/cloud/CloudApiClient'
 import BarChart from '../components/BarChart'
 import type { PageKey } from './pages'
 
@@ -7,6 +7,7 @@ export default function DashboardPage({ onNavigate }: { onNavigate: (p: PageKey)
   const [stats, setStats] = useState<{ decks: number; cards: number; due: number } | null>(null)
   const [byDay, setByDay] = useState<{ date: string; count: number }[]>([])
   const [streak, setStreak] = useState(0)
+  const [study, setStudy] = useState<StudyStat[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -19,7 +20,13 @@ export default function DashboardPage({ onNavigate }: { onNavigate: (p: PageKey)
         setStreak(computeStreak(d))
       })
       .catch((e) => setError((e as Error).message))
+    // Thống kê học tập hôm nay (phút học / từ mới / quiz) — bảng study_stats
+    CloudApi.studyStatsByDay(7)
+      .then(setStudy)
+      .catch(() => setStudy(null))
   }, [])
+
+  const todayStat = study?.[study.length - 1] ?? null
 
   return (
     <div className="page">
@@ -44,6 +51,28 @@ export default function DashboardPage({ onNavigate }: { onNavigate: (p: PageKey)
         <div className="stat-card">
           <div className="stat-num">🔥 {streak}</div>
           <div className="stat-label">Ngày streak</div>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-title">Hôm nay bạn đã học 📚</div>
+        <div className="stat-grid today-grid">
+          <div className="stat-card">
+            <div className="stat-num">⏱️ {todayStat?.minutes_studied ?? '—'}</div>
+            <div className="stat-label">Phút học</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-num">🔁 {todayStat?.cards_reviewed ?? '—'}</div>
+            <div className="stat-label">Thẻ đã ôn</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-num">✨ {todayStat?.new_words ?? '—'}</div>
+            <div className="stat-label">Từ mới</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-num">📝 {todayStat?.quizzes_done ?? '—'}</div>
+            <div className="stat-label">Quiz đã làm</div>
+          </div>
         </div>
       </div>
 

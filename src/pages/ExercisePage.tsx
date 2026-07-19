@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CloudApi, type Card, type Deck } from '../services/cloud/CloudApiClient'
 import { speak, ttsSupported } from '../services/tts'
+import { track } from '../services/studyTracker'
 
 // Trang Bài tập — trắc nghiệm sinh TỰ ĐỘNG từ các bộ từ vựng:
 //  · Anh→Việt: hiện từ tiếng Anh, chọn 1 trong 4 nghĩa tiếng Việt
@@ -37,6 +38,17 @@ function shuffle<T>(arr: T[]): T[] {
 function exampleOf(card: Card): string | null {
   return (card.example ?? '').split('\n').filter(Boolean)[0] ?? null
 }
+
+// Câu ví dụ dùng được cho bài "sắp xếp từ": chọn câu 3–12 từ (đủ khó mà không rối).
+function reorderSentence(card: Card): string | null {
+  for (const line of (card.example ?? '').split('\n').map((s) => s.trim()).filter(Boolean)) {
+    const n = line.split(/\s+/).filter(Boolean).length
+    if (n >= 3 && n <= 12) return line
+  }
+  return null
+}
+
+const hasReorder = (c: Card) => reorderSentence(c) !== null
 
 // Sinh đề: mỗi thẻ trong bộ thành 1 câu hỏi; nhiễu ưu tiên lấy CÙNG BỘ,
 // thiếu mới mượn từ các bộ khác. Không trùng từ / trùng nghĩa giữa các đáp án.
@@ -143,12 +155,23 @@ function restoreOrBuild(
   return { questions, answers, startIdx }
 }
 
+type ExMode = 'mcq' | 'reorder'
+
 export default function ExercisePage() {
   const [decks, setDecks] = useState<DeckWithCards[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [session, setSession] = useState<DeckWithCards | null>(null)
+  // Kiểu bài tập: trắc nghiệm (mặc định) hoặc sắp xếp từ
+  const [mode, setMode] = useState<ExMode>(
+    () => (localStorage.getItem('ex_mode') as ExMode) || 'mcq',
+  )
   // Tiến độ đã lưu trên cloud theo từng bộ (đồng bộ giữa app / web / điện thoại)
   const [cloudProg, setCloudProg] = useState<Map<string, SavedProgress>>(() => new Map())
+
+  const chooseMode = (m: ExMode) => {
+    setMode(m)
+    localStorage.setItem('ex_mode', m)
+  }
 
   useEffect(() => {
     ;(async () => {
@@ -181,7 +204,13 @@ export default function ExercisePage() {
   if (error) return <div className="page"><div className="alert error">{error}</div></div>
 
   if (session) {
-    return (
+    return mode === 'reorder' ? (
+      <ReorderQuiz
+        deck={session.deck}
+        cards={session.cards.filter(hasReorder)}
+        onExit={() => setSession(null)}
+      />
+    ) : (
       <VocabQuiz
         deck={session.deck}
         cards={session.cards}
@@ -192,20 +221,59 @@ export default function ExercisePage() {
     )
   }
 
+  // Ở chế độ "sắp xếp từ" chỉ hiện bộ CÓ câu ví dụ dùng được
+  const visibleDecks =
+    decks && mode === 'reorder'
+      ? decks.filter((d) => d.cards.some(hasReorder))
+      : decks
+
   return (
     <div className="page">
       <h1 className="page-title">Bài tập</h1>
+
+      {/* Chọn kiểu bài: trắc nghiệm / sắp xếp từ */}
+      <div className="tabs ex-mode-tabs">
+        <button
+          className={mode === 'mcq' ? 'tab active' : 'tab'}
+          onClick={() => chooseMode('mcq')}
+        >
+          📝 Trắc nghiệm
+        </button>
+        <button
+          className={mode === 'reorder' ? 'tab active' : 'tab'}
+          onClick={() => chooseMode('reorder')}
+        >
+          🔀 Sắp xếp từ
+        </button>
+      </div>
+
       <p className="muted">
-        Trắc nghiệm sinh tự động từ các bộ từ vựng của bạn — bấm vào một bộ để bắt đầu.
+        {mode === 'reorder'
+          ? 'Sắp xếp các từ đã xáo trộn thành câu ví dụ đúng — bấm vào một bộ để bắt đầu.'
+          : 'Trắc nghiệm sinh tự động từ các bộ từ vựng của bạn — bấm vào một bộ để bắt đầu.'}
       </p>
 
       {!decks ? (
         <p className="muted">Đang tải…</p>
-      ) : decks.length === 0 ? (
-        <p className="muted">Chưa có bộ nào có từ vựng. Hãy thêm từ ở mục Từ vựng trước nhé.</p>
+      ) : !visibleDecks || visibleDecks.length === 0 ? (
+        <p className="muted">
+          {mode === 'reorder'
+            ? 'Chưa có bộ nào có câu ví dụ để sắp xếp. Hãy thêm câu ví dụ cho thẻ ở mục Từ vựng.'
+            : 'Chưa có bộ nào có từ vựng. Hãy thêm từ ở mục Từ vựng trước nhé.'}
+        </p>
       ) : (
         <div className="deck-grid">
-          {decks.map((d) => {
+          {visibleDecks.map((d) => {
+            if (mode === 'reorder') {
+              const n = d.cards.filter(hasReorder).length
+              return (
+                <button key={d.deck.id} className="deck-card" onClick={() => setSession(d)}>
+                  <div className="deck-name">{d.deck.name}</div>
+                  <span className="muted">{n} câu để sắp xếp</span>
+                  <span className="muted">Bắt đầu →</span>
+                </button>
+              )
+            }
             const saved = pickSaved(d.deck.id, cloudProg.get(d.deck.id) ?? null)
             const done = Math.min(answeredCount(saved), d.cards.length)
             const pct = d.cards.length ? Math.round((done / d.cards.length) * 100) : 0
@@ -341,16 +409,27 @@ function VocabQuiz({
   const restart = () => {
     localStorage.removeItem(progressKey(deck.id))
     CloudApi.clearExerciseProgress(deck.id).catch(() => {})
+    quizCounted.current = false // lượt mới -> cho phép đếm lại khi hoàn thành
     setQuestions(buildQuiz(cards, pool))
     setIdx(0)
     setAnswers({})
   }
+
+  // Làm xong 1 lượt (tới màn kết quả) -> đếm +1 quiz vào study_stats (mỗi lượt 1 lần)
+  const quizCounted = useRef(false)
+  useEffect(() => {
+    if (!q && questions.length > 0 && !quizCounted.current) {
+      quizCounted.current = true
+      track.quizzes(1)
+    }
+  }, [q, questions.length])
 
   // Hết câu -> màn kết quả + ôn lại các câu sai / bỏ trống
   if (!q) {
     const wrongCards = questions.filter((x) => answers[x.card.id] !== x.card.id).map((x) => x.card)
     // Vòng mới CHỈ gồm các từ sai/bỏ trống (đề + đáp án trộn lại); tiến độ lưu theo vòng này
     const retryWrong = () => {
+      quizCounted.current = false // lượt mới -> cho phép đếm lại khi hoàn thành
       setQuestions(buildQuiz(wrongCards, pool))
       setIdx(0)
       setAnswers({})
@@ -537,6 +616,301 @@ function VocabQuiz({
           </span>
           <button className="btn" onClick={goNext}>
             Bỏ qua →
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================================
+// Bài "Sắp xếp từ" (reorder) — xáo trộn câu ví dụ của thẻ, người dùng
+// bấm các từ theo đúng thứ tự để dựng lại câu. Chấm bằng cách so chuỗi
+// từ đã xếp với câu gốc (bỏ hoa/thường, khoảng trắng thừa).
+// ============================================================
+interface Chip {
+  id: number // vị trí trong câu gốc (để phân biệt từ trùng nhau)
+  text: string
+}
+
+interface ReorderQuestion {
+  card: Card
+  sentence: string // câu gốc (đáp án đúng)
+  answer: Chip[] // các từ theo đúng thứ tự
+}
+
+// So khớp câu: nối các từ, bỏ hoa/thường & khoảng trắng thừa
+const normSentence = (chips: Chip[]) =>
+  chips
+    .map((c) => c.text)
+    .join(' ')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+
+// Xáo trộn chip sao cho KHÁC thứ tự gốc (thử vài lần, cùng lắm đảo ngược)
+function scramble(chips: Chip[]): Chip[] {
+  if (chips.length < 2) return [...chips]
+  const original = chips.map((c) => c.id).join(',')
+  for (let i = 0; i < 8; i++) {
+    const s = shuffle(chips)
+    if (s.map((c) => c.id).join(',') !== original) return s
+  }
+  return [...chips].reverse()
+}
+
+function buildReorder(cards: Card[]): ReorderQuestion[] {
+  return shuffle(cards)
+    .map((card) => {
+      const sentence = reorderSentence(card)
+      if (!sentence) return null
+      const answer = sentence
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((text, id) => ({ id, text }))
+      return { card, sentence, answer } as ReorderQuestion
+    })
+    .filter((q): q is ReorderQuestion => q !== null)
+}
+
+function ReorderQuiz({
+  deck,
+  cards,
+  onExit,
+}: {
+  deck: Deck
+  cards: Card[]
+  onExit: () => void
+}) {
+  const [questions] = useState<ReorderQuestion[]>(() => buildReorder(cards))
+  const [idx, setIdx] = useState(0)
+  const [placed, setPlaced] = useState<Chip[]>([]) // các từ đã xếp (theo thứ tự)
+  const [bank, setBank] = useState<Chip[]>([]) // các từ còn trong kho
+  const [checked, setChecked] = useState(false)
+  const [correct, setCorrect] = useState(false)
+  // Kết quả từng câu để tính điểm ở màn cuối
+  const [results, setResults] = useState<boolean[]>([])
+
+  const q = questions[idx] as ReorderQuestion | undefined
+
+  // Vào câu mới -> xáo trộn lại kho từ, xóa vùng đã xếp
+  useEffect(() => {
+    if (!q) return
+    setBank(scramble(q.answer))
+    setPlaced([])
+    setChecked(false)
+    setCorrect(false)
+  }, [idx, q])
+
+  // Xong toàn bộ -> đếm +1 quiz vào study_stats (1 lần / lượt)
+  const counted = useRef(false)
+  useEffect(() => {
+    if (!q && questions.length > 0 && !counted.current) {
+      counted.current = true
+      track.quizzes(1)
+    }
+  }, [q, questions.length])
+
+  const pick = (chip: Chip, from: number) => {
+    if (checked) return
+    setBank((b) => b.filter((_, i) => i !== from))
+    setPlaced((p) => [...p, chip])
+  }
+  const unpick = (from: number) => {
+    if (checked) return
+    setPlaced((p) => {
+      const chip = p[from]
+      setBank((b) => [...b, chip])
+      return p.filter((_, i) => i !== from)
+    })
+  }
+
+  const check = () => {
+    if (!q || placed.length !== q.answer.length) return
+    const ok = normSentence(placed) === normSentence(q.answer)
+    setCorrect(ok)
+    setChecked(true)
+    setResults((r) => {
+      const next = [...r]
+      next[idx] = ok
+      return next
+    })
+  }
+
+  const next = () => {
+    setIdx((i) => i + 1)
+  }
+
+  // Enter: đủ từ -> chấm; đã chấm -> sang câu kế
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return
+      e.preventDefault()
+      if (checked) next()
+      else if (q && placed.length === q.answer.length) check()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checked, placed, q])
+
+  if (questions.length === 0) {
+    return (
+      <div className="page center">
+        <h1 className="page-title">Chưa có câu để sắp xếp</h1>
+        <p className="muted">Bộ “{deck.name}” chưa có thẻ nào kèm câu ví dụ phù hợp (3–12 từ).</p>
+        <button className="btn primary" onClick={onExit}>
+          Chọn bộ khác
+        </button>
+      </div>
+    )
+  }
+
+  // Màn kết quả
+  if (!q) {
+    const right = results.filter(Boolean).length
+    const pctRight = Math.round((right / questions.length) * 100)
+    const R = 52
+    const CIRC = 2 * Math.PI * R
+    const ringCls = pctRight >= 80 ? 'good' : pctRight >= 50 ? 'mid' : 'bad'
+    const replay = () => {
+      counted.current = false
+      setResults([])
+      setIdx(0)
+    }
+    return (
+      <div className="page center ex-result">
+        <h1 className="page-title">
+          {pctRight >= 80 ? '🎉 Tuyệt vời!' : pctRight >= 50 ? '👍 Khá lắm!' : '💪 Cố lên!'}
+        </h1>
+        <p className="muted">Bộ “{deck.name}” · Sắp xếp từ</p>
+        <svg className={`ex-ring ${ringCls}`} viewBox="0 0 120 120">
+          <circle className="ex-ring-track" cx="60" cy="60" r={R} />
+          <circle
+            className="ex-ring-fill"
+            cx="60"
+            cy="60"
+            r={R}
+            strokeDasharray={`${(pctRight / 100) * CIRC} ${CIRC}`}
+          />
+          <text className="ex-ring-pct" x="60" y="58">
+            {pctRight}%
+          </text>
+          <text className="ex-ring-sub" x="60" y="78">
+            chính xác
+          </text>
+        </svg>
+        <div className="ex-stats">
+          <div className="ex-stat ok">
+            <strong>{right}</strong>
+            <span>Đúng</span>
+          </div>
+          <div className="ex-stat no">
+            <strong>{questions.length - right}</strong>
+            <span>Sai</span>
+          </div>
+          <div className="ex-stat">
+            <strong>{questions.length}</strong>
+            <span>Tổng số câu</span>
+          </div>
+        </div>
+        <div className="review-actions">
+          <button className="btn primary" onClick={replay}>
+            🔁 Làm lại
+          </button>
+          <button className="btn" onClick={onExit}>
+            Chọn bộ khác
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="page ex-quiz">
+      <div className="ex-top">
+        <button className="ex-exit" onClick={onExit} title="Thoát">
+          ✕
+        </button>
+        <div className="ex-bar" title={`Câu ${idx + 1}/${questions.length}`}>
+          <div
+            className="ex-bar-fill"
+            style={{ width: `${Math.round((idx / questions.length) * 100)}%` }}
+          />
+        </div>
+        <span className="ex-score" title="Số câu đúng">
+          ✓ {results.filter(Boolean).length}
+        </span>
+      </div>
+
+      <div className="ex-prompt">
+        <div className="ex-prompt-label">
+          Câu {idx + 1}/{questions.length} · Sắp xếp các từ thành câu đúng
+        </div>
+        <div className="ro-hint muted">
+          Gợi ý: <strong>{q.card.word}</strong>
+          {q.card.meaning ? ` — ${q.card.meaning}` : ''}
+        </div>
+      </div>
+
+      {/* Vùng đã xếp — bấm 1 từ để trả lại kho */}
+      <div className={`ro-answer ${checked ? (correct ? 'ok' : 'no') : ''}`}>
+        {placed.length === 0 ? (
+          <span className="ro-placeholder muted">Bấm các từ bên dưới để xếp câu…</span>
+        ) : (
+          placed.map((c, i) => (
+            <button key={`${c.id}-${i}`} className="ro-chip placed" onClick={() => unpick(i)}>
+              {c.text}
+            </button>
+          ))
+        )}
+      </div>
+
+      {/* Kho từ đã xáo trộn */}
+      {!checked && (
+        <div className="ro-bank">
+          {bank.map((c, i) => (
+            <button key={`${c.id}-${i}`} className="ro-chip" onClick={() => pick(c, i)}>
+              {c.text}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Phản hồi sau khi chấm */}
+      {checked && !correct && (
+        <div className="ro-solution">
+          <span className="muted">Đáp án đúng:</span> {q.sentence}
+        </div>
+      )}
+
+      {checked ? (
+        <div className={`ex-banner ${correct ? 'ok' : 'no'}`}>
+          <span className="ex-banner-ico">{correct ? '✓' : '✕'}</span>
+          <div className="ex-banner-text">
+            <strong>{correct ? 'Chính xác!' : 'Chưa đúng'}</strong>
+          </div>
+          <button className="ex-continue" onClick={next}>
+            {idx + 1 < questions.length ? 'Tiếp tục →' : 'Xem kết quả'}
+          </button>
+        </div>
+      ) : (
+        <div className="review-nav">
+          <button
+            className="btn"
+            onClick={() => {
+              if (placed.length) unpick(placed.length - 1)
+            }}
+            disabled={placed.length === 0}
+          >
+            ↩ Bỏ từ cuối
+          </button>
+          <button
+            className="btn primary"
+            onClick={check}
+            disabled={placed.length !== q.answer.length}
+          >
+            Kiểm tra
           </button>
         </div>
       )}

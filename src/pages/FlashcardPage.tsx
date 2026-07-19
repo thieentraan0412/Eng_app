@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type TouchEvent } from 'react'
 import { CloudApi, type Deck, type Card } from '../services/cloud/CloudApiClient'
 import { previewInterval, type Rating } from '../services/srs'
 import { speak, stopSpeaking, ttsSupported } from '../services/tts'
+import { track } from '../services/studyTracker'
 
 // Nút 🔊 phát âm 1 lần (câu ví dụ) — dừng nổi bọt để không lật thẻ khi bấm
 function SpeakButton({ text }: { text: string }) {
@@ -400,6 +401,7 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
     if (!practice) {
       try {
         await CloudApi.reviewCard(current, rating)
+        track.cards(1) // đếm vào study_stats: 1 thẻ đã ôn thật
       } catch (e) {
         setError((e as Error).message)
         return

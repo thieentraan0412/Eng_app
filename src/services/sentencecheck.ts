@@ -142,22 +142,58 @@ function rawTokens(text: string): string[] {
   return text.split(/[.,!?;:"“”'’()\-\s]+/).filter(Boolean)
 }
 
-// Từ đúng kế tiếp = token 'del' đầu tiên trong diff: LCS đảm bảo mọi thứ
-// trước nó đã khớp đáp án, nên đây chính là chỗ người dùng đang mắc.
-// Trả null khi câu người dùng không thiếu từ nào (chỉ thừa / chỉ sai dấu câu).
+// Từ đúng kế tiếp = từ đáp án tại CHỖ SAI ĐẦU TIÊN. Đếm số từ khớp liên tục
+// từ đầu (tiền tố đúng) rồi DỪNG ở token 'add'/'del' đầu tiên — token 'same'
+// nằm SAU lỗi (do LCS ghép được) không được tính là "đúng từ đầu", nếu không
+// gợi ý sẽ mâu thuẫn với từ được tô đỏ trong ô nhập.
+// Trả null khi người dùng chỉ THỪA từ ở cuối (đã gõ hết đáp án).
 function nextWordHint(diff: DiffToken[], ref: string): NextWordHint | null {
   const raw = rawTokens(ref)
-  let refIdx = 0 // vị trí đang xét trong đáp án
-  let okCount = 0 // số từ người dùng đã gõ khớp
+  let okCount = 0 // số từ ĐÚNG LIÊN TỤC tính từ đầu câu
   for (const t of diff) {
     if (t.op === 'same') {
-      refIdx++
       okCount++
-    } else if (t.op === 'del') {
-      return { word: raw[refIdx] ?? t.text, okCount }
+      continue
     }
+    // Chỗ lệch đầu tiên: từ đúng cần gõ là từ đáp án thứ okCount (0-based).
+    // Đã gõ hết số từ của đáp án -> chỉ là thừa từ, không gợi ý.
+    return okCount < raw.length ? { word: raw[okCount], okCount } : null
   }
   return null
+}
+
+// Một đoạn của câu người dùng để tô màu trong ô nhập (lớp phủ)
+export interface WrongSegment {
+  text: string
+  wrong: boolean // true = từ gõ SAI VỊ TRÍ so với đáp án (tô đỏ)
+}
+
+// Cùng tập ký tự ngăn cách với normalize() -> mỗi "từ" khớp đúng 1 token
+// của tokens(), nên chỉ số op dùng chung được với diff.
+const WORD_RE = /[^\s.,!?;:"“”'’()\-]+/g
+
+// Chia câu người dùng thành các đoạn (từ + dấu ngăn cách) để dựng lại y hệt
+// trong lớp phủ; từ nào là 'add' theo diff LCS (không khớp vị trí trong đáp án)
+// -> wrong=true. Tính lại trực tiếp từ văn bản HIỆN TẠI nên tô màu luôn khớp
+// với chữ đang hiển thị, và tự cập nhật khi người dùng sửa.
+export function wrongWordSegments(userInput: string, refAnswer: string): WrongSegment[] {
+  const diff = wordDiff(tokens(userInput), tokens(refAnswer))
+  // op của TỪ NGƯỜI DÙNG theo thứ tự (bỏ 'del' = từ đáp án còn thiếu)
+  const userOps = diff.filter((d) => d.op !== 'del').map((d) => d.op)
+
+  const segs: WrongSegment[] = []
+  let last = 0
+  let wi = 0
+  let m: RegExpExecArray | null
+  WORD_RE.lastIndex = 0
+  while ((m = WORD_RE.exec(userInput)) !== null) {
+    if (m.index > last) segs.push({ text: userInput.slice(last, m.index), wrong: false })
+    segs.push({ text: m[0], wrong: userOps[wi] === 'add' })
+    wi++
+    last = m.index + m[0].length
+  }
+  if (last < userInput.length) segs.push({ text: userInput.slice(last), wrong: false })
+  return segs
 }
 
 // Lỗi chính tả trong câu người dùng

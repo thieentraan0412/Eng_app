@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { CloudApi, type Deck, type Card } from '../services/cloud/CloudApiClient'
+import { track } from '../services/studyTracker'
 import { autocomplete, fuzzyCorrect, nextWords } from '../services/suggestion'
 import { isMisspelled, suggestFix } from '../services/spellcheck'
 import {
@@ -673,6 +674,7 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
         pos: pos || undefined,
       })
       setCards((c) => [card, ...c])
+      track.newWords(1) // đếm vào study_stats: +1 từ mới hôm nay
       setForm({ word: '', pos: '' })
       setMeans([])
       setCols([])

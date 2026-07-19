@@ -4,6 +4,7 @@ import TranslatePopup from './TranslatePopup'
 import { CloudApi, type Deck } from '../services/cloud/CloudApiClient'
 import { translate, translateOnline } from '../services/translation'
 import { fetchEnrichment, searchSentences, shortPos } from '../services/enrich'
+import { track, useStudyTime } from '../services/studyTracker'
 import type { PageKey } from '../pages/pages'
 import DashboardPage from '../pages/DashboardPage'
 import VocabularyPage from '../pages/VocabularyPage'
@@ -17,10 +18,23 @@ import SettingsPage from '../pages/SettingsPage'
 
 const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
 
+// Các trang được tính là "đang học" -> đo thời gian học (minutes_studied)
+const STUDY_PAGES = new Set<PageKey>([
+  'flashcard',
+  'exercise',
+  'reading',
+  'writing',
+  'sentence',
+  'vocabulary',
+])
+
 export default function AppLayout() {
   const [page, setPage] = useState<PageKey>('dashboard')
   const [toast, setToast] = useState<string | null>(null)
   const [navOpen, setNavOpen] = useState(false) // drawer menu trên mobile
+
+  // Đo thời gian học khi đang ở một trang học (dừng khi rời trang / ẩn cửa sổ)
+  useStudyTime(STUDY_PAGES.has(page))
 
   // Chọn trang: chuyển trang + đóng drawer (mobile)
   const goto = (p: PageKey) => {
@@ -87,6 +101,7 @@ export default function AppLayout() {
       pattern: patterns.length ? patterns.join('\n') : undefined,
       example: examples.length ? examples.join('\n') : undefined,
     })
+    track.newWords(1) // đếm vào study_stats: +1 từ mới (lưu nhanh khi bôi dịch)
     localStorage.setItem('last_deck_id', deck.id) // nhớ bộ gần nhất cho lần sau
   }
 

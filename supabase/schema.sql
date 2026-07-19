@@ -304,3 +304,36 @@ $$;
 
 revoke all on function public.get_db_stats() from public, anon;
 grant execute on function public.get_db_stats() to authenticated;
+
+-- ============================================================
+-- GHI THỐNG KÊ HỌC TẬP theo ngày (study_stats) — cộng dồn nguyên tử.
+-- Client gọi hàm này để +thẻ đã ôn / +phút học / +từ mới / +quiz cho HÔM NAY;
+-- upsert theo (user_id, current_date) nên gọi nhiều lần trong ngày vẫn cộng dồn
+-- đúng, không cần đọc-sửa-ghi (tránh race giữa nhiều thao tác).
+-- ============================================================
+create or replace function public.bump_study_stats(
+  d_cards     integer default 0,
+  d_minutes   integer default 0,
+  d_new_words integer default 0,
+  d_quizzes   integer default 0
+) returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.study_stats
+    (user_id, date, cards_reviewed, minutes_studied, new_words, quizzes_done)
+  values
+    (auth.uid(), current_date,
+     greatest(d_cards, 0), greatest(d_minutes, 0),
+     greatest(d_new_words, 0), greatest(d_quizzes, 0))
+  on conflict (user_id, date) do update set
+    cards_reviewed  = public.study_stats.cards_reviewed  + excluded.cards_reviewed,
+    minutes_studied = public.study_stats.minutes_studied + excluded.minutes_studied,
+    new_words       = public.study_stats.new_words       + excluded.new_words,
+    quizzes_done    = public.study_stats.quizzes_done    + excluded.quizzes_done;
+end $$;
+
+revoke all on function public.bump_study_stats(integer, integer, integer, integer) from public, anon;
+grant execute on function public.bump_study_stats(integer, integer, integer, integer) to authenticated;
