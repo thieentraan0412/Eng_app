@@ -659,6 +659,34 @@ export const CloudApi = {
     if (error) throw error
   },
 
+  // ---------- Bài tập: tiến độ trắc nghiệm theo bộ từ (đồng bộ mọi thiết bị) ----------
+  // data là jsonb do trang Bài tập tự định nghĩa ({q, a, t}) — API không cần hiểu cấu trúc
+  async listExerciseProgress(): Promise<{ deck_id: string; data: unknown }[]> {
+    const { data, error } = await supabase.from('exercise_progress').select('deck_id, data')
+    if (error) throw error
+    return data as { deck_id: string; data: unknown }[]
+  },
+
+  async saveExerciseProgress(deckId: string, payload: unknown): Promise<void> {
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { error } = await supabase.from('exercise_progress').upsert(
+      {
+        user_id: user.id,
+        deck_id: deckId,
+        data: payload,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,deck_id' },
+    )
+    if (error) throw error
+  },
+
+  async clearExerciseProgress(deckId: string): Promise<void> {
+    const { error } = await supabase.from('exercise_progress').delete().eq('deck_id', deckId)
+    if (error) throw error
+  },
+
   // ---------- Thống kê dung lượng DB (trang Thống kê) ----------
   async getDbStats(): Promise<DbStats> {
     const { data, error } = await supabase.rpc('get_db_stats')

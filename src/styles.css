@@ -1452,6 +1452,18 @@ textarea::placeholder {
   border-color: var(--primary);
   color: var(--primary);
 }
+.fc-toggle-row {
+  align-self: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+/* Trạng thái ĐANG TẮT của nút bật/tắt (gõ từ, ví dụ) */
+.fc-dir-toggle.off {
+  opacity: 0.55;
+  border-style: dashed;
+}
 .fc-extra {
   display: flex;
   align-items: center;
@@ -2021,6 +2033,101 @@ textarea::placeholder {
 .bar-label {
   font-size: 0.7rem;
   color: var(--muted);
+}
+
+/* ---------- Bài tập (trắc nghiệm từ bộ từ vựng) ---------- */
+.ex-quiz {
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.ex-prompt {
+  text-align: center;
+  padding: 1.4rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-xs);
+}
+.ex-prompt-label {
+  font-size: 0.82rem;
+  color: var(--text-soft);
+  margin-bottom: 0.5rem;
+}
+.ex-word {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.ex-options {
+  display: grid;
+  gap: 0.6rem;
+}
+.ex-option {
+  text-align: left;
+  padding: 0.7rem 0.95rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font: inherit;
+  transition: border-color 0.13s, background 0.13s, opacity 0.13s;
+}
+.ex-option:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+.ex-option.correct {
+  border-color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+}
+.ex-option.wrong {
+  border-color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+.ex-option.dim {
+  opacity: 0.55;
+}
+.ex-option-main {
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+.ex-option-ex {
+  font-size: 0.85rem;
+  color: var(--text-soft);
+  font-style: italic;
+}
+.ex-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+.ex-wrong-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 1rem auto;
+  max-width: 560px;
+  width: 100%;
+  text-align: left;
+}
+.ex-wrong-title {
+  font-weight: 700;
 }
 
 /* ---------- Quiz / Grammar ---------- */
@@ -3232,6 +3339,20 @@ textarea::placeholder {
   }
   .auth-sub {
     font-size: 0.86rem;
+  }
+
+  /* ===== Bài tập — mobile: đề gọn hơn, nút bấm to bản dễ chạm ===== */
+  .ex-word {
+    font-size: 1.35rem;
+  }
+  .ex-prompt {
+    padding: 1rem 0.8rem;
+  }
+  .ex-feedback {
+    justify-content: center;
+  }
+  .ex-feedback .btn {
+    flex: 1 1 100%;
   }
 }
 

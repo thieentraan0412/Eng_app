@@ -95,10 +95,30 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   const [hintLevel, setHintLevel] = useState(0)
   // Tự phát âm từ tiếng Anh khi từ xuất hiện (mặc định BẬT; bấm loa để tắt)
   const [autoSpeak, setAutoSpeak] = useState(() => localStorage.getItem('fc_autospeak') !== '0')
+  // Bật/tắt ô gõ từ tiếng Anh ở mặt trước (mặc định BẬT; nhớ lựa chọn)
+  const [showTyping, setShowTyping] = useState(() => localStorage.getItem('fc_show_typing') !== '0')
+  // Bật/tắt câu ví dụ ở mặt sau (cả ví dụ có sẵn lẫn ô tự viết; mặc định BẬT)
+  const [showExamples, setShowExamples] = useState(() => localStorage.getItem('fc_show_examples') !== '0')
   const answerRef = useRef<HTMLInputElement>(null)
   // Vuốt ngang (mobile) để chuyển thẻ
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const swiped = useRef(false)
+
+  const toggleTyping = () => {
+    setShowTyping((v) => {
+      const nv = !v
+      localStorage.setItem('fc_show_typing', nv ? '1' : '0')
+      return nv
+    })
+  }
+
+  const toggleExamples = () => {
+    setShowExamples((v) => {
+      const nv = !v
+      localStorage.setItem('fc_show_examples', nv ? '1' : '0')
+      return nv
+    })
+  }
 
   const toggleFront = () => {
     setFrontVi((v) => {
@@ -127,8 +147,8 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
 
   // Tự focus vào ô gõ từ tiếng Anh mỗi khi qua thẻ mới (cả 2 chiều học)
   useEffect(() => {
-    if (!flipped && current) answerRef.current?.focus()
-  }, [idx, frontVi, flipped, current])
+    if (!flipped && current && showTyping) answerRef.current?.focus()
+  }, [idx, frontVi, flipped, current, showTyping])
 
   // Tự phát âm khi SANG THẺ MỚI ở chiều Anh→Việt (từ hiện ngay mặt trước).
   // Không phụ thuộc `flipped` để lật đi lật lại không đọc lại.
@@ -378,9 +398,25 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
       </div>
 
       <div className="review-stage" onTouchStart={onStageTouchStart} onTouchEnd={onStageTouchEnd}>
-        <button className="fc-dir-toggle" onClick={toggleFront} title="Đổi chiều học">
-          🔁 {frontVi ? 'Việt → Anh' : 'Anh → Việt'}
-        </button>
+        <div className="fc-toggle-row">
+          <button className="fc-dir-toggle" onClick={toggleFront} title="Đổi chiều học">
+            🔁 {frontVi ? 'Việt → Anh' : 'Anh → Việt'}
+          </button>
+          <button
+            className={showTyping ? 'fc-dir-toggle' : 'fc-dir-toggle off'}
+            onClick={toggleTyping}
+            title={showTyping ? 'Đang hiện ô gõ từ — bấm để ẩn' : 'Ô gõ từ đang ẩn — bấm để hiện'}
+          >
+            ⌨️ Gõ từ {showTyping ? '' : '(tắt)'}
+          </button>
+          <button
+            className={showExamples ? 'fc-dir-toggle' : 'fc-dir-toggle off'}
+            onClick={toggleExamples}
+            title={showExamples ? 'Đang hiện câu ví dụ — bấm để ẩn' : 'Câu ví dụ đang ẩn — bấm để hiện'}
+          >
+            📝 Ví dụ {showExamples ? '' : '(tắt)'}
+          </button>
+        </div>
 
         <div
           className={flipped ? 'flashcard flipped' : 'flashcard'}
@@ -410,10 +446,11 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
 
           {!flipped && (
             <>
-              {/* Ô gõ từ tiếng Anh — cả 2 chiều học:
+              {/* Ô gõ từ tiếng Anh — cả 2 chiều học (ẩn/hiện bằng nút "⌨️ Gõ từ"):
                   · Việt→Anh: nhớ lại từ theo nghĩa (có gợi ý lộ dần chữ cái)
                   · Anh→Việt: gõ lại từ đang thấy để nhớ mặt chữ/chính tả
                   Gõ đúng (hoặc Enter khi đúng) -> tự sang từ khác */}
+              {showTyping && (
               <form
                 className={`fc-answer-form ${answerState}`}
                 onClick={(e) => e.stopPropagation()}
@@ -461,6 +498,7 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
                   </div>
                 )}
               </form>
+              )}
               <div className="fc-hint">
                 Bấm thẻ hoặc phím Tab để xem {frontVi ? 'từ tiếng Anh' : 'nghĩa'}
               </div>
@@ -480,7 +518,7 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
               )}
               <ExtraBlock label="Collocation" value={current.collocation} />
               <ExtraBlock label="Pattern" value={current.pattern} />
-              {current.example && (
+              {showExamples && current.example && (
                 <div className="fc-examples">
                   {current.example
                     .split('\n')
@@ -494,7 +532,7 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
               )}
 
               {/* Tự viết câu ví dụ với từ này -> lưu thêm vào thẻ */}
-              {exampleForm}
+              {showExamples && exampleForm}
             </div>
           )}
         </div>

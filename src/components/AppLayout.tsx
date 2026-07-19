@@ -9,7 +9,7 @@ import DashboardPage from '../pages/DashboardPage'
 import VocabularyPage from '../pages/VocabularyPage'
 import FlashcardPage from '../pages/FlashcardPage'
 import ReadingPage from '../pages/ReadingPage'
-import GrammarPage from '../pages/GrammarPage'
+import ExercisePage from '../pages/ExercisePage'
 import WritingPage from '../pages/WritingPage'
 import SentencePage from '../pages/SentencePage'
 import UsagePage from '../pages/UsagePage'
@@ -133,8 +133,8 @@ export default function AppLayout() {
         return <ReadingPage />
       case 'settings':
         return <SettingsPage />
-      case 'grammar':
-        return <GrammarPage />
+      case 'exercise':
+        return <ExercisePage />
       case 'writing':
         return <WritingPage />
       case 'sentence':

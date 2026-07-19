@@ -167,9 +167,23 @@ create table if not exists public.sentence_progress (
   unique (user_id, sentence_id)
 );
 
+-- ---------- 13. EXERCISE_PROGRESS (tiến độ trang Bài tập theo bộ từ) ----------
+-- Mỗi bộ từ 1 dòng/1 user: đề trắc nghiệm đã sinh + đáp án đã chọn (jsonb),
+-- để app ↔ web ↔ điện thoại vào lại đều tiếp tục đúng câu đang dở.
+create table if not exists public.exercise_progress (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  deck_id    uuid not null references public.decks (id) on delete cascade,
+  data       jsonb not null,                      -- {q: [{c, o}], a: {...}, t}
+  updated_at timestamptz not null default now(),
+  unique (user_id, deck_id)
+);
+
 -- ============================================================
 -- CHỈ MỤC (index) cho truy vấn thường dùng
 -- ============================================================
+create index if not exists idx_exprogress_user   on public.exercise_progress (user_id);
+create index if not exists idx_exprogress_deck   on public.exercise_progress (deck_id);
 create index if not exists idx_sfolders_user     on public.sentence_folders (user_id);
 create index if not exists idx_sentences_folder   on public.sentences (folder_id);
 create index if not exists idx_sprogress_user     on public.sentence_progress (user_id);
@@ -191,7 +205,8 @@ declare
   tables text[] := array[
     'decks','cards','review_logs','lessons','questions',
     'readings','writings','study_stats','settings',
-    'sentence_folders','sentences','sentence_progress'
+    'sentence_folders','sentences','sentence_progress',
+    'exercise_progress'
   ];
 begin
   foreach t in array tables loop
@@ -262,6 +277,7 @@ as $$
         union all select 'sentences',         count(*) from public.sentences         where deleted_at is null
         union all select 'sentence_folders',  count(*) from public.sentence_folders  where deleted_at is null
         union all select 'sentence_progress', count(*) from public.sentence_progress
+        union all select 'exercise_progress', count(*) from public.exercise_progress
         union all select 'readings',          count(*) from public.readings          where deleted_at is null
         union all select 'writings',          count(*) from public.writings          where deleted_at is null
         union all select 'lessons',           count(*) from public.lessons           where deleted_at is null
