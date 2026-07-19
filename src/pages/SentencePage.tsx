@@ -265,29 +265,56 @@ export default function SentencePage() {
 // ================= CHI TIẾT MỘT THƯ MỤC =================
 function FolderDetail({ folder, onBack }: { folder: Folder; onBack: () => void }) {
   const [mode, setMode] = useState<'practice' | 'manage'>('practice')
+  // Bố cục mockup CHỈ dùng cho mobile (màn hẹp); app/web PC giữ giao diện gốc.
+  const narrow = useIsNarrow()
 
   return (
     <div className="page page-wide sentence-page">
-      <button className="btn tiny" onClick={onBack}>
-        ← Quay lại
-      </button>
-      <div className="sentence-head">
-        <h1 className="page-title">{folder.name}</h1>
-        <div className="tabs">
-          <button
-            className={mode === 'practice' ? 'tab active' : 'tab'}
-            onClick={() => setMode('practice')}
-          >
-            Luyện tập
+      {narrow ? (
+        <>
+          <div className="sp-head">
+            <button className="sp-back" onClick={onBack}>
+              ‹ Quay lại
+            </button>
+            <h1 className="sp-title">{folder.name}</h1>
+            <p className="sp-sub">Luyện dịch câu · nhiều cấp độ &amp; chủ đề</p>
+          </div>
+          <div className="sp-seg">
+            <button
+              className={mode === 'practice' ? 'on' : ''}
+              onClick={() => setMode('practice')}
+            >
+              Luyện tập
+            </button>
+            <button className={mode === 'manage' ? 'on' : ''} onClick={() => setMode('manage')}>
+              Quản lý
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <button className="btn tiny" onClick={onBack}>
+            ← Quay lại
           </button>
-          <button
-            className={mode === 'manage' ? 'tab active' : 'tab'}
-            onClick={() => setMode('manage')}
-          >
-            Quản lý
-          </button>
-        </div>
-      </div>
+          <div className="sentence-head">
+            <h1 className="page-title">{folder.name}</h1>
+            <div className="tabs">
+              <button
+                className={mode === 'practice' ? 'tab active' : 'tab'}
+                onClick={() => setMode('practice')}
+              >
+                Luyện tập
+              </button>
+              <button
+                className={mode === 'manage' ? 'tab active' : 'tab'}
+                onClick={() => setMode('manage')}
+              >
+                Quản lý
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {mode === 'practice' ? (
         <PracticeView folder={folder} />
@@ -582,7 +609,68 @@ function PracticeView({ folder }: { folder: Folder }) {
   }
 
   // Hàng chọn chế độ luyện + lọc theo cấp độ / chủ đề (dùng chung 2 bố cục)
-  const filterRow = (
+  // MOBILE (mockup): mode chips + filter chips tách hàng.
+  // DESKTOP (gốc): thanh lọc gộp một hàng như cũ.
+  const filterRow = narrow ? (
+    <div className="sp-controls">
+      {ttsSupported && (
+        <div className="sp-modes">
+          <button
+            className={!dictation ? 'sp-mode on' : 'sp-mode'}
+            onClick={() => toggleDictation(false)}
+            title="Nhìn câu tiếng Việt, dịch sang tiếng Anh"
+          >
+            ✍️ Dịch
+          </button>
+          <button
+            className={dictation ? 'sp-mode on' : 'sp-mode'}
+            onClick={() => toggleDictation(true)}
+            title="Nghe máy đọc câu tiếng Anh rồi gõ lại (dictation)"
+          >
+            🎧 Nghe-chép
+          </button>
+        </div>
+      )}
+      {(levels.length > 0 || topics.length > 1) && (
+        <div className="sp-filters">
+          {levels.length > 0 && (
+            <>
+              <button
+                className={levelF === '' ? 'sp-chip on' : 'sp-chip'}
+                onClick={() => setLevelF('')}
+              >
+                Tất cả
+              </button>
+              {levels.map((l) => (
+                <button
+                  key={l}
+                  className={levelF === l ? 'sp-chip on' : 'sp-chip'}
+                  onClick={() => setLevelF(l)}
+                >
+                  {l}
+                </button>
+              ))}
+            </>
+          )}
+          {topics.length > 1 && (
+            <select
+              className="sp-topic"
+              value={topicF}
+              onChange={(e) => setTopicF(e.target.value)}
+              title="Lọc theo chủ đề"
+            >
+              <option value="">Mọi chủ đề</option>
+              {topics.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+    </div>
+  ) : (
     <div className="sp-filter">
       {ttsSupported && (
         <div className="tabs">
@@ -653,20 +741,24 @@ function PracticeView({ folder }: { folder: Folder }) {
     return (
       <div className="practice-focus">
         {filterRow}
-        <div className="pf-top">
-          <span className="pf-count">
-            Câu <strong>{idx + 1}</strong> / {shown.length}
-          </span>
-          <span className="pf-correct">
-            Đúng <strong>{correctCount}</strong>
-            {saving && <span className="muted sp-saving"> · đang lưu…</span>}
-          </span>
-        </div>
-        <div className="pf-bar">
-          <div
-            className="pf-bar-fill"
-            style={{ width: `${((idx + 1) / shown.length) * 100}%` }}
-          />
+        <div className="pf-progress">
+          <div className="pf-top">
+            <span className="pf-count">
+              Câu <strong>{idx + 1}</strong>
+              <span className="pf-count-total">/ {shown.length}</span>
+            </span>
+            <span className="pf-correct">
+              <span className="pf-correct-ico">✓</span>
+              <strong>{correctCount}</strong> đúng
+              {saving && <span className="muted sp-saving"> · đang lưu…</span>}
+            </span>
+          </div>
+          <div className="pf-bar">
+            <div
+              className="pf-bar-fill"
+              style={{ width: `${((idx + 1) / shown.length) * 100}%` }}
+            />
+          </div>
         </div>
 
         <SentenceCard
@@ -677,6 +769,7 @@ function PracticeView({ folder }: { folder: Folder }) {
           result={results[item.id]}
           revealed={!!revealed[item.id]}
           dictation={dictation}
+          focus
           onChange={setInput}
           onCheck={checkOne}
           onReveal={reveal}
@@ -767,6 +860,7 @@ const SentenceCard = memo(function SentenceCard({
   result,
   revealed,
   dictation = false,
+  focus = false,
   onChange,
   onCheck,
   onReveal,
@@ -777,6 +871,7 @@ const SentenceCard = memo(function SentenceCard({
   result?: GradeResult
   revealed: boolean
   dictation?: boolean // nghe-chép: nghe TTS đọc câu tiếng Anh rồi gõ lại
+  focus?: boolean // true = bố cục MOBILE (mockup); false = bố cục DESKTOP gốc
   onChange: (id: string, v: string) => void
   onCheck: (id: string, advance?: boolean) => void
   onReveal: (id: string) => void
@@ -901,40 +996,91 @@ const SentenceCard = memo(function SentenceCard({
 
   return (
     <div id={`sc-${item.id}`} className={`sentence-card ${statusClass}`}>
-      <div className="sc-vi">
-        <span className="sc-index">{index}</span>
-        <span className="sc-flag">{dict ? '🎧' : '🇻🇳'}</span>
-        {hidePrompt ? (
-          <span className="sc-vi-text muted">Nghe máy đọc rồi gõ lại câu tiếng Anh…</span>
-        ) : (
-          <span className="sc-vi-text">{item.vi}</span>
-        )}
-        {dict && (
-          <span className="sc-listen">
-            <button type="button" className="btn tiny" onClick={() => speak(item.en)}>
-              🔊 Nghe
-            </button>
-            <button
-              type="button"
-              className="btn tiny"
-              title="Đọc chậm"
-              onClick={() => speak(item.en, 0.65)}
-            >
-              🐢 Chậm
-            </button>
-          </span>
-        )}
-        {item.level && <span className="sc-level">{item.level}</span>}
-      </div>
+      {focus ? (
+        /* ===== Bố cục MOBILE (mockup): badge → đề → tag → nhãn ===== */
+        <>
+          <div className="sc-top">
+            <span className="sc-qnum">{index}</span>
+            <span className="sc-badge-lang">{dict ? '🎧 NGHE' : '🇻🇳 VN'}</span>
+            {dict && (
+              <span className="sc-listen">
+                <button type="button" className="btn tiny" onClick={() => speak(item.en)}>
+                  🔊 Nghe
+                </button>
+                <button
+                  type="button"
+                  className="btn tiny"
+                  title="Đọc chậm"
+                  onClick={() => speak(item.en, 0.65)}
+                >
+                  🐢 Chậm
+                </button>
+              </span>
+            )}
+            {item.level && <span className="sc-level">{item.level}</span>}
+          </div>
 
-      {item.hints && item.hints.length > 0 && !hidePrompt && (
-        <div className="sc-hints">
-          {item.hints.map((h) => (
-            <span key={h} className="sc-hint">
-              💡 {h}
-            </span>
-          ))}
-        </div>
+          {hidePrompt ? (
+            <p className="sc-prompt is-muted">Nghe máy đọc rồi gõ lại câu tiếng Anh…</p>
+          ) : (
+            <p className="sc-prompt">{item.vi}</p>
+          )}
+
+          {item.hints && item.hints.length > 0 && !hidePrompt && (
+            <div className="sc-tags">
+              {item.hints.map((h, i) => (
+                <span key={h} className={`sc-tag ${i % 2 ? 'v' : 'g'}`}>
+                  <span className="sc-tag-dot" />
+                  {h}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="sc-ans-label">
+            <span className="sc-ans-ico">✎</span>
+            {dict ? 'Câu bạn nghe được' : 'Bản dịch của bạn'}
+          </div>
+        </>
+      ) : (
+        /* ===== Bố cục DESKTOP (gốc): đề + gợi ý trên cùng một khối ===== */
+        <>
+          <div className="sc-vi">
+            <span className="sc-index">{index}</span>
+            <span className="sc-flag">{dict ? '🎧' : '🇻🇳'}</span>
+            {hidePrompt ? (
+              <span className="sc-vi-text muted">Nghe máy đọc rồi gõ lại câu tiếng Anh…</span>
+            ) : (
+              <span className="sc-vi-text">{item.vi}</span>
+            )}
+            {dict && (
+              <span className="sc-listen">
+                <button type="button" className="btn tiny" onClick={() => speak(item.en)}>
+                  🔊 Nghe
+                </button>
+                <button
+                  type="button"
+                  className="btn tiny"
+                  title="Đọc chậm"
+                  onClick={() => speak(item.en, 0.65)}
+                >
+                  🐢 Chậm
+                </button>
+              </span>
+            )}
+            {item.level && <span className="sc-level">{item.level}</span>}
+          </div>
+
+          {item.hints && item.hints.length > 0 && !hidePrompt && (
+            <div className="sc-hints">
+              {item.hints.map((h) => (
+                <span key={h} className="sc-hint">
+                  💡 {h}
+                </span>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <div className="sc-input-wrap">

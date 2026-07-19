@@ -1797,6 +1797,18 @@ textarea::placeholder {
   gap: 0.3rem;
   flex-wrap: wrap;
 }
+/* Chip lọc cấp độ: viên thuốc viền gọn, đồng bộ với bố cục luyện tập */
+.sp-chipset .tab {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+.sp-chipset .tab.active {
+  border-color: var(--primary);
+  color: var(--primary);
+}
 .sc-listen {
   display: inline-flex;
   gap: 0.35rem;
@@ -3278,8 +3290,9 @@ textarea::placeholder {
   font-size: 0.76rem;
   color: var(--text-soft);
   background: var(--surface-2);
+  border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 0.12rem 0.55rem;
+  padding: 0.15rem 0.6rem;
 }
 .sc-input-wrap {
   position: relative;
@@ -3356,13 +3369,24 @@ textarea::placeholder {
 }
 .sc-result {
   margin-top: 0.75rem;
-  padding: 0.7rem 0.8rem;
+  padding: 0.7rem 0.8rem 0.7rem 0.9rem;
   border-radius: var(--r-md);
   background: var(--surface-2);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+}
+/* Viền trái đổi màu theo kết quả -> phản hồi rõ ràng, chuyên nghiệp */
+.sentence-card.is-correct .sc-result {
+  border-left-color: var(--success);
+}
+.sentence-card.is-close .sc-result {
+  border-left-color: var(--warn);
+}
+.sentence-card.is-wrong .sc-result {
+  border-left-color: var(--danger);
 }
 .sc-status {
   display: flex;
@@ -3435,25 +3459,62 @@ textarea::placeholder {
 .practice-focus {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 1rem;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* Đầu trang: bảng tiến độ gọn có khung */
+.pf-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem 0.95rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-xs);
 }
 .pf-top {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   color: var(--text-soft);
 }
 .pf-count strong {
   color: var(--primary);
-  font-size: 1.05rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+.pf-count-total {
+  margin-left: 0.25rem;
+  color: var(--muted);
+}
+.pf-correct {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  color: var(--success);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 .pf-correct strong {
-  color: var(--success);
+  font-weight: 800;
+}
+.pf-correct-ico {
+  font-size: 0.72rem;
+}
+.pf-correct .sp-saving {
+  color: var(--muted);
+  font-weight: 500;
 }
 .pf-bar {
-  height: 8px;
+  height: 9px;
   border-radius: 999px;
   background: var(--surface-2);
   overflow: hidden;
@@ -3462,28 +3523,76 @@ textarea::placeholder {
   height: 100%;
   background: var(--grad-brand);
   border-radius: 999px;
-  transition: width 0.3s ease;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* Thẻ câu duy nhất: cho "thoáng" hơn khi đứng một mình */
+
+/* Thẻ câu HERO: nổi bật, thoáng, bo góc lớn */
 .practice-focus .sentence-card {
-  padding: 1.15rem 1.15rem 1.25rem;
+  padding: 1.35rem 1.3rem 1.4rem;
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-md);
 }
+.practice-focus .sc-vi-text {
+  font-size: 1.22rem;
+  line-height: 1.45;
+}
+
+/* Hàng nút trong thẻ: "Kiểm tra" là hành động chính chiếm phần lớn */
+.practice-focus .sc-actions {
+  justify-content: stretch;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+.practice-focus .sc-actions .btn {
+  min-height: 48px;
+  font-size: 1rem;
+  border-radius: var(--r-md);
+}
+.practice-focus .sc-actions .btn.tiny {
+  flex: 0 0 auto;
+  padding: 0 1.1rem;
+  font-size: 0.92rem;
+  background: transparent;
+  color: var(--text-soft);
+  border: 1px solid var(--border-strong);
+}
+.practice-focus .sc-actions .btn.tiny:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.practice-focus .sc-actions .btn.primary {
+  flex: 1;
+  font-weight: 700;
+}
+
+/* Điều hướng câu: Trước / Tiếp nổi bật, ngang nhau */
 .pf-nav {
   display: flex;
   gap: 0.6rem;
 }
 .pf-nav .btn {
   flex: 1;
-  min-height: 46px;
+  min-height: 48px;
   font-size: 1rem;
   font-weight: 650;
+  border-radius: var(--r-md);
 }
+
+/* Công cụ phụ: nhạt hơn để không tranh chú ý với hành động chính */
 .pf-tools {
   display: flex;
   gap: 0.6rem;
 }
 .pf-tools .btn {
   flex: 1;
+  min-height: 42px;
+  background: transparent;
+  color: var(--text-soft);
+  border: 1px solid var(--border);
+}
+.pf-tools .btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
 }
 
 /* ---------- Chép câu: chế độ quản lý ---------- */
@@ -4374,95 +4483,594 @@ textarea::placeholder {
 }
 
 /* ============================================================
-   Chép câu — Luyện tập trên ĐIỆN THOẠI: gói gọn trong 1 màn hình,
-   thấy đủ mọi nút (Xem đáp án/Kiểm tra, Trước/Tiếp, Kiểm tra tất cả/
-   Làm lại) mà không phải cuộn. Chủ yếu cắt bớt khoảng cách dọc.
+   CHÉP CÂU — Luyện tập: BỐ CỤC CHUYÊN NGHIỆP (theo mockup)
+   CHỈ ÁP DỤNG CHO MOBILE / MÀN HẸP (<= 860px). App & Web PC (desktop,
+   > 860px) giữ nguyên giao diện gốc (danh sách nhiều câu). Dùng biến màu
+   chung của app -> tự thích ứng sáng/tối. Font: Space Grotesk + Be Vietnam Pro.
+   ============================================================ */
+@media (max-width: 860px) {
+.sentence-page {
+  --font-d: 'Space Grotesk', var(--font-sans);
+  --font-b: 'Be Vietnam Pro', var(--font-sans);
+  font-family: var(--font-b);
+}
+/* Cột nội dung rộng vừa phải, canh giữa (chỉ ở màn hẹp) */
+.page.sentence-page {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---------- Đầu trang ---------- */
+.sp-head {
+  margin-bottom: 1rem;
+}
+.sp-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.3rem 0;
+  margin-bottom: 0.45rem;
+}
+.sp-back:hover {
+  color: var(--primary);
+}
+.sp-title {
+  font-family: var(--font-d);
+  font-weight: 700;
+  font-size: 1.55rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0;
+}
+.sp-sub {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
+/* ---------- Tab phân đoạn Luyện tập / Quản lý ---------- */
+.sp-seg {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.28rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 1rem;
+}
+.sp-seg button {
+  flex: 1;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--muted);
+  background: transparent;
+  transition: 0.18s;
+}
+.sp-seg button:hover {
+  color: var(--text-soft);
+}
+.sp-seg button.on {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Hàng điều khiển: mode + filter ---------- */
+.sp-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.sp-modes {
+  display: flex;
+  gap: 0.6rem;
+}
+.sp-mode {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 46px;
+  border-radius: 14px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.92rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  transition: 0.18s;
+}
+.sp-mode:hover {
+  border-color: var(--primary);
+}
+.sp-mode.on {
+  background: var(--grad-primary);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--shadow-primary);
+}
+.sp-filters {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+  scrollbar-width: none;
+}
+.sp-filters::-webkit-scrollbar {
+  display: none;
+}
+.sp-chip {
+  flex: 0 0 auto;
+  height: 34px;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  transition: 0.15s;
+}
+.sp-chip:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+.sp-chip.on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.sp-topic {
+  flex: 0 0 auto;
+  height: 34px;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---------- Vùng luyện tập (chế độ tập trung) ---------- */
+.practice-focus {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* Bảng tiến độ */
+.pf-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-xs);
+  margin: 0;
+}
+.pf-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.pf-count {
+  font-family: var(--font-d);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-soft);
+}
+.pf-count strong {
+  color: var(--primary);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+.pf-count-total {
+  margin-left: 0.25rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+.pf-correct {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 26px;
+  padding: 0 0.65rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid color-mix(in srgb, var(--success) 28%, transparent);
+}
+.pf-correct-ico {
+  font-size: 0.7rem;
+}
+.pf-correct .sp-saving {
+  color: var(--muted);
+  font-weight: 500;
+}
+.pf-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.pf-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--grad-brand);
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---------- Thẻ luyện (drill card) ---------- */
+.sentence-page .sentence-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  padding: 1.2rem 1.2rem 1.25rem 1.4rem;
+  box-shadow: var(--shadow-md);
+  transition: border-color 0.35s, box-shadow 0.35s;
+}
+/* Vạch màu bên trái đổi theo kết quả */
+.sentence-page .sentence-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--grad-primary);
+  transition: background 0.4s;
+}
+.sentence-page .sentence-card.is-correct {
+  border-color: color-mix(in srgb, var(--success) 42%, var(--border));
+  box-shadow: 0 1px 2px rgba(18, 161, 80, 0.06), 0 18px 40px -22px rgba(18, 161, 80, 0.4);
+}
+.sentence-page .sentence-card.is-correct::before {
+  background: linear-gradient(180deg, #20bf6b, var(--success));
+}
+.sentence-page .sentence-card.is-close {
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
+}
+.sentence-page .sentence-card.is-close::before {
+  background: linear-gradient(180deg, #f7c05a, var(--warn));
+}
+.sentence-page .sentence-card.is-wrong {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+}
+.sentence-page .sentence-card.is-wrong::before {
+  background: linear-gradient(180deg, #ff8080, var(--danger));
+}
+
+/* Hàng trên: số câu · nhãn ngôn ngữ · cấp độ */
+.sc-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+.sc-qnum {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-family: var(--font-d);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.sc-badge-lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 26px;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+.sc-level {
+  margin-left: auto;
+  flex: none;
+  height: 26px;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  color: var(--primary);
+  border: 1px solid var(--primary-soft);
+  font-family: var(--font-d);
+  font-weight: 600;
+  font-size: 0.72rem;
+}
+.sc-listen {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+/* Đề tiếng Việt */
+.sc-prompt {
+  font-family: var(--font-b);
+  font-weight: 600;
+  font-size: 1.22rem;
+  line-height: 1.42;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 0 0 0.85rem;
+}
+.sc-prompt.is-muted {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+/* Nhãn gợi ý ngữ pháp / từ vựng */
+.sc-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+.sc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 26px;
+  padding: 0 0.6rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.72rem;
+}
+.sc-tag.g {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sc-tag.v {
+  background: color-mix(in srgb, var(--warn) 15%, transparent);
+  color: var(--warn);
+}
+.sc-tag-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+/* Nhãn ô nhập */
+.sc-ans-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sc-ans-ico {
+  color: var(--primary);
+}
+
+/* Ô nhập: giữ metrics khớp lớp phủ (.sc-backdrop) để tô đỏ đúng vị trí */
+.sentence-page .sc-input {
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.sentence-page .sc-input::placeholder {
+  color: var(--muted-2, var(--muted));
+}
+
+/* Hàng nút trong thẻ: Xem đáp án (phụ) + Kiểm tra (chính) */
+.sentence-page .sc-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+.sentence-page .sc-actions .btn {
+  height: 48px;
+  min-height: 48px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.sentence-page .sc-actions .btn.tiny {
+  padding: 0;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text-soft);
+  font-size: 0.92rem;
+}
+.sentence-page .sc-actions .btn.tiny:hover {
+  border-color: var(--primary);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.sentence-page .sc-actions .btn.primary {
+  background: var(--grad-primary);
+  color: #fff;
+  box-shadow: var(--shadow-primary);
+  font-weight: 700;
+}
+
+/* ---------- Điều hướng câu ---------- */
+.pf-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin: 0;
+}
+.pf-nav .btn {
+  height: 50px;
+  min-height: 50px;
+  border-radius: 14px;
+  font-weight: 650;
+  font-size: 1rem;
+}
+.pf-nav .btn:first-child {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text-soft);
+}
+.pf-nav .btn:first-child:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--text);
+}
+.pf-nav .btn:last-child {
+  background: var(--primary-soft);
+  border: 1.5px solid transparent;
+  color: var(--primary);
+}
+.pf-nav .btn.primary {
+  background: var(--grad-primary);
+  color: #fff;
+  box-shadow: var(--shadow-primary);
+  animation: pf-pulse 1.5s ease-in-out 2;
+}
+@keyframes pf-pulse {
+  0%,
+  100% {
+    box-shadow: var(--shadow-primary);
+  }
+  50% {
+    box-shadow: 0 12px 30px -6px var(--primary);
+  }
+}
+
+/* ---------- Công cụ phụ: dạng nút chữ, có vạch ngăn ---------- */
+.pf-tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin: 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+.pf-tools .btn {
+  min-height: auto;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  border-radius: 0;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+.pf-tools .btn:first-child {
+  border-right: 1px solid var(--border);
+}
+.pf-tools .btn:hover {
+  background: none;
+  color: var(--primary);
+}
+
+/* ---------- Khối kết quả ---------- */
+.sentence-page .sc-result {
+  margin-top: 1rem;
+}
+} /* === hết @media (max-width: 860px) — bố cục mockup cho mobile === */
+
+/* ============================================================
+   Chép câu — điều chỉnh cho ĐIỆN THOẠI (gọn 1 màn, chạm thoải mái)
    ============================================================ */
 @media (max-width: 560px) {
-  /* Đầu trang gọn lại */
   .sentence-page.page {
-    padding-top: 0.4rem;
+    padding-top: 0.5rem;
   }
-  .sentence-page > .btn.tiny {
-    /* nút "← Quay lại" */
-    margin-bottom: 0.15rem;
-    min-height: 32px;
+  .sp-head {
+    margin-bottom: 0.7rem;
   }
-  .sentence-page .sentence-head {
-    margin-bottom: 0.4rem;
-    gap: 0.3rem;
+  .sp-title {
+    font-size: 1.3rem;
   }
-  .sentence-head .page-title {
-    font-size: 1.15rem;
-    margin: 0.05rem 0;
+  .sp-seg {
+    margin-bottom: 0.75rem;
   }
-  .sentence-head .tab {
-    min-height: 34px;
+  .sp-seg button {
+    height: 38px;
   }
-
-  /* Hàng chọn chế độ + lọc cấp độ/chủ đề */
-  .sp-filter {
-    gap: 0.4rem;
-    margin-bottom: 0.4rem;
+  .sp-controls {
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
   }
-  .sp-filter .tab {
-    min-height: 32px;
-  }
-  .sp-filter .level-select {
-    min-height: 32px;
+  .sp-mode {
+    height: 44px;
   }
 
-  /* Vùng luyện tập: thu khoảng cách giữa các khối */
   .practice-focus {
-    gap: 0.45rem;
+    gap: 0.7rem;
   }
-  .pf-top {
-    font-size: 0.82rem;
-  }
-  .pf-bar {
-    height: 6px;
+  .pf-progress {
+    padding: 0.7rem 0.85rem;
+    gap: 0.5rem;
   }
 
-  /* Thẻ câu gọn hơn */
-  .practice-focus .sentence-card {
-    padding: 0.65rem 0.8rem;
+  .sentence-page .sentence-card {
+    padding: 1rem 1rem 1.05rem 1.15rem;
   }
-  .practice-focus .sc-hints {
-    margin: 0.3rem 0 0.1rem;
+  .sc-prompt {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
   }
-  .practice-focus .sc-hint {
-    font-size: 0.72rem;
-    padding: 0.1rem 0.5rem;
+  .sc-tags {
+    margin-bottom: 0.85rem;
   }
   .practice-focus .sc-input-wrap {
-    margin: 0.4rem 0;
+    margin: 0.35rem 0 0.1rem;
   }
   .practice-focus .sc-input,
   .practice-focus .sc-backdrop {
-    min-height: 42px;
-    padding: 0.45rem 0.6rem;
-    line-height: 1.4;
-  }
-  .practice-focus .sc-actions {
-    margin-top: 0.1rem;
-  }
-  .practice-focus .sc-result {
-    margin-top: 0.4rem;
+    min-height: 46px;
     padding: 0.55rem 0.7rem;
+    line-height: 1.45;
   }
-
-  /* Điều hướng + công cụ: nút thấp hơn, sát nhau */
-  .pf-nav {
-    gap: 0.45rem;
+  .sentence-page .sc-actions {
+    margin-top: 0.8rem;
+  }
+  .sentence-page .sc-actions .btn {
+    height: 46px;
+    min-height: 46px;
   }
   .pf-nav .btn {
-    min-height: 40px;
+    height: 46px;
+    min-height: 46px;
     font-size: 0.95rem;
-  }
-  .pf-tools {
-    gap: 0.45rem;
-  }
-  .pf-tools .btn {
-    min-height: 36px;
   }
 }
