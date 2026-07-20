@@ -896,16 +896,19 @@ const SentenceCard = memo(function SentenceCard({
   const backdropRef = useRef<HTMLDivElement>(null)
   const pendingCaret = useRef<number | null>(null)
 
+  const [caret, setCaret] = useState(0)
+  const [focused, setFocused] = useState(false)
+
   // Sau khi chấm (sai/gần đúng): tô ĐỎ các từ gõ sai vị trí ngay trong ô nhập.
   // Tính lại theo văn bản hiện tại nên tự cập nhật khi người dùng sửa từ.
   const wrongSegs = useMemo(() => {
     if (!result || result.status === 'correct') return null
     return wrongWordSegments(value, result.bestAnswer)
   }, [result, value])
-  const showOverlay = !!wrongSegs && wrongSegs.some((s) => s.wrong)
-
-  const [caret, setCaret] = useState(0)
-  const [focused, setFocused] = useState(false)
+  // Chỉ bật lớp phủ tô đỏ khi ô KHÔNG focus. Khi đang gõ (focus) hiển thị chữ
+  // thật bình thường — tránh lỗi trên mobile: chữ trong suốt + backdrop lệch
+  // metrics khiến chữ vừa gõ như bị "ẩn mất".
+  const showOverlay = !focused && !!wrongSegs && wrongSegs.some((s) => s.wrong)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [active, setActive] = useState(0)
   const [open, setOpen] = useState(false)
