@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The story of silk — Đọc · EngMaster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style></style>
+</head>
+<body>
+<header class="topbar">
+  <button class="burger" id="burger" aria-label="Mở menu">☰</button>
+  <div class="brand-mark">E</div>
+  <div class="topbar-title">The story of silk — Đọc</div>
+</header>
+<div class="overlay" id="overlay"></div>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">E</div>
+      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
+      <button class="side-close" id="sideClose" aria-label="Đóng menu">✕</button>
+    </div>
+    <ul class="nav">
+      <li><a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a></li>
+      <li><a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a></li>
+      <li><a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a></li>
+      <li><a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a></li>
+      <li><a href="../06-doc/index.html" class="active"><span class="ico">📖</span>Đọc</a></li>
+      <li><a href="../07-viet/index.html"><span class="ico">✍️</span>Viết</a></li>
+      <li><a href="../08-chep-cau/index.html"><span class="ico">✏️</span>Chép câu</a></li>
+      <li><a href="../09-thong-ke/index.html"><span class="ico">📊</span>Thống kê</a></li>
+      <li><a href="../10-cai-dat/index.html"><span class="ico">⚙️</span>Cài đặt</a></li>
+    </ul>
+    <div class="side-user">
+      <div class="ava">T</div>
+      <div><b>thieentraan</b><span>Gói miễn phí</span></div>
+    </div>
+    <div class="side-foot"><span>v0.1.0</span><span>© EngMaster</span></div>
+  </aside>
+  <main class="content">
+
+    <a class="back-link" href="index.html">← Danh sách bài đọc</a>
+    <h1 class="page-title" style="font-size:1.35rem;margin-bottom:12px">The story of silk</h1>
+    <div class="read-toolbar">
+      <button class="btn btn-soft btn-sm">🔊 Nghe đọc bài</button>
+      <span class="chip">💡 Bôi chữ để dịch/bôi màu · bấm vùng đã bôi để thêm ghi chú</span>
+    </div>
+    <div class="card">
+      <div class="read-body">
+        <p><em>The history of the world’s most luxurious fabric, from ancient China to the present day.</em></p>
+        <p>Silk is a fine, smooth material produced from the <span class="hl">cocoons<span class="hl-tip">kén tằm · đã lưu vào bộ từ</span></span> — soft protective shells — that are made by mulberry silkworms (insect larvae). Legend has it that it was Lei Tzu, wife of the Yellow Emperor, ruler of China in about 3000 BC, who discovered silkworms.</p>
+        <p>One account of the story goes that as she was taking a walk in her husband’s gardens, she discovered that silkworms were responsible for the destruction of several mulberry trees. She collected a number of cocoons and sat down to have a rest. It just so happened that while she was sipping some tea, one of the cocoons that she had collected landed in the hot tea and started to unravel into a fine thread.</p>
+        <p>Demand for this exotic fabric eventually created the lucrative trade route now known as the Silk Road, taking silk westward and bringing gold, silver and wool to the East. It was named the Silk Road after its most precious commodity, which was considered to be worth more than gold…</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+<nav class="tabbar">
+  <a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a>
+  <a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a>
+  <a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a>
+  <a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a>
+  <button id="tabMenu"><span class="ico">☰</span>Menu</button>
+</nav>
+<script>
+var sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
+function menu(o){sb.classList.toggle('open',o);ov.classList.toggle('show',o);}
+document.getElementById('burger').onclick=function(){menu(true)};
+document.getElementById('sideClose').onclick=function(){menu(false)};
+ov.onclick=function(){menu(false)};
+var tm=document.getElementById('tabMenu'); if(tm) tm.onclick=function(){menu(true)};
+document.querySelectorAll('[data-flip]').forEach(function(f){
+  f.addEventListener('click',function(){f.classList.toggle('flipped')});
+  f.querySelectorAll('input,textarea,button').forEach(function(i){i.addEventListener('click',function(e){e.stopPropagation()})});
+});
+document.querySelectorAll('.tabs:not([data-static])').forEach(function(g){g.querySelectorAll('.tab').forEach(function(t){if(t.tagName==='BUTTON')t.onclick=function(){g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
+document.querySelectorAll('.pills').forEach(function(g){g.querySelectorAll('.pill').forEach(function(t){t.onclick=function(){g.querySelectorAll('.pill').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
+</script>
+
+</body>
+</html>

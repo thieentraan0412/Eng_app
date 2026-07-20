@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session 1 — Chép câu · EngMaster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style></style>
+</head>
+<body>
+<header class="topbar">
+  <button class="burger" id="burger" aria-label="Mở menu">☰</button>
+  <div class="brand-mark">E</div>
+  <div class="topbar-title">Session 1 — Chép câu</div>
+</header>
+<div class="overlay" id="overlay"></div>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">E</div>
+      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
+      <button class="side-close" id="sideClose" aria-label="Đóng menu">✕</button>
+    </div>
+    <ul class="nav">
+      <li><a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a></li>
+      <li><a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a></li>
+      <li><a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a></li>
+      <li><a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a></li>
+      <li><a href="../06-doc/index.html"><span class="ico">📖</span>Đọc</a></li>
+      <li><a href="../07-viet/index.html"><span class="ico">✍️</span>Viết</a></li>
+      <li><a href="../08-chep-cau/index.html" class="active"><span class="ico">✏️</span>Chép câu</a></li>
+      <li><a href="../09-thong-ke/index.html"><span class="ico">📊</span>Thống kê</a></li>
+      <li><a href="../10-cai-dat/index.html"><span class="ico">⚙️</span>Cài đặt</a></li>
+    </ul>
+    <div class="side-user">
+      <div class="ava">T</div>
+      <div><b>thieentraan</b><span>Gói miễn phí</span></div>
+    </div>
+    <div class="side-foot"><span>v0.1.0</span><span>© EngMaster</span></div>
+  </aside>
+  <main class="content">
+
+    <a class="back-link" href="index.html">← Quay lại danh sách thư mục</a>
+    <div class="head-row" style="margin-bottom:16px">
+      <h1 class="page-title" style="font-size:1.35rem">Session 1</h1>
+      <div class="tabs"><button class="tab active">Luyện tập</button><button class="tab">Quản lý</button></div>
+    </div>
+
+    <div class="card">
+      <div class="head-row">
+        <div class="tabs"><button class="tab active">✍️ Dịch</button><button class="tab">🎧 Nghe-chép</button></div>
+        <div class="pills">
+          <button class="pill active">Tất cả</button><button class="pill">A1</button><button class="pill">A2</button><button class="pill">B1</button><button class="pill">B2</button>
+        </div>
+        <select class="select" style="max-width:180px">
+          <option>Mọi chủ đề</option><option>Học tập</option><option>Đời sống</option><option>Du lịch</option><option>Công việc</option>
+        </select>
+      </div>
+      <div class="head-row" style="margin-top:16px">
+        <div style="flex:1;min-width:220px">
+          <div style="font-size:.85rem;font-weight:600;margin-bottom:7px">Đúng <b style="color:var(--green)">37</b> / 100</div>
+          <div class="progress progress-teal"><div class="progress-fill" style="width:37%"></div></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-soft btn-sm">Kiểm tra tất cả</button>
+          <button class="btn btn-ghost btn-sm">Làm lại</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-gap">
+      <div class="sent-card">
+        <div class="sent-top">
+          <span class="sent-no">1</span>
+          <div class="sent-vi">🇻🇳 Tôi đã học tiếng Anh được ba năm.</div>
+          <span class="badge badge-lvl">B1</span>
+        </div>
+        <div class="chip-row" style="margin-top:10px">
+          <span class="chip chip-amber">💡 thì hiện tại hoàn thành</span>
+          <span class="chip chip-amber">💡 for + khoảng thời gian</span>
+        </div>
+        <input class="input" style="margin-top:12px" value="i have learned english for three years">
+        <div class="head-row" style="margin-top:12px">
+          <button class="btn btn-ghost btn-sm">Xem đáp án</button>
+          <button class="btn btn-primary btn-sm">Kiểm tra</button>
+        </div>
+        <div class="feedback fb-ok">✅ Đúng · <b>100%</b> &nbsp;·&nbsp; <span class="fb-fix">Chính tả: english → <b>English</b></span></div>
+      </div>
+
+      <div class="sent-card">
+        <div class="sent-top">
+          <span class="sent-no">2</span>
+          <div class="sent-vi">🇻🇳 Cô ấy sống ở Hà Nội.</div>
+          <span class="badge badge-lvl">A1</span>
+        </div>
+        <div class="chip-row" style="margin-top:10px">
+          <span class="chip chip-amber">💡 thì hiện tại đơn</span>
+          <span class="chip chip-amber">💡 live in + nơi chốn</span>
+        </div>
+        <input class="input" style="margin-top:12px" value="She lives in hanoi">
+        <div class="head-row" style="margin-top:12px">
+          <button class="btn btn-ghost btn-sm">Xem đáp án</button>
+          <button class="btn btn-primary btn-sm">Kiểm tra</button>
+        </div>
+        <div class="feedback fb-ok">✅ Đúng · <b>100%</b> &nbsp;·&nbsp; <span class="fb-fix">Chính tả: hanoi → <b>Hanoi</b></span></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+<nav class="tabbar">
+  <a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a>
+  <a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a>
+  <a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a>
+  <a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a>
+  <button id="tabMenu"><span class="ico">☰</span>Menu</button>
+</nav>
+<script>
+var sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
+function menu(o){sb.classList.toggle('open',o);ov.classList.toggle('show',o);}
+document.getElementById('burger').onclick=function(){menu(true)};
+document.getElementById('sideClose').onclick=function(){menu(false)};
+ov.onclick=function(){menu(false)};
+var tm=document.getElementById('tabMenu'); if(tm) tm.onclick=function(){menu(true)};
+document.querySelectorAll('[data-flip]').forEach(function(f){
+  f.addEventListener('click',function(){f.classList.toggle('flipped')});
+  f.querySelectorAll('input,textarea,button').forEach(function(i){i.addEventListener('click',function(e){e.stopPropagation()})});
+});
+document.querySelectorAll('.tabs:not([data-static])').forEach(function(g){g.querySelectorAll('.tab').forEach(function(t){if(t.tagName==='BUTTON')t.onclick=function(){g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
+document.querySelectorAll('.pills').forEach(function(g){g.querySelectorAll('.pill').forEach(function(t){t.onclick=function(){g.querySelectorAll('.pill').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
+</script>
+
+</body>
+</html>

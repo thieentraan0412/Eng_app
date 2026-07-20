@@ -41,6 +41,7 @@ import {
 } from '../services/excelImport'
 import { translateToEnglish } from '../services/translation'
 import { speak, ttsSupported } from '../services/tts'
+import '../styles/sentence.css'
 
 const LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 
@@ -249,6 +250,20 @@ export default function SentencePage() {
               )}
               <div className="deck-desc">
                 Đã làm {Math.min(doneCounts[f.id] ?? 0, counts[f.id] ?? 0)}/{counts[f.id] ?? 0} câu
+              </div>
+              <div className="sc-deck-progress">
+                <div
+                  className="sc-deck-progress-fill"
+                  style={{
+                    width: `${
+                      counts[f.id]
+                        ? Math.round(
+                            (Math.min(doneCounts[f.id] ?? 0, counts[f.id]) / counts[f.id]) * 100,
+                          )
+                        : 0
+                    }%`,
+                  }}
+                />
               </div>
               <div className="deck-foot">
                 <span>Mở thư mục</span>

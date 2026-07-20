@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trang chủ · EngMaster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>@media (max-width:920px){#quick{grid-template-columns:1fr!important}}</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="burger" id="burger" aria-label="Mở menu">☰</button>
+  <div class="brand-mark">E</div>
+  <div class="topbar-title">Trang chủ</div>
+</header>
+<div class="overlay" id="overlay"></div>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">E</div>
+      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
+      <button class="side-close" id="sideClose" aria-label="Đóng menu">✕</button>
+    </div>
+    <ul class="nav">
+      <li><a href="../02-trang-chu/index.html" class="active"><span class="ico">🏠</span>Trang chủ</a></li>
+      <li><a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a></li>
+      <li><a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a></li>
+      <li><a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a></li>
+      <li><a href="../06-doc/index.html"><span class="ico">📖</span>Đọc</a></li>
+      <li><a href="../07-viet/index.html"><span class="ico">✍️</span>Viết</a></li>
+      <li><a href="../08-chep-cau/index.html"><span class="ico">✏️</span>Chép câu</a></li>
+      <li><a href="../09-thong-ke/index.html"><span class="ico">📊</span>Thống kê</a></li>
+      <li><a href="../10-cai-dat/index.html"><span class="ico">⚙️</span>Cài đặt</a></li>
+    </ul>
+    <div class="side-user">
+      <div class="ava">T</div>
+      <div><b>thieentraan</b><span>Gói miễn phí</span></div>
+    </div>
+    <div class="side-foot"><span>v0.1.0</span><span>© EngMaster</span></div>
+  </aside>
+  <main class="content">
+
+    <div class="page-head head-row">
+      <div>
+        <h1 class="page-title">Chào mừng quay lại 👋</h1>
+        <p class="page-sub">Hôm nay là Thứ Hai, 20/07 — cùng giữ nhịp học tiếng Anh nhé.</p>
+      </div>
+      <a class="btn btn-primary" href="../04-on-tap/index.html">🔁 Ôn tập ngay</a>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card"><div class="stat-ico i1">📇</div><div class="stat-num">4</div><div class="stat-lbl">Bộ từ</div></div>
+      <div class="stat-card"><div class="stat-ico i2">🗂️</div><div class="stat-num">87</div><div class="stat-lbl">Tổng số thẻ</div></div>
+      <div class="stat-card"><div class="stat-ico i3">🔔</div><div class="stat-num">87</div><div class="stat-lbl">Thẻ cần ôn hôm nay</div></div>
+      <div class="stat-card"><div class="stat-ico i4">🔥</div><div class="stat-num">0</div><div class="stat-lbl">Ngày streak</div></div>
+    </div>
+
+    <div class="card section-gap">
+      <div class="card-head"><div class="card-title">📚 Hôm nay bạn đã học</div><span class="card-note">Tự động ghi nhận</span></div>
+      <div class="mini-stats">
+        <div class="mini-stat"><b>0</b><span>⏱️ Phút học</span></div>
+        <div class="mini-stat"><b>0</b><span>🔁 Thẻ đã ôn</span></div>
+        <div class="mini-stat"><b>0</b><span>✨ Từ mới</span></div>
+        <div class="mini-stat"><b>0</b><span>📝 Quiz đã làm</span></div>
+      </div>
+    </div>
+
+    <div class="card section-gap">
+      <div class="card-head"><div class="card-title">📈 Số thẻ đã ôn</div><span class="card-note">14 ngày gần nhất</span></div>
+      <div class="bars"><div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">7</span></div><div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">8</span></div><div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">9</span></div><div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">10</span></div><div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">11</span></div><div class="bar-col"><span class="bar-val">1</span><div class="bar-fill" style="height:25%"></div><span class="bar-x">12</span></div><div class="bar-col"><span class="bar-val">4</span><div class="bar-fill" style="height:100%"></div><span class="bar-x">13</span></div><div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">14</span></div><div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">15</span></div><div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">16</span></div><div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">17</span></div><div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">18</span></div><div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">19</span></div><div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">20</span></div></div>
+    </div>
+
+    <div class="section-gap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px" id="quick">
+      <a class="card" style="text-align:center" href="../03-tu-vung/index.html"><div class="stat-ico i1" style="margin:0 auto 10px">📇</div><b>Quản lý từ vựng</b><p class="card-note" style="margin-top:4px">Tạo bộ từ &amp; thêm thẻ mới</p></a>
+      <a class="card" style="text-align:center" href="../04-on-tap/index.html"><div class="stat-ico i2" style="margin:0 auto 10px">🔁</div><b>Ôn tập ngay</b><p class="card-note" style="margin-top:4px">87 thẻ đang chờ bạn</p></a>
+      <a class="card" style="text-align:center" href="../06-doc/index.html"><div class="stat-ico i3" style="margin:0 auto 10px">📖</div><b>Đọc &amp; tra từ</b><p class="card-note" style="margin-top:4px">Bôi chữ để dịch tức thì</p></a>
+    </div>
+
+  </main>
+</div>
+<nav class="tabbar">
+  <a href="../02-trang-chu/index.html" class="active"><span class="ico">🏠</span>Trang chủ</a>
+  <a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a>
+  <a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a>
+  <a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a>
+  <button id="tabMenu"><span class="ico">☰</span>Menu</button>
+</nav>
+<script>
+var sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
+function menu(o){sb.classList.toggle('open',o);ov.classList.toggle('show',o);}
+document.getElementById('burger').onclick=function(){menu(true)};
+document.getElementById('sideClose').onclick=function(){menu(false)};
+ov.onclick=function(){menu(false)};
+var tm=document.getElementById('tabMenu'); if(tm) tm.onclick=function(){menu(true)};
+document.querySelectorAll('[data-flip]').forEach(function(f){
+  f.addEventListener('click',function(){f.classList.toggle('flipped')});
+  f.querySelectorAll('input,textarea,button').forEach(function(i){i.addEventListener('click',function(e){e.stopPropagation()})});
+});
+document.querySelectorAll('.tabs:not([data-static])').forEach(function(g){g.querySelectorAll('.tab').forEach(function(t){if(t.tagName==='BUTTON')t.onclick=function(){g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
+document.querySelectorAll('.pills').forEach(function(g){g.querySelectorAll('.pill').forEach(function(t){t.onclick=function(){g.querySelectorAll('.pill').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
+</script>
+
+</body>
+</html>

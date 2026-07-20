@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phiên ôn tập — ADV · EngMaster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style></style>
+</head>
+<body>
+<header class="topbar">
+  <button class="burger" id="burger" aria-label="Mở menu">☰</button>
+  <div class="brand-mark">E</div>
+  <div class="topbar-title">Phiên ôn tập — ADV</div>
+</header>
+<div class="overlay" id="overlay"></div>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">E</div>
+      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
+      <button class="side-close" id="sideClose" aria-label="Đóng menu">✕</button>
+    </div>
+    <ul class="nav">
+      <li><a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a></li>
+      <li><a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a></li>
+      <li><a href="../04-on-tap/index.html" class="active"><span class="ico">🔁</span>Ôn tập</a></li>
+      <li><a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a></li>
+      <li><a href="../06-doc/index.html"><span class="ico">📖</span>Đọc</a></li>
+      <li><a href="../07-viet/index.html"><span class="ico">✍️</span>Viết</a></li>
+      <li><a href="../08-chep-cau/index.html"><span class="ico">✏️</span>Chép câu</a></li>
+      <li><a href="../09-thong-ke/index.html"><span class="ico">📊</span>Thống kê</a></li>
+      <li><a href="../10-cai-dat/index.html"><span class="ico">⚙️</span>Cài đặt</a></li>
+    </ul>
+    <div class="side-user">
+      <div class="ava">T</div>
+      <div><b>thieentraan</b><span>Gói miễn phí</span></div>
+    </div>
+    <div class="side-foot"><span>v0.1.0</span><span>© EngMaster</span></div>
+  </aside>
+  <main class="content">
+
+    <div class="fc-stage">
+      <div class="fc-head">
+        <a class="icon-btn" href="index.html" title="Kết thúc phiên">✕</a>
+        <span class="chip">Còn lại 5 thẻ</span>
+        <span class="chip chip-teal">✓ 0/5 đã ôn</span>
+      </div>
+      <div class="fc-modes">
+        <div class="tabs">
+          <button class="tab active">🔁 Anh → Việt</button>
+          <button class="tab">⌨️ Gõ từ</button>
+          <button class="tab">📝 Ví dụ</button>
+        </div>
+      </div>
+
+      <div class="flip-wrap" data-flip>
+        <div class="flip-inner">
+          <div class="fc-face">
+            <div class="fc-word">negative impact <span class="pos-badge">n</span><button class="speak">🔊</button></div>
+            <input class="input" style="max-width:340px;text-align:center" placeholder="Gõ lại từ để nhớ chính tả…">
+            <div class="fc-hint">Bấm thẻ hoặc phím Tab để xem nghĩa</div>
+          </div>
+          <div class="fc-face fc-back">
+            <div class="fc-meaning">tác động tiêu cực</div>
+            <div class="chip-row" style="justify-content:center"><span class="chip chip-primary">impact on sth</span></div>
+            <p style="font-style:italic;color:var(--ink-soft);font-size:.9rem;text-align:center">“staying up late can have negative impact on health” <button class="speak" style="width:30px;height:30px;font-size:.8rem">🔊</button></p>
+            <input class="input" style="max-width:340px" placeholder="Viết câu ví dụ của bạn với từ này…">
+          </div>
+        </div>
+      </div>
+
+      <div class="grade-row">
+        <button class="grade g1">Lại (1)<small>1 ngày</small></button>
+        <button class="grade g2">Khó (2)<small>1 ngày</small></button>
+        <button class="grade g3">Được (3)<small>1 ngày</small></button>
+        <button class="grade g4">Dễ (4)<small>2 ngày</small></button>
+      </div>
+      <div class="fc-nav">
+        <button class="btn btn-ghost btn-sm" disabled style="opacity:.5">← Trước</button>
+        <span>1 / 5</span>
+        <button class="btn btn-soft btn-sm">Tiếp →</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+<nav class="tabbar">
+  <a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a>
+  <a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a>
+  <a href="../04-on-tap/index.html" class="active"><span class="ico">🔁</span>Ôn tập</a>
+  <a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a>
+  <button id="tabMenu"><span class="ico">☰</span>Menu</button>
+</nav>
+<script>
+var sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
+function menu(o){sb.classList.toggle('open',o);ov.classList.toggle('show',o);}
+document.getElementById('burger').onclick=function(){menu(true)};
+document.getElementById('sideClose').onclick=function(){menu(false)};
+ov.onclick=function(){menu(false)};
+var tm=document.getElementById('tabMenu'); if(tm) tm.onclick=function(){menu(true)};
+document.querySelectorAll('[data-flip]').forEach(function(f){
+  f.addEventListener('click',function(){f.classList.toggle('flipped')});
+  f.querySelectorAll('input,textarea,button').forEach(function(i){i.addEventListener('click',function(e){e.stopPropagation()})});
+});
+document.querySelectorAll('.tabs:not([data-static])').forEach(function(g){g.querySelectorAll('.tab').forEach(function(t){if(t.tagName==='BUTTON')t.onclick=function(){g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
+document.querySelectorAll('.pills').forEach(function(g){g.querySelectorAll('.pill').forEach(function(t){t.onclick=function(){g.querySelectorAll('.pill').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
+</script>
+
+</body>
+</html>

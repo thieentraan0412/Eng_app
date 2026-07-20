@@ -1,0 +1,455 @@
+/* ============================================================
+   Trang Viết — restyle theo mockup EngMaster_Redesign/07-viet
+   Dùng token thiết kế của app (src/styles.css). Tiền tố: write-
+   Cổng đúp: mọi màu hardcode của mockup đã map sang var(--...)
+   để hoạt động cả light & dark.
+   ============================================================ */
+
+/* ---------- DANH SÁCH BÀI VIẾT ---------- */
+.write-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.4rem;
+}
+.write-sub {
+  color: var(--text-soft);
+  font-size: 0.92rem;
+  margin: 0.25rem 0 0;
+  max-width: 640px;
+}
+
+.write-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.write-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  transition: border-color 0.16s, box-shadow 0.16s, transform 0.16s;
+}
+.write-row:hover {
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.write-row-ico {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: var(--r-md);
+  display: grid;
+  place-items: center;
+  font-size: 1.15rem;
+  /* mockup: .stat-ico.i3 amber tint → var(--warn) */
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+}
+.write-row-main {
+  flex: 1;
+  min-width: 0;
+}
+.write-row-title {
+  font-weight: 650;
+  font-size: 0.96rem;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.write-row-topic {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+}
+.write-row-sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.write-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  text-align: center;
+  color: var(--muted);
+  padding: 3rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-xs);
+  margin-top: 0.5rem;
+}
+.write-empty-ico {
+  font-size: 2.6rem;
+}
+.write-empty h2 {
+  margin: 0.2rem 0 0;
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+/* ---------- SOẠN THẢO ---------- */
+.write-editor {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.write-ehead {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.write-back {
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.35rem 0.6rem;
+  flex-shrink: 0;
+}
+.write-title {
+  flex: 1;
+  min-width: 160px;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.8rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.write-title:focus {
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+.write-count {
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.write-meta {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.write-topic {
+  flex: 1;
+  max-width: 340px;
+  min-width: 160px;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.write-topic:focus {
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+
+/* Vùng viết + lớp nền gạch chân chính tả (giữ nguyên kỹ thuật overlay cũ).
+   .write-backdrop và .write-textarea PHẢI cùng box-model để chữ trùng khít. */
+.write-ta-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 220px;
+}
+.write-backdrop,
+.write-textarea {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 1.1rem 1.2rem;
+  /* mockup .write-area: border 1.5px var(--border-strong), surface bg */
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.9;
+  letter-spacing: normal;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.write-backdrop {
+  overflow: hidden;
+  color: var(--text); /* lớp nền hiển thị CHỮ THẬT */
+  background: var(--surface);
+  pointer-events: none;
+  z-index: 0;
+  box-shadow: var(--shadow-sm);
+}
+.write-textarea {
+  color: transparent; /* chữ trong suốt, để lộ chữ ở lớp nền */
+  caret-color: var(--text);
+  background: transparent;
+  resize: none;
+  z-index: 1;
+  outline: none;
+  box-shadow: none;
+}
+.write-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+.write-textarea::selection {
+  background: var(--primary-soft);
+}
+/* từ sai chính tả: giữ màu chữ, chỉ gạch chân lượn sóng đỏ (theo mockup .spell) */
+.write-misspell {
+  color: inherit;
+  background: transparent;
+  text-decoration: underline wavy var(--danger) 2px;
+  text-underline-offset: 4px;
+}
+
+.write-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+
+/* Thanh kiểm tra ngữ pháp */
+.write-gbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.9rem;
+  background: var(--primary-tint);
+  border: 1px solid var(--primary-soft);
+  border-radius: var(--r-md);
+}
+.write-glabel {
+  font-size: 0.72rem;
+  color: var(--primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.write-gfixall {
+  border: 1px solid transparent;
+  background: var(--grad-primary);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.24rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-primary);
+}
+.write-gfixall:hover {
+  filter: brightness(1.05);
+}
+.write-gitem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.write-gerr {
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: underline dotted var(--primary);
+  text-underline-offset: 2px;
+  cursor: help;
+}
+.write-arrow {
+  color: var(--muted);
+}
+.write-gfix,
+.write-spfix {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.22rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 500;
+  transition: background 0.13s, border-color 0.13s;
+  box-shadow: var(--shadow-xs);
+}
+.write-gfix:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.write-ginfo {
+  cursor: help;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+/* Thanh sửa chính tả */
+.write-spbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.9rem;
+  background: color-mix(in srgb, var(--danger) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 22%, transparent);
+  border-radius: var(--r-md);
+}
+.write-splabel {
+  font-size: 0.72rem;
+  color: var(--danger);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.write-spitem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.write-spword {
+  font-weight: 600;
+  color: var(--danger);
+  text-decoration: underline wavy var(--danger);
+  text-underline-offset: 2px;
+}
+.write-spfix:hover {
+  border-color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+.write-spignore {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  margin-left: 0.1rem;
+}
+.write-spignore:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* Thanh gợi ý từ */
+.write-sgbar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.9rem;
+  min-height: 46px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.write-sglabel {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.write-sghint {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.write-sgchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 500;
+  transition: border-color 0.13s, background 0.13s;
+  box-shadow: var(--shadow-xs);
+}
+.write-sgchip:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.write-sgchip small {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 400;
+}
+.write-sgchip.synonym {
+  border-color: var(--accent-3);
+}
+.write-sgchip.nextword {
+  border-color: var(--accent-2);
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 860px) {
+  .write-head {
+    gap: 0.7rem;
+  }
+  .write-head .btn {
+    align-self: stretch;
+    justify-content: center;
+  }
+  .write-row {
+    padding: 0.75rem 0.85rem;
+    gap: 0.7rem;
+  }
+  .write-row-ico {
+    width: 38px;
+    height: 38px;
+    font-size: 1.05rem;
+  }
+  .write-ehead {
+    gap: 0.45rem;
+  }
+  .write-title {
+    font-size: 1.1rem;
+    flex-basis: 100%;
+    order: 3;
+  }
+  .write-count {
+    order: 4;
+    flex-basis: 100%;
+  }
+  .write-backdrop,
+  .write-textarea {
+    padding: 0.9rem 1rem;
+    font-size: 1rem;
+    line-height: 1.8;
+  }
+}

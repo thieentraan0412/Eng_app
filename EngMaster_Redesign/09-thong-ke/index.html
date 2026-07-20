@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thống kê · EngMaster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>.col2{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media (max-width:920px){.col2{grid-template-columns:1fr}.retain-row[style]{grid-template-columns:90px 1fr 110px!important}}</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="burger" id="burger" aria-label="Mở menu">☰</button>
+  <div class="brand-mark">E</div>
+  <div class="topbar-title">Thống kê</div>
+</header>
+<div class="overlay" id="overlay"></div>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">E</div>
+      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
+      <button class="side-close" id="sideClose" aria-label="Đóng menu">✕</button>
+    </div>
+    <ul class="nav">
+      <li><a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a></li>
+      <li><a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a></li>
+      <li><a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a></li>
+      <li><a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a></li>
+      <li><a href="../06-doc/index.html"><span class="ico">📖</span>Đọc</a></li>
+      <li><a href="../07-viet/index.html"><span class="ico">✍️</span>Viết</a></li>
+      <li><a href="../08-chep-cau/index.html"><span class="ico">✏️</span>Chép câu</a></li>
+      <li><a href="../09-thong-ke/index.html" class="active"><span class="ico">📊</span>Thống kê</a></li>
+      <li><a href="../10-cai-dat/index.html"><span class="ico">⚙️</span>Cài đặt</a></li>
+    </ul>
+    <div class="side-user">
+      <div class="ava">T</div>
+      <div><b>thieentraan</b><span>Gói miễn phí</span></div>
+    </div>
+    <div class="side-foot"><span>v0.1.0</span><span>© EngMaster</span></div>
+  </aside>
+  <main class="content">
+
+    <div class="page-head head-row">
+      <div>
+        <h1 class="page-title">Thống kê</h1>
+        <p class="page-sub">Tiến độ học tập, tỷ lệ nhớ &amp; dung lượng lưu trữ</p>
+      </div>
+      <button class="btn btn-ghost">↻ Làm mới</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card"><div class="stat-ico i1">⏱️</div><div class="stat-num">0</div><div class="stat-lbl">Phút học (1 năm)</div></div>
+      <div class="stat-card"><div class="stat-ico i2">🔁</div><div class="stat-num">5</div><div class="stat-lbl">Lượt ôn thẻ</div></div>
+      <div class="stat-card"><div class="stat-ico i3">✨</div><div class="stat-num">0</div><div class="stat-lbl">Từ mới đã thêm</div></div>
+      <div class="stat-card"><div class="stat-ico i4">📝</div><div class="stat-num">0</div><div class="stat-lbl">Quiz đã làm</div></div>
+    </div>
+
+    <div class="card section-gap">
+      <div class="card-head"><div class="card-title">🗓️ Lịch học cả năm</div><span class="card-note">phút học mỗi ngày</span></div>
+      <div class="heat" id="hm"></div>
+      <div class="heat-legend">Ít <i style="background:var(--surface-2);border:1px solid var(--border)"></i><i style="background:#DCD6FC"></i><i style="background:#B3A6F9"></i><i style="background:#8B7CFF"></i><i style="background:#5B48EE"></i> Nhiều</div>
+    </div>
+
+    <div class="col2 section-gap">
+      <div class="card" style="margin:0">
+        <div class="card-head"><div class="card-title">🧠 Tỷ lệ nhớ (30 ngày)</div><span class="stat-num" style="font-size:1.5rem;color:var(--primary)">40%</span></div>
+        <p class="card-note" style="margin-bottom:14px">Nhớ 2 / 5 lượt (không bấm “Lại”)</p>
+        <div class="retain-bars">
+          <div class="retain-row"><span style="color:var(--rose)">Lại</span><div class="progress"><div class="progress-fill" style="width:60%;background:linear-gradient(90deg,#F43F6E,#FB7185)"></div></div><span>3 · 60%</span></div>
+          <div class="retain-row"><span style="color:#B26E05">Khó</span><div class="progress"><div class="progress-fill" style="width:0%"></div></div><span>0 · 0%</span></div>
+          <div class="retain-row"><span style="color:#1D4FD8">Được</span><div class="progress"><div class="progress-fill" style="width:0%"></div></div><span>0 · 0%</span></div>
+          <div class="retain-row"><span style="color:var(--green)">Dễ</span><div class="progress"><div class="progress-fill" style="width:40%;background:var(--grad-teal)"></div></div><span>2 · 40%</span></div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-head"><div class="card-title">🔮 Thẻ đến hạn (7 ngày tới)</div></div>
+        <div class="due-grid">
+          <div class="due-cell hot"><b>87</b><span>Quá hạn</span></div>
+          <div class="due-cell"><b>0</b><span>Hôm nay</span></div>
+          <div class="due-cell"><b>0</b><span>Mai</span></div>
+          <div class="due-cell"><b>0</b><span>T4</span></div>
+          <div class="due-cell"><b>0</b><span>T5</span></div>
+          <div class="due-cell"><b>0</b><span>T6</span></div>
+          <div class="due-cell"><b>0</b><span>T7</span></div>
+          <div class="due-cell"><b>0</b><span>CN</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card section-gap">
+      <div class="card-head"><div class="card-title">📚 Theo từng bộ từ</div></div>
+      <div class="retain-bars">
+        <div class="retain-row" style="grid-template-columns:150px 1fr 150px"><span>Silk (Reading)</span><div class="progress"><div class="progress-fill" style="width:2%"></div></div><span>0/73 · 🔔 73 đến hạn</span></div>
+        <div class="retain-row" style="grid-template-columns:150px 1fr 150px"><span>Parttern</span><div class="progress"><div class="progress-fill" style="width:2%"></div></div><span>0/5 · 🔔 5 đến hạn</span></div>
+        <div class="retain-row" style="grid-template-columns:150px 1fr 150px"><span>ADV</span><div class="progress"><div class="progress-fill" style="width:20%"></div></div><span>1/5 · 🔔 5 đến hạn</span></div>
+        <div class="retain-row" style="grid-template-columns:150px 1fr 150px"><span>Từ đã lưu khi đọc</span><div class="progress"><div class="progress-fill" style="width:2%"></div></div><span>0/4 · 🔔 4 đến hạn</span></div>
+      </div>
+    </div>
+
+    <div class="col2 section-gap">
+      <div class="card" style="margin:0">
+        <div class="card-head"><div class="card-title">💾 Dung lượng Database</div><span class="card-note">11.82 MB / 500 MB</span></div>
+        <div class="progress progress-teal"><div class="progress-fill" style="width:2.4%"></div></div>
+        <div class="head-row" style="margin-top:10px"><span class="card-note">Đã dùng 2.4% hạn mức miễn phí</span><span class="chip">474 bản ghi</span></div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-head"><div class="card-title">📡 Request tới Supabase</div><span class="chip chip-primary">52 hôm nay</span></div>
+        <div class="bars" style="height:80px">
+          <div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">14</span></div>
+          <div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">15</span></div>
+          <div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">16</span></div>
+          <div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">17</span></div>
+          <div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">18</span></div>
+          <div class="bar-col"><div class="bar-fill empty" style="height:4px"></div><span class="bar-x">19</span></div>
+          <div class="bar-col"><span class="bar-val">52</span><div class="bar-fill" style="height:100%"></div><span class="bar-x">20</span></div>
+        </div>
+        <div class="head-row" style="margin-top:8px"><span class="card-note">Đếm request do app gọi <b>trên máy này</b></span><button class="btn btn-ghost btn-sm">Đặt lại</button></div>
+      </div>
+    </div>
+
+    <div class="card section-gap">
+      <div class="card-head"><div class="card-title">📋 Số bản ghi theo bảng</div></div>
+      <div class="table-grid">
+        <div class="tg-item"><b>334</b><span>Câu (Chép câu)</span></div>
+        <div class="tg-item"><b>87</b><span>Thẻ từ</span></div>
+        <div class="tg-item"><b>39</b><span>Bài đã làm</span></div>
+        <div class="tg-item"><b>5</b><span>Lịch sử ôn</span></div>
+        <div class="tg-item"><b>4</b><span>Bộ từ</span></div>
+        <div class="tg-item"><b>2</b><span>Bài đọc</span></div>
+        <div class="tg-item"><b>2</b><span>Thư mục câu</span></div>
+        <div class="tg-item"><b>1</b><span>Bài viết</span></div>
+        <div class="tg-item"><b>0</b><span>Bài ngữ pháp</span></div>
+        <div class="tg-item"><b>0</b><span>Câu hỏi</span></div>
+      </div>
+    </div>
+
+    <div class="card section-gap">
+      <div class="card-head"><div class="card-title">🆓 Hạn mức gói Free (tham khảo)</div></div>
+      <div class="kv"><span>Database</span><b>500 MB · đo được ở trên</b></div>
+      <div class="kv"><span>Băng thông (egress)</span><b>5 GB / tháng</b></div>
+      <div class="kv"><span>File Storage</span><b>1 GB</b></div>
+      <div class="kv"><span>Người dùng hoạt động / tháng</span><b>50.000</b></div>
+      <p class="card-note" style="margin-top:10px">Con số chính xác xem tại <b>Supabase Dashboard → Settings → Usage</b>.</p>
+    </div>
+
+  </main>
+</div>
+<nav class="tabbar">
+  <a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a>
+  <a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a>
+  <a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a>
+  <a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a>
+  <button id="tabMenu"><span class="ico">☰</span>Menu</button>
+</nav>
+<script>
+var sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
+function menu(o){sb.classList.toggle('open',o);ov.classList.toggle('show',o);}
+document.getElementById('burger').onclick=function(){menu(true)};
+document.getElementById('sideClose').onclick=function(){menu(false)};
+ov.onclick=function(){menu(false)};
+var tm=document.getElementById('tabMenu'); if(tm) tm.onclick=function(){menu(true)};
+document.querySelectorAll('[data-flip]').forEach(function(f){
+  f.addEventListener('click',function(){f.classList.toggle('flipped')});
+  f.querySelectorAll('input,textarea,button').forEach(function(i){i.addEventListener('click',function(e){e.stopPropagation()})});
+});
+document.querySelectorAll('.tabs:not([data-static])').forEach(function(g){g.querySelectorAll('.tab').forEach(function(t){if(t.tagName==='BUTTON')t.onclick=function(){g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
+document.querySelectorAll('.pills').forEach(function(g){g.querySelectorAll('.pill').forEach(function(t){t.onclick=function(){g.querySelectorAll('.pill').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
+</script>
+<script>
+var hm=document.getElementById('hm');var cells='';
+for(var w=0;w<30;w++){for(var d=0;d<7;d++){var r=Math.sin(w*7+d)*Math.cos(d*3+w*.7);var c='';
+if(r>0.3)c='h1';if(r>0.6)c='h2';if(r>0.8)c='h3';if(r>0.93)c='h4';cells+='<i class="'+c+'"></i>';}}
+hm.innerHTML=cells;
+</script>
+</body>
+</html>

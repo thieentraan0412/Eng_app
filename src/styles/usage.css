@@ -1,0 +1,211 @@
+/* ============================================================
+   TRANG THỐNG KÊ (Usage) — restyle theo mockup 09-thong-ke
+   Chỉ thêm class prefix `stats-`; tái dùng .usage-card / hm-* /
+   .barchart / .sp-bar / .ex-deck-bar / .usage-rows đã có sẵn.
+   ============================================================ */
+
+/* ---------- Thẻ số tổng quan (hộp icon màu giống Dashboard/mockup) ---------- */
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 1.4rem 0;
+}
+.stats-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.stats-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+.stats-ico {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  font-size: 1.15rem;
+  margin-bottom: 12px;
+}
+.stats-ico.i1 {
+  background: var(--primary-soft);
+}
+.stats-ico.i2 {
+  background: color-mix(in srgb, var(--accent-2) 16%, transparent);
+}
+.stats-ico.i3 {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+}
+.stats-ico.i4 {
+  background: color-mix(in srgb, var(--danger) 15%, transparent);
+}
+.stats-num {
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  color: var(--text);
+}
+.stats-lbl {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* ---------- Bố cục 2 cột (gộp 1 cột trên mobile) ---------- */
+.stats-col2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.stats-col2 > .usage-card {
+  margin-top: 0;
+}
+
+/* ---------- Tỷ lệ nhớ — thanh ngang theo từng mức ---------- */
+.stats-retain {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 0.9rem;
+}
+.stats-retain-row {
+  display: grid;
+  grid-template-columns: 64px 1fr 96px;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.stats-retain-lbl {
+  font-weight: 700;
+}
+.stats-retain-row.r-again .stats-retain-lbl {
+  color: var(--danger);
+}
+.stats-retain-row.r-hard .stats-retain-lbl {
+  color: var(--warn);
+}
+.stats-retain-row.r-good .stats-retain-lbl {
+  color: var(--primary);
+}
+.stats-retain-row.r-easy .stats-retain-lbl {
+  color: var(--success);
+}
+.stats-retain-val {
+  text-align: right;
+  color: var(--muted);
+  font-weight: 500;
+}
+.stats-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.stats-track > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.3s ease;
+}
+.r-again .stats-track > i {
+  background: var(--danger);
+}
+.r-hard .stats-track > i {
+  background: var(--warn);
+}
+.r-good .stats-track > i {
+  background: var(--primary);
+}
+.r-easy .stats-track > i {
+  background: var(--success);
+}
+
+/* ---------- Thẻ đến hạn — lưới ô ---------- */
+.stats-due {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 10px;
+  text-align: center;
+}
+.stats-due-cell {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px 6px;
+}
+.stats-due-cell b {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.stats-due-cell span {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.stats-due-cell.hot {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+}
+.stats-due-cell.hot b {
+  color: var(--danger);
+}
+
+/* ---------- Số bản ghi theo bảng — lưới ô số ---------- */
+.stats-tg {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+.stats-tg-item {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 13px;
+  text-align: center;
+}
+.stats-tg-item b {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.stats-tg-item span {
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* ---------- Responsive (lưới co lại) ---------- */
+@media (max-width: 860px) {
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .stats-col2 {
+    grid-template-columns: 1fr;
+  }
+  .stats-due {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .stats-tg {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stats-retain-row {
+    grid-template-columns: 52px 1fr 84px;
+  }
+}

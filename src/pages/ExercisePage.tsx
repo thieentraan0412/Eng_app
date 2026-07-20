@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CloudApi, type Card, type Deck } from '../services/cloud/CloudApiClient'
 import { speak, ttsSupported } from '../services/tts'
 import { track } from '../services/studyTracker'
+import '../styles/exercise.css'
 
 // Trang Bài tập — trắc nghiệm sinh TỰ ĐỘNG từ các bộ từ vựng:
 //  · Anh→Việt: hiện từ tiếng Anh, chọn 1 trong 4 nghĩa tiếng Việt
@@ -229,29 +230,33 @@ export default function ExercisePage() {
 
   return (
     <div className="page">
-      <h1 className="page-title">Bài tập</h1>
+      {/* Header dạng hàng: tiêu đề + mô tả bên trái, chọn kiểu bài bên phải */}
+      <div className="exq-head">
+        <div>
+          <h1 className="page-title">Bài tập</h1>
+          <p className="page-sub">
+            {mode === 'reorder'
+              ? 'Sắp xếp các từ đã xáo trộn thành câu ví dụ đúng — bấm vào một bộ để bắt đầu.'
+              : 'Trắc nghiệm sinh tự động từ các bộ từ vựng của bạn — bấm vào một bộ để bắt đầu.'}
+          </p>
+        </div>
 
-      {/* Chọn kiểu bài: trắc nghiệm / sắp xếp từ */}
-      <div className="tabs ex-mode-tabs">
-        <button
-          className={mode === 'mcq' ? 'tab active' : 'tab'}
-          onClick={() => chooseMode('mcq')}
-        >
-          📝 Trắc nghiệm
-        </button>
-        <button
-          className={mode === 'reorder' ? 'tab active' : 'tab'}
-          onClick={() => chooseMode('reorder')}
-        >
-          🔀 Sắp xếp từ
-        </button>
+        {/* Chọn kiểu bài: trắc nghiệm / sắp xếp từ */}
+        <div className="tabs exq-tabs">
+          <button
+            className={mode === 'mcq' ? 'tab active' : 'tab'}
+            onClick={() => chooseMode('mcq')}
+          >
+            📝 Trắc nghiệm
+          </button>
+          <button
+            className={mode === 'reorder' ? 'tab active' : 'tab'}
+            onClick={() => chooseMode('reorder')}
+          >
+            🔀 Sắp xếp từ
+          </button>
+        </div>
       </div>
-
-      <p className="muted">
-        {mode === 'reorder'
-          ? 'Sắp xếp các từ đã xáo trộn thành câu ví dụ đúng — bấm vào một bộ để bắt đầu.'
-          : 'Trắc nghiệm sinh tự động từ các bộ từ vựng của bạn — bấm vào một bộ để bắt đầu.'}
-      </p>
 
       {!decks ? (
         <p className="muted">Đang tải…</p>
@@ -269,8 +274,10 @@ export default function ExercisePage() {
               return (
                 <button key={d.deck.id} className="deck-card" onClick={() => setSession(d)}>
                   <div className="deck-name">{d.deck.name}</div>
-                  <span className="muted">{n} câu để sắp xếp</span>
-                  <span className="muted">Bắt đầu →</span>
+                  <span className="deck-desc">{n} câu để sắp xếp</span>
+                  <span className="exq-deck-open">
+                    Bắt đầu <span>→</span>
+                  </span>
                 </button>
               )
             }
@@ -280,14 +287,15 @@ export default function ExercisePage() {
             return (
               <button key={d.deck.id} className="deck-card" onClick={() => setSession(d)}>
                 <div className="deck-name">{d.deck.name}</div>
-                <span className="muted">
+                <span className="deck-desc">
                   {d.cards.length} từ · {d.cards.length} câu hỏi
                 </span>
-                <div className="ex-deck-bar" title={`${pct}%`}>
+                <div className="exq-deck-bar" title={`${pct}%`}>
                   <div style={{ width: `${pct}%` }} />
                 </div>
-                <span className="muted">
-                  {done > 0 ? `Đã làm ${done}/${d.cards.length} · Làm tiếp →` : 'Bắt đầu →'}
+                <span className="exq-deck-open">
+                  {done > 0 ? `Đã làm ${done}/${d.cards.length} · Làm tiếp ` : 'Bắt đầu '}
+                  <span>→</span>
                 </span>
               </button>
             )
@@ -562,7 +570,7 @@ function VocabQuiz({
       </div>
 
       {/* 4 đáp án đánh số (bấm phím 1-4 cũng chọn được) — câu ví dụ chỉ hiện SAU khi chọn */}
-      <div className="ex-options">
+      <div className="ex-options exq-options">
         {q.options.map((c, i) => {
           const ex = answered ? exampleOf(c) : null
           let cls = 'ex-option'
@@ -847,9 +855,11 @@ function ReorderQuiz({
         <div className="ex-prompt-label">
           Câu {idx + 1}/{questions.length} · Sắp xếp các từ thành câu đúng
         </div>
-        <div className="ro-hint muted">
-          Gợi ý: <strong>{q.card.word}</strong>
-          {q.card.meaning ? ` — ${q.card.meaning}` : ''}
+        <div className="exq-hint-row">
+          <span className="exq-hint">
+            💡 Gợi ý: <strong>{q.card.word}</strong>
+            {q.card.meaning ? ` — ${q.card.meaning}` : ''}
+          </span>
         </div>
       </div>
 

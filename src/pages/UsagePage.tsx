@@ -10,6 +10,7 @@ import {
 import { getUsageStats, resetRequestStats, type UsageStats } from '../services/usageStats'
 import BarChart from '../components/BarChart'
 import Heatmap from '../components/Heatmap'
+import '../styles/usage.css'
 
 // Hạn mức gói Supabase Free (tham khảo — nên đối chiếu Dashboard cho chính xác)
 const DB_FREE_BYTES = 500 * 1024 * 1024 // 500 MB
@@ -99,7 +100,6 @@ export default function UsagePage() {
       )
     : null
   const heatDays = study?.map((s) => ({ date: s.date, value: s.minutes_studied })) ?? []
-  const maxForecast = forecast ? Math.max(1, ...forecast.map((b) => b.count)) : 1
 
   const onReset = () => {
     if (!confirm('Đặt lại bộ đếm request (chỉ trên máy này)?')) return
@@ -123,22 +123,26 @@ export default function UsagePage() {
 
       {/* Tổng quan học tập (30–365 ngày) */}
       {studyTotals && (
-        <div className="stat-grid">
-          <div className="stat-card">
-            <div className="stat-num">⏱️ {studyTotals.minutes.toLocaleString('vi-VN')}</div>
-            <div className="stat-label">Phút học (1 năm)</div>
+        <div className="stats-cards">
+          <div className="stats-card">
+            <div className="stats-ico i1">⏱️</div>
+            <div className="stats-num">{studyTotals.minutes.toLocaleString('vi-VN')}</div>
+            <div className="stats-lbl">Phút học (1 năm)</div>
           </div>
-          <div className="stat-card">
-            <div className="stat-num">🔁 {studyTotals.cards.toLocaleString('vi-VN')}</div>
-            <div className="stat-label">Lượt ôn thẻ</div>
+          <div className="stats-card">
+            <div className="stats-ico i2">🔁</div>
+            <div className="stats-num">{studyTotals.cards.toLocaleString('vi-VN')}</div>
+            <div className="stats-lbl">Lượt ôn thẻ</div>
           </div>
-          <div className="stat-card">
-            <div className="stat-num">✨ {studyTotals.words.toLocaleString('vi-VN')}</div>
-            <div className="stat-label">Từ mới đã thêm</div>
+          <div className="stats-card">
+            <div className="stats-ico i3">✨</div>
+            <div className="stats-num">{studyTotals.words.toLocaleString('vi-VN')}</div>
+            <div className="stats-lbl">Từ mới đã thêm</div>
           </div>
-          <div className="stat-card">
-            <div className="stat-num">📝 {studyTotals.quizzes.toLocaleString('vi-VN')}</div>
-            <div className="stat-label">Quiz đã làm</div>
+          <div className="stats-card">
+            <div className="stats-ico i4">📝</div>
+            <div className="stats-num">{studyTotals.quizzes.toLocaleString('vi-VN')}</div>
+            <div className="stats-lbl">Quiz đã làm</div>
           </div>
         </div>
       )}
@@ -159,76 +163,69 @@ export default function UsagePage() {
         )}
       </div>
 
-      {/* Tỷ lệ nhớ (retention) 30 ngày */}
-      {retention && (
-        <div className="usage-card">
-          <div className="usage-card-head">
-            <h2>🧠 Tỷ lệ nhớ (30 ngày)</h2>
-            <span className="usage-big">
-              {retention.total ? `${Math.round(retention.rate * 100)}%` : '—'}
-            </span>
-          </div>
-          {retention.total === 0 ? (
-            <p className="muted">Chưa có lượt ôn nào trong 30 ngày qua.</p>
-          ) : (
-            <>
-              <div className="sp-bar usage-bar">
-                <div
-                  className={`sp-bar-fill ${
-                    retention.rate >= 0.85 ? '' : retention.rate >= 0.6 ? 'is-warn' : 'is-danger'
-                  }`}
-                  style={{ width: `${Math.round(retention.rate * 100)}%` }}
-                />
-              </div>
-              <div className="usage-meta">
-                <span className="muted">
-                  Nhớ {retention.kept.toLocaleString('vi-VN')} / {retention.total.toLocaleString('vi-VN')} lượt
-                  (không bấm “Lại”)
-                </span>
-              </div>
-              <div className="retention-breakdown">
-                {(['again', 'hard', 'good', 'easy'] as const).map((k) => {
-                  const label = { again: 'Lại', hard: 'Khó', good: 'Được', easy: 'Dễ' }[k]
-                  const pct = retention.total
-                    ? Math.round((retention.byRating[k] / retention.total) * 100)
-                    : 0
-                  return (
-                    <div key={k} className={`ret-item ret-${k}`}>
-                      <span className="ret-label">{label}</span>
-                      <span className="ret-count">{retention.byRating[k]}</span>
-                      <span className="ret-pct muted">{pct}%</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Dự báo thẻ đến hạn 7 ngày tới */}
-      {forecast && (
-        <div className="usage-card">
-          <div className="usage-card-head">
-            <h2>🔮 Thẻ đến hạn (7 ngày tới)</h2>
-          </div>
-          <div className="forecast">
-            {forecast.map((b) => (
-              <div className="fc-bar-col" key={b.date || 'overdue'}>
-                <div className="fc-bar-track">
-                  <div
-                    className={`fc-bar-fill ${b.date === '' ? 'overdue' : ''}`}
-                    style={{ height: `${(b.count / maxForecast) * 100}%` }}
-                    title={`${b.label}: ${b.count} thẻ`}
-                  />
+      <div className="stats-col2">
+        {/* Tỷ lệ nhớ (retention) 30 ngày */}
+        {retention && (
+          <div className="usage-card">
+            <div className="usage-card-head">
+              <h2>🧠 Tỷ lệ nhớ (30 ngày)</h2>
+              <span className="usage-big">
+                {retention.total ? `${Math.round(retention.rate * 100)}%` : '—'}
+              </span>
+            </div>
+            {retention.total === 0 ? (
+              <p className="muted">Chưa có lượt ôn nào trong 30 ngày qua.</p>
+            ) : (
+              <>
+                <p className="muted" style={{ margin: '0 0 0.4rem' }}>
+                  Nhớ {retention.kept.toLocaleString('vi-VN')} /{' '}
+                  {retention.total.toLocaleString('vi-VN')} lượt (không bấm “Lại”)
+                </p>
+                <div className="stats-retain">
+                  {(['again', 'hard', 'good', 'easy'] as const).map((k) => {
+                    const label = { again: 'Lại', hard: 'Khó', good: 'Được', easy: 'Dễ' }[k]
+                    const pct = retention.total
+                      ? Math.round((retention.byRating[k] / retention.total) * 100)
+                      : 0
+                    return (
+                      <div key={k} className={`stats-retain-row r-${k}`}>
+                        <span className="stats-retain-lbl">{label}</span>
+                        <div className="stats-track">
+                          <i style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="stats-retain-val">
+                          {retention.byRating[k]} · {pct}%
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
-                <span className="fc-bar-count">{b.count}</span>
-                <span className="fc-bar-label muted">{b.label}</span>
-              </div>
-            ))}
+              </>
+            )}
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Dự báo thẻ đến hạn 7 ngày tới */}
+        {forecast && (
+          <div className="usage-card">
+            <div className="usage-card-head">
+              <h2>🔮 Thẻ đến hạn (7 ngày tới)</h2>
+            </div>
+            <div className="stats-due">
+              {forecast.map((b) => (
+                <div
+                  className={`stats-due-cell ${b.date === '' ? 'hot' : ''}`}
+                  key={b.date || 'overdue'}
+                  title={`${b.label}: ${b.count} thẻ`}
+                >
+                  <b>{b.count}</b>
+                  <span>{b.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Thống kê theo từng bộ từ */}
       {deckStats && deckStats.length > 0 && (
@@ -261,25 +258,47 @@ export default function UsagePage() {
         </div>
       )}
 
-      {/* Dung lượng Database */}
-      <div className="usage-card">
-        <div className="usage-card-head">
-          <h2>💾 Dung lượng Database</h2>
-          {db && (
-            <span className="usage-big">
-              {fmtBytes(db.db_size_bytes)} <span className="muted">/ 500 MB</span>
+      <div className="stats-col2">
+        {/* Dung lượng Database */}
+        <div className="usage-card">
+          <div className="usage-card-head">
+            <h2>💾 Dung lượng Database</h2>
+            {db && (
+              <span className="usage-big">
+                {fmtBytes(db.db_size_bytes)} <span className="muted">/ 500 MB</span>
+              </span>
+            )}
+          </div>
+          <div className="sp-bar usage-bar">
+            <div
+              className={`sp-bar-fill ${dbPct >= 80 ? 'is-danger' : dbPct >= 50 ? 'is-warn' : ''}`}
+              style={{ width: `${dbPct}%` }}
+            />
+          </div>
+          <div className="usage-meta">
+            <span>Đã dùng {dbPct.toFixed(1)}% hạn mức miễn phí</span>
+            <span className="muted">{totalRows.toLocaleString('vi-VN')} bản ghi</span>
+          </div>
+        </div>
+
+        {/* Số request (đếm phía client) */}
+        <div className="usage-card">
+          <div className="usage-card-head">
+            <h2>📡 Số request tới Supabase</h2>
+            <div className="usage-req-nums">
+              <span className="usage-big">{usage.total.toLocaleString('vi-VN')}</span>
+              <span className="muted">tổng · {usage.today.toLocaleString('vi-VN')} hôm nay</span>
+            </div>
+          </div>
+          <BarChart data={usage.byDay} />
+          <div className="usage-meta">
+            <span className="muted">
+              Đếm request do app này gọi <strong>trên máy này</strong> — không phải tổng toàn hệ thống.
             </span>
-          )}
-        </div>
-        <div className="sp-bar usage-bar">
-          <div
-            className={`sp-bar-fill ${dbPct >= 80 ? 'is-danger' : dbPct >= 50 ? 'is-warn' : ''}`}
-            style={{ width: `${dbPct}%` }}
-          />
-        </div>
-        <div className="usage-meta">
-          <span>Đã dùng {dbPct.toFixed(1)}% hạn mức miễn phí</span>
-          <span className="muted">{totalRows.toLocaleString('vi-VN')} bản ghi</span>
+            <button className="btn tiny" onClick={onReset}>
+              Đặt lại
+            </button>
+          </div>
         </div>
       </div>
 
@@ -289,38 +308,18 @@ export default function UsagePage() {
           <div className="usage-card-head">
             <h2>📋 Số bản ghi theo bảng</h2>
           </div>
-          <div className="usage-rows">
+          <div className="stats-tg">
             {Object.entries(db.tables)
               .sort((a, b) => b[1] - a[1])
               .map(([name, cnt]) => (
-                <div className="usage-row" key={name}>
-                  <span className="usage-row-name">{TABLE_LABEL[name] ?? name}</span>
-                  <span className="usage-row-count">{cnt.toLocaleString('vi-VN')}</span>
+                <div className="stats-tg-item" key={name}>
+                  <b>{cnt.toLocaleString('vi-VN')}</b>
+                  <span>{TABLE_LABEL[name] ?? name}</span>
                 </div>
               ))}
           </div>
         </div>
       )}
-
-      {/* Số request (đếm phía client) */}
-      <div className="usage-card">
-        <div className="usage-card-head">
-          <h2>📡 Số request tới Supabase</h2>
-          <div className="usage-req-nums">
-            <span className="usage-big">{usage.total.toLocaleString('vi-VN')}</span>
-            <span className="muted">tổng · {usage.today.toLocaleString('vi-VN')} hôm nay</span>
-          </div>
-        </div>
-        <BarChart data={usage.byDay} />
-        <div className="usage-meta">
-          <span className="muted">
-            Đếm request do app này gọi <strong>trên máy này</strong> — không phải tổng toàn hệ thống.
-          </span>
-          <button className="btn tiny" onClick={onReset}>
-            Đặt lại
-          </button>
-        </div>
-      </div>
 
       {/* Hạn mức gói Free */}
       <div className="usage-card">

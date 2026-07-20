@@ -3,6 +3,7 @@ import { CloudApi, type Deck, type Card } from '../services/cloud/CloudApiClient
 import { previewInterval, type Rating } from '../services/srs'
 import { speak, stopSpeaking, ttsSupported } from '../services/tts'
 import { track } from '../services/studyTracker'
+import '../styles/flashcard.css'
 
 // Nút 🔊 phát âm 1 lần (câu ví dụ) — dừng nổi bọt để không lật thẻ khi bấm
 function SpeakButton({ text }: { text: string }) {
@@ -543,34 +544,34 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   )
 
   return (
-    <div className="review-page">
-      <div className="ex-top">
-        <button className="ex-exit" onClick={onExit} title="Thoát">
+    <div className="page rev-session">
+      <div className="rev-top">
+        <button className="rev-exit" onClick={onExit} title="Thoát">
           ✕
         </button>
-        <div className="ex-bar" title={`Còn lại ${total - idx} thẻ`}>
-          <div className="ex-bar-fill" style={{ width: `${pct}%` }} />
+        <div className="rev-bar" title={`Còn lại ${total - idx} thẻ`}>
+          <div className="rev-bar-fill" style={{ width: `${pct}%` }} />
         </div>
-        {practice && <span className="review-mode">Học lại</span>}
-        <span className="ex-score" title="Đã ôn / tổng số thẻ">
+        {practice && <span className="rev-mode">Học lại</span>}
+        <span className="rev-score" title="Đã ôn / tổng số thẻ">
           ✓ {done}/{total}
         </span>
       </div>
 
-      <div className="review-stage" onTouchStart={onStageTouchStart} onTouchEnd={onStageTouchEnd}>
-        <div className="fc-toggle-row">
-          <button className="fc-dir-toggle" onClick={toggleFront} title="Đổi chiều học">
+      <div className="rev-stage" onTouchStart={onStageTouchStart} onTouchEnd={onStageTouchEnd}>
+        <div className="rev-toggle-row">
+          <button className="rev-toggle" onClick={toggleFront} title="Đổi chiều học">
             🔁 {frontVi ? 'Việt → Anh' : 'Anh → Việt'}
           </button>
           <button
-            className={showTyping ? 'fc-dir-toggle' : 'fc-dir-toggle off'}
+            className={showTyping ? 'rev-toggle' : 'rev-toggle off'}
             onClick={toggleTyping}
             title={showTyping ? 'Đang hiện ô gõ từ — bấm để ẩn' : 'Ô gõ từ đang ẩn — bấm để hiện'}
           >
             ⌨️ Gõ từ {showTyping ? '' : '(tắt)'}
           </button>
           <button
-            className={showExamples ? 'fc-dir-toggle' : 'fc-dir-toggle off'}
+            className={showExamples ? 'rev-toggle' : 'rev-toggle off'}
             onClick={toggleExamples}
             title={showExamples ? 'Đang hiện câu ví dụ — bấm để ẩn' : 'Câu ví dụ đang ẩn — bấm để hiện'}
           >
@@ -578,8 +579,9 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
           </button>
         </div>
 
+        <div className="rev-flip">
         <div
-          className={flipped ? 'flashcard flipped' : 'flashcard'}
+          className={flipped ? 'rev-card flipped' : 'rev-card'}
           onClick={() => {
             // Vừa vuốt xong -> bỏ qua cú click (không lật thẻ)
             if (swiped.current) {
@@ -592,13 +594,13 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
             setFlipped((f) => !f)
           }}
         >
-          <div className="fc-top">
+          <div className="rev-word-row">
             {frontVi ? (
-              <span className="fc-word">{current.meaning || '(chưa có nghĩa)'}</span>
+              <span className="rev-word">{current.meaning || '(chưa có nghĩa)'}</span>
             ) : (
               <>
-                <span className="fc-word">{current.word}</span>
-                {current.pos && <span className="fc-pos">{current.pos}</span>}
+                <span className="rev-word">{current.word}</span>
+                {current.pos && <span className="rev-pos">{current.pos}</span>}
                 <SpeakToggle on={autoSpeak} onToggle={toggleAutoSpeak} />
               </>
             )}
@@ -659,22 +661,22 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
                 )}
               </form>
               )}
-              <div className="fc-hint">
+              <div className="rev-hint">
                 Bấm thẻ hoặc phím Tab để xem {frontVi ? 'từ tiếng Anh' : 'nghĩa'}
               </div>
             </>
           )}
 
           {flipped && (
-            <div className="fc-back">
+            <div className="rev-back">
               {frontVi ? (
-                <div className="fc-answer">
-                  <span className="fc-answer-word">{current.word}</span>
-                  {current.pos && <span className="fc-pos">{current.pos}</span>}
+                <div className="rev-answer">
+                  <span className="rev-answer-word">{current.word}</span>
+                  {current.pos && <span className="rev-pos">{current.pos}</span>}
                   <SpeakToggle on={autoSpeak} onToggle={toggleAutoSpeak} />
                 </div>
               ) : (
-                <div className="fc-meaning">{current.meaning || '(chưa có nghĩa)'}</div>
+                <div className="rev-meaning">{current.meaning || '(chưa có nghĩa)'}</div>
               )}
               <ExtraBlock label="Collocation" value={current.collocation} />
               <ExtraBlock label="Pattern" value={current.pattern} />
@@ -696,11 +698,12 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
             </div>
           )}
         </div>
+        </div>
 
         {flipped && (
-          <div className="rating-row">
-            {RATINGS.map((r) => (
-              <button key={r.key} className={`btn rating ${r.cls}`} onClick={() => rate(r.key)}>
+          <div className="rev-grade-row">
+            {RATINGS.map((r, i) => (
+              <button key={r.key} className={`rev-grade rev-g${i + 1}`} onClick={() => rate(r.key)}>
                 <span>{r.label}</span>
                 <small>{previewInterval(current, r.key)}</small>
               </button>
@@ -708,14 +711,14 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
           </div>
         )}
 
-        <div className="review-nav">
-          <button className="btn" onClick={goBack} disabled={idx === 0}>
+        <div className="rev-nav">
+          <button className="btn small" onClick={goBack} disabled={idx === 0}>
             ← Trước
           </button>
-          <span className="review-nav-pos">
+          <span className="rev-nav-pos">
             {idx + 1} / {total}
           </span>
-          <button className="btn" onClick={goNext}>
+          <button className="btn small" onClick={goNext}>
             Tiếp →
           </button>
         </div>

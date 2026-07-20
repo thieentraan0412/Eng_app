@@ -1,0 +1,327 @@
+/* ============================================================
+   Ôn tập / Flashcard — page styles (ported from mockup 04-on-tap)
+   Prefix: rev-   ·   Tokens: var(--...) from src/styles.css (dark-mode safe)
+   Only the ReviewSession (flip / grade / nav) is rescoped here.
+   The deck-selection list keeps the shared global .deck-* classes.
+   ============================================================ */
+
+/* Layout wrapper — column stack, keeps the global .page container */
+.rev-session {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  min-height: 100%;
+}
+
+/* ---------- Top bar: exit ✕ + progress + score ---------- */
+.rev-top {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.rev-exit {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: color 0.15s, border-color 0.15s, transform 0.15s;
+}
+.rev-exit:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  transform: scale(1.06);
+}
+.rev-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.rev-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--grad-primary);
+  transition: width 0.35s ease;
+}
+.rev-mode {
+  flex: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent-3);
+  background: color-mix(in srgb, var(--accent-3) 14%, transparent);
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+}
+.rev-score {
+  flex: none;
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: var(--accent-2);
+  background: color-mix(in srgb, var(--accent-2) 15%, transparent);
+  padding: 0.28rem 0.72rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ---------- Stage ---------- */
+.rev-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding-bottom: 2rem;
+}
+
+/* ---------- Direction / mode toggles (segmented pills) ---------- */
+.rev-toggle-row {
+  align-self: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.rev-toggle {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-soft);
+  border-radius: 999px;
+  padding: 0.4rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.14s, color 0.14s, background 0.14s;
+}
+.rev-toggle:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.rev-toggle.off {
+  opacity: 0.55;
+  border-style: dashed;
+  box-shadow: none;
+}
+
+/* ---------- Flip card (3D) ---------- */
+.rev-flip {
+  perspective: 1400px;
+  width: 100%;
+  max-width: 640px;
+}
+.rev-card {
+  position: relative;
+  width: 100%;
+  min-height: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-md);
+  padding: 2.4rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  cursor: pointer;
+  text-align: center;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  /* Card-turn animation — retriggers because animation-name differs per state */
+  animation: revTurnFront 0.45s cubic-bezier(0.4, 0.1, 0.2, 1) both;
+}
+.rev-card.flipped {
+  animation-name: revTurnBack;
+}
+@keyframes revTurnFront {
+  from {
+    transform: rotateY(-88deg);
+    opacity: 0.25;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes revTurnBack {
+  from {
+    transform: rotateY(88deg);
+    opacity: 0.25;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+/* Gradient accent strip on top edge (mockup .fc-face:before) */
+.rev-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 5px;
+  background: var(--grad-brand);
+}
+
+/* Front word row */
+.rev-word-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.rev-word {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.rev-pos {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--primary);
+  background: var(--primary-soft);
+  padding: 0.12rem 0.55rem;
+  border-radius: 8px;
+}
+.rev-hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-top: 0.3rem;
+}
+
+/* Back face content */
+.rev-back {
+  border-top: 1px solid var(--border);
+  padding-top: 1.4rem;
+  margin-top: 0.4rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  animation: fadein 0.25s ease;
+}
+.rev-meaning {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+.rev-answer {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.rev-answer-word {
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+/* ---------- Grade row: 4 tinted SRS buttons ---------- */
+.rev-grade-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 640px;
+}
+.rev-grade {
+  border-radius: 14px;
+  padding: 0.8rem 0.6rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, filter 0.15s;
+}
+.rev-grade small {
+  display: block;
+  font-weight: 500;
+  font-size: 0.68rem;
+  opacity: 0.78;
+  margin-top: 2px;
+}
+.rev-grade:hover {
+  transform: translateY(-3px);
+}
+.rev-grade:active {
+  transform: translateY(0);
+}
+/* rose / amber / blue-primary / green — rgba of danger/warn/primary/success */
+.rev-g1 {
+  background: color-mix(in srgb, var(--danger) 13%, transparent);
+  color: var(--danger);
+}
+.rev-g2 {
+  background: color-mix(in srgb, var(--warn) 15%, transparent);
+  color: var(--warn);
+}
+.rev-g3 {
+  background: color-mix(in srgb, var(--primary) 13%, transparent);
+  color: var(--primary);
+}
+.rev-g4 {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
+}
+
+/* ---------- Bottom nav ---------- */
+.rev-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  width: 100%;
+  max-width: 640px;
+}
+.rev-nav-pos {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 860px) {
+  .rev-card {
+    min-height: 340px;
+    padding: 2.2rem 1.4rem;
+  }
+  .rev-word {
+    font-size: 2rem;
+  }
+  .rev-answer-word {
+    font-size: 1.7rem;
+  }
+  .rev-meaning {
+    font-size: 1.25rem;
+  }
+  .rev-grade-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

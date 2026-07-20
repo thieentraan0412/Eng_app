@@ -13,6 +13,7 @@ import { suggest, type Suggestion } from '../services/suggestion'
 import { ignoreWord, isMisspelled, suggestFix, tokenizeWords } from '../services/spellcheck'
 import { checkGrammar, type GrammarMatch } from '../services/grammarcheck'
 import { checkLocalGrammar } from '../services/localgrammar'
+import '../styles/writing.css'
 
 // Gộp lỗi offline + LanguageTool, bỏ trùng theo vị trí, sắp theo thứ tự trong câu
 function mergeGrammar(a: GrammarMatch[], b: GrammarMatch[]): GrammarMatch[] {
@@ -108,8 +109,13 @@ export default function WritingPage() {
   // Trang danh sách
   return (
     <div className="page">
-      <div className="list-header">
-        <h1 className="page-title">Bài viết</h1>
+      <div className="write-head">
+        <div>
+          <h1 className="page-title">Bài viết</h1>
+          <p className="write-sub">
+            Luyện viết tiếng Anh với gợi ý từ, kiểm tra chính tả &amp; ngữ pháp.
+          </p>
+        </div>
         <button className="btn primary" onClick={() => setSel('new')}>
           + Bài viết mới
         </button>
@@ -117,20 +123,23 @@ export default function WritingPage() {
       {error && <div className="alert error">{error}</div>}
 
       {writings.length === 0 ? (
-        <div className="writing-empty">
-          <div className="we-icon">✍️</div>
+        <div className="write-empty">
+          <div className="write-empty-ico">✍️</div>
           <h2>Chưa có bài viết</h2>
           <p className="muted">Bấm “Bài viết mới” để bắt đầu luyện viết.</p>
         </div>
       ) : (
-        <div className="deck-grid">
+        <div className="write-list">
           {writings.map((w) => (
-            <div key={w.id} className="deck-card" onClick={() => setSel(w.id)}>
-              <div className="deck-name">
-                {w.title || '(chưa có tiêu đề)'}
-                {w.topic && <span className="level-badge">{w.topic}</span>}
+            <div key={w.id} className="write-row" onClick={() => setSel(w.id)}>
+              <div className="write-row-ico">✍️</div>
+              <div className="write-row-main">
+                <div className="write-row-title">
+                  {w.title || '(chưa có tiêu đề)'}
+                  {w.topic && <span className="write-row-topic">{w.topic}</span>}
+                </div>
+                <div className="write-row-sub">{w.word_count} từ</div>
               </div>
-              <span className="muted">{w.word_count} từ</span>
               <button
                 className="btn tiny danger"
                 onClick={(e) => {
@@ -228,7 +237,7 @@ function Editor({
     if (!spellEnabled || badSet.size === 0) return [content]
     return content.split(/([\p{L}\p{M}']+)/u).map((part, i) =>
       /^[\p{L}\p{M}']+$/u.test(part) && badSet.has(part.toLowerCase()) ? (
-        <mark className="misspell" key={i}>
+        <mark className="write-misspell" key={i}>
           {part}
         </mark>
       ) : (
@@ -376,18 +385,18 @@ function Editor({
   }
 
   return (
-    <form className="writing-editor-page" onSubmit={save}>
-      <div className="editor-head">
-        <button type="button" className="btn tiny back-btn" onClick={onBack} title="Quay lại">
+    <form className="page write-editor" onSubmit={save}>
+      <div className="write-ehead">
+        <button type="button" className="btn tiny write-back" onClick={onBack} title="Quay lại">
           ←
         </button>
         <input
-          className="writing-title"
+          className="write-title"
           placeholder="Tiêu đề bài viết"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <span className="muted wm-count">
+        <span className="write-count">
           {countWords(content)} từ · {content.length} ký tự
           {savedAt && ` · Đã lưu ${savedAt}`}
         </span>
@@ -402,9 +411,9 @@ function Editor({
       </div>
 
       {/* Chủ đề bài viết + gợi ý đề ngẫu nhiên */}
-      <div className="writing-meta-row">
+      <div className="write-meta">
         <input
-          className="writing-topic"
+          className="write-topic"
           placeholder="Chủ đề (VD: Travel, Daily life…)"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
@@ -422,14 +431,14 @@ function Editor({
 
       {error && <div className="alert error">{error}</div>}
 
-      <div className="ta-wrap">
-        <div className="ta-backdrop" ref={backdropRef} aria-hidden="true">
+      <div className="write-ta-wrap">
+        <div className="write-backdrop" ref={backdropRef} aria-hidden="true">
           {highlighted}
           {'\n'}
         </div>
         <textarea
           ref={taRef}
-          className="writing-area"
+          className="write-textarea"
           placeholder="Viết bằng tiếng Anh… (gõ để nhận gợi ý; nhấn Tab để chèn gợi ý đầu tiên)"
           spellCheck={false}
           value={content}
@@ -444,30 +453,30 @@ function Editor({
         />
       </div>
 
-      <div className="writing-bottom">
+      <div className="write-bottom">
         {grammarEnabled && (grammar.length > 0 || grammarChecking) && (
-          <div className="grammar-bar">
-            <span className="grammar-label">Kiểm tra câu</span>
+          <div className="write-gbar">
+            <span className="write-glabel">Kiểm tra câu</span>
             {fixableCount > 1 && (
-              <button type="button" className="grammar-fixall" onClick={fixAllGrammar}>
+              <button type="button" className="write-gfixall" onClick={fixAllGrammar}>
                 ✓ Sửa cả câu ({fixableCount})
               </button>
             )}
             {grammar.length === 0 && grammarChecking ? (
-              <span className="suggest-hint">Đang kiểm tra…</span>
+              <span className="write-sghint">Đang kiểm tra…</span>
             ) : (
               grammar.map((m, idx) => (
-                <span className="grammar-item" key={idx}>
-                  <span className="grammar-err" title={m.message}>
+                <span className="write-gitem" key={idx}>
+                  <span className="write-gerr" title={m.message}>
                     {m.errorText || '⚠'}
                   </span>
-                  <span className="grammar-arrow">→</span>
+                  <span className="write-arrow">→</span>
                   {m.replacements.length > 0 ? (
                     m.replacements.map((rep) => (
                       <button
                         type="button"
                         key={rep}
-                        className="grammar-fix"
+                        className="write-gfix"
                         title={m.message}
                         onClick={() => applyGrammar(m, rep)}
                       >
@@ -475,7 +484,7 @@ function Editor({
                       </button>
                     ))
                   ) : (
-                    <span className="grammar-info" title={m.message}>
+                    <span className="write-ginfo" title={m.message}>
                       ⓘ
                     </span>
                   )}
@@ -485,18 +494,18 @@ function Editor({
           </div>
         )}
         {spellEnabled && spellList.length > 0 && (
-          <div className="spell-bar">
-            <span className="spell-label">Chính tả</span>
+          <div className="write-spbar">
+            <span className="write-splabel">Chính tả</span>
             {spellList.map((item) => (
-              <span className="spell-item" key={item.word}>
-                <span className="spell-word">{item.word}</span>
-                <span className="spell-arrow">→</span>
+              <span className="write-spitem" key={item.word}>
+                <span className="write-spword">{item.word}</span>
+                <span className="write-arrow">→</span>
                 {item.suggestions.length > 0 ? (
                   item.suggestions.map((sug) => (
                     <button
                       type="button"
                       key={sug}
-                      className="spell-fix"
+                      className="write-spfix"
                       onClick={() => fixWord(item.word, sug)}
                     >
                       {sug}
@@ -507,7 +516,7 @@ function Editor({
                 )}
                 <button
                   type="button"
-                  className="spell-ignore"
+                  className="write-spignore"
                   title="Bỏ qua từ này (thêm vào từ điển cá nhân)"
                   onClick={() => ignore(item.word)}
                 >
@@ -517,14 +526,14 @@ function Editor({
             ))}
           </div>
         )}
-        <div className="suggest-bar">
-          <span className="suggest-label">Gợi ý</span>
+        <div className="write-sgbar">
+          <span className="write-sglabel">Gợi ý</span>
           {suggestEnabled && suggestions.length > 0 ? (
             suggestions.map((s, i) => (
               <button
                 type="button"
                 key={s.text + i}
-                className={`suggest-chip ${s.type}`}
+                className={`write-sgchip ${s.type}`}
                 onClick={() => accept(s)}
               >
                 {s.text}
@@ -532,7 +541,7 @@ function Editor({
               </button>
             ))
           ) : (
-            <span className="suggest-hint">
+            <span className="write-sghint">
               {suggestEnabled ? 'Gõ tiếng Anh để nhận gợi ý…' : 'Đã tắt gợi ý (bật lại ở Cài đặt)'}
             </span>
           )}

@@ -1,0 +1,159 @@
+/* ============================================================
+   Chép câu (SentencePage) — bổ sung theo mockup 08-chep-cau
+   Chỉ THÊM phần còn thiếu so với styles.css toàn cục:
+   - Thanh tiến độ trong THẺ THƯ MỤC (mockup có .progress; app chưa vẽ).
+   Các lớp .deck-* / .sc-* / .sp-* / .pf-* khác đã có sẵn & khớp mockup,
+   không lặp lại ở đây để tránh ghi đè.
+   Tiền tố mới: sc-deck-* (đã kiểm tra không trùng lớp .sc-* toàn cục).
+   ============================================================ */
+
+/* Thanh tiến độ "Đã làm x/y" — dùng var(--...) để hợp dark-mode */
+.sc-deck-progress {
+  height: 8px;
+  margin-top: 0.7rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.sc-deck-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--grad-primary);
+  transition: width 0.3s ease;
+}
+
+/* Màn hẹp (mobile, theo mockup ≤860px): thẻ thoáng hơn một chút */
+@media (max-width: 860px) {
+  .sc-deck-progress {
+    margin-top: 0.6rem;
+  }
+}
+
+/* Thẻ thư mục: hiện "Mở thư mục →" luôn (mockup không ẩn theo hover) */
+.sentence-page .deck-foot {
+  opacity: 1;
+  transform: none;
+}
+
+/* ============================================================
+   Màn LUYỆN TẬP (desktop) — khớp mockup 08-chep-cau/thu-muc.html
+   .sent-card đơn giản: ô số nhỏ + đề + badge cấp độ, chip amber 💡,
+   ô nhập 1 dòng, nút nhỏ (Xem đáp án trái · Kiểm tra phải),
+   feedback tô màu theo kết quả. KHÔNG dùng ô số to / vạch màu dày.
+   ============================================================ */
+/* Cột nội dung rộng vừa phải, canh giữa cho dễ đọc */
+.page.sentence-page {
+  max-width: 820px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Vỏ thẻ câu (giống .sent-card của mockup) */
+.sentence-page .sentence-card {
+  padding: 1.15rem 1.25rem;
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Hàng đầu: số câu · cờ + đề · badge cấp độ */
+.sentence-page .sc-vi {
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+.sentence-page .sc-index {
+  min-width: 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px; /* ô vuông bo góc như .sent-no */
+  background: var(--primary-tint);
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 0.78rem;
+}
+.sentence-page .sc-vi-text {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.sentence-page .sc-level {
+  border: none;
+  color: var(--primary);
+  background: var(--primary-tint);
+  font-weight: 700;
+  padding: 0.12rem 0.6rem;
+  border-radius: 999px;
+}
+
+/* Chip gợi ý: amber, có 💡, KHÔNG thụt lề dưới số */
+.sentence-page .sc-hints {
+  margin: 0.7rem 0 0;
+}
+.sentence-page .sc-hint {
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border: none;
+  color: var(--warn);
+  font-weight: 600;
+  padding: 0.2rem 0.7rem;
+}
+
+/* Ô nhập: nền trắng, bo tròn như .input của mockup */
+.sentence-page .sc-input {
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 12px;
+  min-height: 46px;
+}
+
+/* Hàng nút: Xem đáp án (trái) · Kiểm tra (phải), cỡ nhỏ */
+.sentence-page .sc-actions {
+  justify-content: space-between;
+  margin-top: 0.75rem;
+}
+.sentence-page .sc-actions .btn {
+  padding: 0.55rem 1.15rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.sentence-page .sc-actions .btn.tiny {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text-soft);
+}
+.sentence-page .sc-actions .btn.tiny:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.sentence-page .sc-actions .btn.primary {
+  background: var(--grad-primary);
+  color: #fff;
+  box-shadow: var(--shadow-primary);
+}
+
+/* Viền thẻ giữ trung tính như mockup — chỉ khối feedback đổi màu */
+.sentence-page .sentence-card.is-correct,
+.sentence-page .sentence-card.is-close,
+.sentence-page .sentence-card.is-wrong {
+  border-color: var(--border);
+}
+
+/* Feedback: khối tô màu theo kết quả (như .feedback .fb-ok) */
+.sentence-page .sc-result {
+  border: 1px solid transparent;
+  border-left-width: 1px;
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+}
+.sentence-page .sentence-card.is-correct .sc-result {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border));
+}
+.sentence-page .sentence-card.is-close .sc-result {
+  background: color-mix(in srgb, var(--warn) 11%, var(--surface));
+  border-color: color-mix(in srgb, var(--warn) 28%, var(--border));
+}
+.sentence-page .sentence-card.is-wrong .sc-result {
+  background: color-mix(in srgb, var(--danger) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 26%, var(--border));
+}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import '../styles/vocabulary.css'
 import { CloudApi, type Deck, type Card } from '../services/cloud/CloudApiClient'
 import { track } from '../services/studyTracker'
 import { autocomplete, fuzzyCorrect, nextWords } from '../services/suggestion'
@@ -109,16 +110,19 @@ export default function VocabularyPage() {
       <p className="page-sub">Tạo và quản lý các bộ từ của bạn</p>
       {error && <div className="alert error">{error}</div>}
 
-      <form className="inline-form" onSubmit={createDeck}>
-        <input
-          placeholder="Tên bộ từ mới (VD: IELTS Vocab 1)"
-          value={newDeckName}
-          onChange={(e) => setNewDeckName(e.target.value)}
-        />
-        <button className="btn primary" type="submit">
-          + Tạo bộ
-        </button>
-      </form>
+      <div className="vocab-create">
+        <form className="vocab-create-row" onSubmit={createDeck}>
+          <input
+            className="vocab-create-input"
+            placeholder="Tên bộ từ mới (VD: IELTS Vocab 1)"
+            value={newDeckName}
+            onChange={(e) => setNewDeckName(e.target.value)}
+          />
+          <button className="btn primary" type="submit">
+            + Tạo bộ
+          </button>
+        </form>
+      </div>
 
       {decks.length === 0 ? (
         <div className="empty-state">
@@ -127,37 +131,39 @@ export default function VocabularyPage() {
           <p className="muted">Tạo bộ từ đầu tiên ở ô phía trên để bắt đầu học.</p>
         </div>
       ) : (
-        <div className="deck-grid">
+        <div className="vocab-grid">
           {decks.map((deck) => (
             <div
               key={deck.id}
-              className="deck-card"
+              className="vocab-card"
               onClick={() => (editingId === deck.id ? undefined : setSelected(deck))}
             >
-              <button
-                className="deck-edit"
-                title="Đổi tên bộ từ"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  startRename(deck)
-                }}
-              >
-                ✎
-              </button>
-              <button
-                className="deck-del"
-                title="Xóa bộ từ"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  removeDeck(deck)
-                }}
-              >
-                ✕
-              </button>
-              <div className="deck-icon">{deck.name.trim().charAt(0).toUpperCase() || '📚'}</div>
+              <div className="vocab-actions">
+                <button
+                  className="vocab-iconbtn"
+                  title="Đổi tên bộ từ"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    startRename(deck)
+                  }}
+                >
+                  ✎
+                </button>
+                <button
+                  className="vocab-iconbtn vocab-del"
+                  title="Xóa bộ từ"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removeDeck(deck)
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="vocab-ava">{deck.name.trim().charAt(0).toUpperCase() || '📚'}</div>
               {editingId === deck.id ? (
                 <input
-                  className="deck-rename"
+                  className="vocab-rename"
                   autoFocus
                   value={editName}
                   onClick={(e) => e.stopPropagation()}
@@ -173,12 +179,11 @@ export default function VocabularyPage() {
                   }}
                 />
               ) : (
-                <div className="deck-name">{deck.name}</div>
+                <div className="vocab-name">{deck.name}</div>
               )}
-              <div className="deck-desc">{deck.description || 'Bộ từ vựng'}</div>
-              <div className="deck-foot">
-                <span>Mở bộ</span>
-                <span className="deck-arrow">→</span>
+              <div className="vocab-desc">{deck.description || 'Bộ từ vựng'}</div>
+              <div className="vocab-open">
+                Mở bộ <span>→</span>
               </div>
             </div>
           ))}
@@ -738,13 +743,17 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
 
   return (
     <div className="page deck-detail">
-      <button className="btn tiny" onClick={onBack}>
-        ← Quay lại
+      <button className="vocab-back" onClick={onBack}>
+        ← Quay lại danh sách
       </button>
-      <h1 className="page-title">{deck.name}</h1>
+      <div className="vocab-detail-head">
+        <h1 className="page-title">{deck.name}</h1>
+        <span className="vocab-count">{cards.length} thẻ</span>
+      </div>
       {error && <div className="alert error">{error}</div>}
 
-      <form className="card-form" onSubmit={addCard}>
+      <form className="card-form vocab-addcard" onSubmit={addCard}>
+        <div className="vocab-addcard-title">➕ Thêm thẻ mới</div>
         {/* Từ tiếng Anh + autocomplete */}
         <div className="field-wrap">
           <input
@@ -874,7 +883,7 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
           multiline
         />
 
-        <button className="btn primary" type="submit" disabled={saving}>
+        <button className="btn primary vocab-add-btn" type="submit" disabled={saving}>
           {saving ? 'Đang lưu…' : '+ Thêm thẻ'}
         </button>
       </form>
@@ -889,66 +898,70 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
       )}
       <div className="card-list">
         {visibleCards.map((card) => (
-          <div key={card.id} className="word-card">
-            <div className="wc-main">
-              <span className="wc-word">{card.word}</span>
-              {card.pos && <span className="wc-pos">{card.pos}</span>}
+          <div key={card.id} className="vocab-wcard">
+            <div className="vocab-wc-head">
+              <div className="vocab-wc-word">
+                {card.word}
+                {card.pos && <span className="vocab-pos-badge">{card.pos}</span>}
+              </div>
+              <div className="vocab-wc-actions">
+                <button
+                  className="btn tiny"
+                  title="Sửa thẻ"
+                  onClick={() => setEditingCard(card.id)}
+                >
+                  Sửa
+                </button>
+                <button className="btn tiny danger" onClick={() => removeCard(card.id)}>
+                  Xóa
+                </button>
+              </div>
             </div>
-            {card.meaning && <div className="wc-meaning">{card.meaning}</div>}
+            {card.meaning && <div className="vocab-wc-meaning">{card.meaning}</div>}
             {card.collocation && card.collocation !== ',' && (
-              <div className="wc-extra">
-                <span className="wc-tag">Collocation</span>
-                <span className="wc-vals">
+              <>
+                <div className="vocab-wc-note">Collocation</div>
+                <div className="vocab-chip-row">
                   {card.collocation
                     .split('\n')
                     .filter(Boolean)
                     .map((v, i) => (
-                      <span className="wc-chip" key={i}>
+                      <span className="vocab-chip vocab-chip-teal" key={i}>
                         {v}
                       </span>
                     ))}
-                </span>
-              </div>
+                </div>
+              </>
             )}
             {card.pattern && card.pattern !== ',' && (
-              <div className="wc-extra">
-                <span className="wc-tag">Pattern</span>
-                <span className="wc-vals">
+              <>
+                <div className="vocab-wc-note">Pattern</div>
+                <div className="vocab-chip-row">
                   {card.pattern
                     .split('\n')
                     .filter(Boolean)
                     .map((v, i) => (
-                      <span className="wc-chip" key={i}>
+                      <span className="vocab-chip vocab-chip-primary" key={i}>
                         {v}
                       </span>
                     ))}
-                </span>
-              </div>
+                </div>
+              </>
             )}
             {card.example &&
               card.example
                 .split('\n')
                 .filter(Boolean)
                 .map((ex, i) => (
-                  <div className="wc-example" key={i}>
+                  <div className="vocab-wc-example" key={i}>
                     “{ex}”
                   </div>
                 ))}
-            <button
-              className="btn tiny wc-edit-btn"
-              title="Sửa thẻ"
-              onClick={() => setEditingCard(card.id)}
-            >
-              Sửa
-            </button>
-            <button className="btn tiny danger" onClick={() => removeCard(card.id)}>
-              Xóa
-            </button>
           </div>
         ))}
         {hasMore && (
           <div ref={sentinelRef} className="load-more">
-            <button className="btn" onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}>
+            <button className="btn vocab-more" onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}>
               Hiện thêm ({filteredCards.length - visibleCount} thẻ còn lại)
             </button>
           </div>

@@ -1,0 +1,404 @@
+/* ============================================================
+   Trang Từ vựng (Vocabulary) — port từ mockup 03-tu-vung
+   Chỉ style phần "landing" (tạo bộ + lưới bộ từ) đúng mockup.
+   Dùng token dùng chung (var(--...)) để giữ dark mode.
+   Tiền tố: vocab-
+   ============================================================ */
+
+/* ---------- Khối tạo bộ từ (mockup .card + .form-row) ---------- */
+.vocab-create {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.4rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.6rem;
+}
+.vocab-create-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0;
+}
+.vocab-create-input {
+  flex: 1;
+  min-width: 200px;
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.vocab-create-input:focus {
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+
+/* ---------- Lưới bộ từ (mockup .deck-grid) ---------- */
+.vocab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-top: 1.6rem;
+}
+
+/* ---------- Thẻ bộ từ (mockup .deck-card) ---------- */
+.vocab-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  color: var(--text);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.vocab-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+/* Avatar chữ cái đầu — xoay màu theo vị trí như mockup */
+.vocab-ava {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: #fff;
+  margin-bottom: 0.9rem;
+  background: var(--grad-brand);
+  box-shadow: var(--shadow-primary);
+}
+.vocab-grid > *:nth-child(4n + 2) .vocab-ava {
+  background: linear-gradient(135deg, var(--accent-2), color-mix(in srgb, var(--accent-2) 55%, #fff));
+}
+.vocab-grid > *:nth-child(4n + 3) .vocab-ava {
+  background: linear-gradient(135deg, var(--warn), color-mix(in srgb, var(--warn) 55%, #fff));
+}
+.vocab-grid > *:nth-child(4n + 4) .vocab-ava {
+  background: linear-gradient(135deg, var(--danger), color-mix(in srgb, var(--danger) 55%, #fff));
+}
+
+.vocab-name {
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vocab-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vocab-open {
+  margin-top: 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.vocab-card:hover .vocab-open {
+  gap: 10px;
+}
+.vocab-open span {
+  transition: transform 0.18s;
+}
+
+/* ---------- Nút sửa / xóa (mockup .deck-actions + .icon-btn) ---------- */
+.vocab-actions {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.vocab-card:hover .vocab-actions {
+  opacity: 1;
+}
+.vocab-iconbtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.vocab-iconbtn:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.vocab-iconbtn.vocab-del:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: rgba(240, 68, 56, 0.1);
+}
+
+/* Ô nhập đổi tên inline trên thẻ */
+.vocab-rename {
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+  outline: none;
+}
+.vocab-rename:focus {
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+
+/* Thiết bị cảm ứng (không có hover): luôn hiện nút sửa/xóa */
+@media (hover: none) {
+  .vocab-actions {
+    opacity: 1;
+  }
+}
+
+/* ---------- Responsive (mockup mobile) ---------- */
+@media (max-width: 860px) {
+  .vocab-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .vocab-actions {
+    opacity: 1;
+  }
+}
+@media (max-width: 520px) {
+  .vocab-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   Chi tiết bộ từ (deck-detail) — port từ mockup 03-tu-vung/chi-tiet.html
+   Style lại danh sách thẻ + ô thêm thẻ đúng mockup, giữ nguyên hành vi.
+   Mọi rule bọc trong .deck-detail để thắng specificity của styles.css.
+   ============================================================ */
+
+/* ---------- Link quay lại (mockup .back-link) ---------- */
+.deck-detail .vocab-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0.9rem;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.deck-detail .vocab-back:hover {
+  color: var(--primary);
+}
+
+/* ---------- Tiêu đề + chip đếm thẻ (mockup .head-row + .chip-primary) ---------- */
+.deck-detail .vocab-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.4rem;
+}
+.deck-detail .vocab-detail-head .page-title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+.deck-detail .vocab-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+/* ---------- Ô thêm thẻ dạng card (mockup .card + .form-grid) ---------- */
+.deck-detail .vocab-addcard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  align-items: start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.4rem;
+  box-shadow: var(--shadow-sm);
+  margin: 1rem 0 1.6rem;
+}
+.deck-detail .vocab-addcard-title {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text);
+}
+/* Các ô nhập là grid-item: bỏ flex-basis cũ, cho co giãn trong ô lưới */
+.deck-detail .vocab-addcard .field-wrap {
+  flex: none;
+  min-width: 0;
+}
+.deck-detail .vocab-addcard .field-wrap.wide {
+  grid-column: 1 / -1;
+}
+.deck-detail .vocab-add-btn {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+/* ---------- Thẻ từ (mockup .card có head-row + chip-row) ---------- */
+.deck-detail .vocab-wcard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.25rem 1.35rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.16s, border-color 0.16s;
+}
+.deck-detail .vocab-wcard:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+.deck-detail .vocab-wc-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.deck-detail .vocab-wc-word {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.deck-detail .vocab-pos-badge {
+  display: inline-grid;
+  place-items: center;
+  padding: 0.1rem 0.5rem;
+  border-radius: 8px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-style: italic;
+}
+.deck-detail .vocab-wc-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Nghĩa tiếng Việt — nổi bật (mockup <p> màu primary-deep) */
+.deck-detail .vocab-wc-meaning {
+  margin: 0.4rem 0 0.75rem;
+  font-weight: 600;
+  color: var(--primary-hover);
+}
+
+/* Nhãn phụ Collocation / Pattern (mockup .card-note) */
+.deck-detail .vocab-wc-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 0.55rem 0 0.4rem;
+}
+
+/* Hàng chip (mockup .chip-row) */
+.deck-detail .vocab-chip-row {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.deck-detail .vocab-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.24rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.deck-detail .vocab-chip-teal {
+  background: color-mix(in srgb, var(--accent-2) 15%, var(--surface));
+  color: var(--accent-2);
+}
+.deck-detail .vocab-chip-primary {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+/* Câu ví dụ (mockup <p> in nghiêng, muted) */
+.deck-detail .vocab-wc-example {
+  margin-top: 0.5rem;
+  font-style: italic;
+  font-size: 0.87rem;
+  color: var(--text-soft);
+}
+.deck-detail .vocab-wc-example + .vocab-wc-example {
+  margin-top: 0.25rem;
+}
+
+/* Nút "Hiện thêm" (mockup .btn-soft, canh giữa) */
+.deck-detail .load-more {
+  margin-top: 0.4rem;
+}
+.deck-detail .vocab-more {
+  background: var(--primary-soft);
+  border-color: transparent;
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: none;
+}
+.deck-detail .vocab-more:hover {
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface));
+  border-color: transparent;
+}
+
+/* ---------- Responsive (mockup mobile ≤ 860px) ---------- */
+@media (max-width: 860px) {
+  .deck-detail .vocab-addcard {
+    grid-template-columns: 1fr;
+  }
+  .deck-detail .vocab-detail-head .page-title {
+    font-size: 1.3rem;
+  }
+  .deck-detail .vocab-wc-head {
+    flex-wrap: nowrap;
+  }
+}

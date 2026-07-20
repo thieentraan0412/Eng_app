@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { isDesktop } from '../platform'
+import '../styles/settings.css'
 
 // Dựng chuỗi accelerator Electron từ sự kiện bàn phím (Ctrl+Alt+D, Ctrl+Shift+F2…).
 // Bắt buộc có Ctrl/Alt/Super để không chiếm phím gõ thường của mọi ứng dụng.
@@ -109,96 +110,129 @@ export default function SettingsPage() {
     localStorage.setItem('grammar_enabled', next ? '1' : '0')
   }
 
+  // Chữ cái đầu của email cho ô avatar (thuần hiển thị, không đổi logic)
+  const initial = (user?.email?.[0] ?? 'U').toUpperCase()
+
   return (
-    <div className="page">
-      <h1 className="page-title">Cài đặt</h1>
-
-      <div className="setting-row">
-        <div>
-          <div className="setting-label">Tài khoản</div>
-          <div className="muted">{user?.email}</div>
-        </div>
-        <button className="btn danger" onClick={signOut}>
-          Đăng xuất
-        </button>
+    <div className="page set-page">
+      <div className="set-head">
+        <h1 className="page-title">Cài đặt</h1>
+        <p className="set-sub">Tài khoản, giao diện và trợ lý viết</p>
       </div>
 
-      <div className="setting-row">
-        <div>
-          <div className="setting-label">Giao diện</div>
-          <div className="muted">Chế độ {theme === 'dark' ? 'Tối' : 'Sáng'}</div>
-        </div>
-        <button className="btn" onClick={toggle}>
-          Chuyển sang {theme === 'dark' ? 'Sáng ☀️' : 'Tối 🌙'}
-        </button>
-      </div>
-
-      <div className="setting-row">
-        <div>
-          <div className="setting-label">Gợi ý từ khi viết</div>
-          <div className="muted">{suggest ? 'Đang bật' : 'Đang tắt'}</div>
-        </div>
-        <button className="btn" onClick={toggleSuggest}>
-          {suggest ? 'Tắt' : 'Bật'}
-        </button>
-      </div>
-
-      <div className="setting-row">
-        <div>
-          <div className="setting-label">Kiểm tra chính tả</div>
-          <div className="muted">
-            {spell ? 'Gạch chân từ sai + gợi ý sửa' : 'Đang tắt'}
+      {/* Tài khoản */}
+      <div className="set-card">
+        <div className="set-row">
+          <div className="set-ico set-ava">{initial}</div>
+          <div className="set-main">
+            <div className="set-title">{user?.email}</div>
+            <div className="set-desc">Tài khoản · đồng bộ đám mây</div>
           </div>
-        </div>
-        <button className="btn" onClick={toggleSpell}>
-          {spell ? 'Tắt' : 'Bật'}
-        </button>
-      </div>
-
-      <div className="setting-row">
-        <div>
-          <div className="setting-label">Kiểm tra câu</div>
-          <div className="muted">
-            {grammar ? 'Ngữ pháp, văn phong, dùng từ, collocation (cần mạng)' : 'Đang tắt'}
-          </div>
-        </div>
-        <button className="btn" onClick={toggleGrammar}>
-          {grammar ? 'Tắt' : 'Bật'}
-        </button>
-      </div>
-
-      {/* Dịch toàn màn hình là tính năng nền của desktop → ẩn trên web */}
-      {isDesktop && (
-        <div className="setting-row">
-          <div>
-            <div className="setting-label">Dịch nhanh toàn màn hình</div>
-            <div className="muted">
-              {deskTrans
-                ? 'Bôi/tô chữ ở BẤT KỲ app nào (trình duyệt, Word, PDF…) để dịch'
-                : 'Đang tắt'}
-            </div>
-            <div className="hotkey-line muted">
-              Phím tắt bật/tắt:{' '}
-              {recording ? (
-                <span className="hotkey-recording">
-                  nhấn tổ hợp phím (kèm Ctrl/Alt)… · Esc hủy · Backspace gỡ
-                </span>
-              ) : (
-                <>
-                  <kbd className="hotkey-kbd">{hotkey || 'chưa đặt'}</kbd>
-                  <button className="btn tiny" onClick={() => setRecording(true)}>
-                    Đổi
-                  </button>
-                </>
-              )}
-              {hkErr && <span className="hotkey-err">⚠️ {hkErr}</span>}
-            </div>
-          </div>
-          <button className="btn" onClick={toggleDeskTrans}>
-            {deskTrans ? 'Tắt' : 'Bật'}
+          <button className="btn set-signout" onClick={signOut}>
+            Đăng xuất
           </button>
         </div>
-      )}
+      </div>
+
+      {/* Tùy chọn */}
+      <div className="set-card set-section-gap">
+        <div className="set-card-title">Tùy chọn</div>
+
+        <div className="set-row">
+          <div className="set-ico set-i1">🌗</div>
+          <div className="set-main">
+            <div className="set-title">Giao diện</div>
+            <div className="set-desc">Chế độ hiển thị Sáng / Tối</div>
+          </div>
+          <div className="set-seg">
+            <button
+              className={`set-seg-btn${theme !== 'dark' ? ' active' : ''}`}
+              onClick={() => theme === 'dark' && toggle()}
+            >
+              ☀️ Sáng
+            </button>
+            <button
+              className={`set-seg-btn${theme === 'dark' ? ' active' : ''}`}
+              onClick={() => theme !== 'dark' && toggle()}
+            >
+              🌙 Tối
+            </button>
+          </div>
+        </div>
+
+        <div className="set-row">
+          <div className="set-ico set-i2">✨</div>
+          <div className="set-main">
+            <div className="set-title">Gợi ý từ khi viết</div>
+            <div className="set-desc">Hiện gợi ý từ tiếp theo khi bạn gõ</div>
+          </div>
+          <label className="switch">
+            <input type="checkbox" checked={suggest} onChange={toggleSuggest} />
+            <span className="slider"></span>
+          </label>
+        </div>
+
+        <div className="set-row">
+          <div className="set-ico set-i3">🔤</div>
+          <div className="set-main">
+            <div className="set-title">Kiểm tra chính tả</div>
+            <div className="set-desc">Gạch chân từ sai + gợi ý sửa</div>
+          </div>
+          <label className="switch">
+            <input type="checkbox" checked={spell} onChange={toggleSpell} />
+            <span className="slider"></span>
+          </label>
+        </div>
+
+        <div className="set-row">
+          <div className="set-ico set-i4">🧠</div>
+          <div className="set-main">
+            <div className="set-title">Kiểm tra câu</div>
+            <div className="set-desc">
+              Ngữ pháp, văn phong, dùng từ, collocation (cần mạng)
+            </div>
+          </div>
+          <label className="switch">
+            <input type="checkbox" checked={grammar} onChange={toggleGrammar} />
+            <span className="slider"></span>
+          </label>
+        </div>
+
+        {/* Dịch toàn màn hình là tính năng nền của desktop → ẩn trên web */}
+        {isDesktop && (
+          <div className="set-row">
+            <div className="set-ico set-i5">🌐</div>
+            <div className="set-main">
+              <div className="set-title">Dịch nhanh toàn màn hình</div>
+              <div className="set-desc">
+                {deskTrans
+                  ? 'Bôi/tô chữ ở BẤT KỲ app nào (trình duyệt, Word, PDF…) để dịch'
+                  : 'Bôi/tô chữ ở bất kỳ ứng dụng nào để dịch nhanh'}
+              </div>
+              <div className="hotkey-line muted">
+                Phím tắt bật/tắt:{' '}
+                {recording ? (
+                  <span className="hotkey-recording">
+                    nhấn tổ hợp phím (kèm Ctrl/Alt)… · Esc hủy · Backspace gỡ
+                  </span>
+                ) : (
+                  <>
+                    <kbd className="hotkey-kbd">{hotkey || 'chưa đặt'}</kbd>
+                    <button className="btn tiny" onClick={() => setRecording(true)}>
+                      Đổi
+                    </button>
+                  </>
+                )}
+                {hkErr && <span className="hotkey-err">⚠️ {hkErr}</span>}
+              </div>
+            </div>
+            <label className="switch">
+              <input type="checkbox" checked={deskTrans} onChange={toggleDeskTrans} />
+              <span className="slider"></span>
+            </label>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

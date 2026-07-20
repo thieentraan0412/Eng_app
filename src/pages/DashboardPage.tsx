@@ -3,6 +3,8 @@ import { CloudApi, computeStreak, type StudyStat } from '../services/cloud/Cloud
 import BarChart from '../components/BarChart'
 import type { PageKey } from './pages'
 
+const WEEKDAYS = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy']
+
 export default function DashboardPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
   const [stats, setStats] = useState<{ decks: number; cards: number; due: number } | null>(null)
   const [byDay, setByDay] = useState<{ date: string; count: number }[]>([])
@@ -28,68 +30,100 @@ export default function DashboardPage({ onNavigate }: { onNavigate: (p: PageKey)
 
   const todayStat = study?.[study.length - 1] ?? null
 
+  // Ngày hôm nay dạng "Hôm nay là Thứ Hai, 20/07"
+  const now = new Date()
+  const dd = String(now.getDate()).padStart(2, '0')
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dateLabel = `Hôm nay là ${WEEKDAYS[now.getDay()]}, ${dd}/${mm} — cùng giữ nhịp học tiếng Anh nhé.`
+
+  // Hiển thị số; khi chưa tải xong (null/undefined) thì hiện "—", còn 0 vẫn hiện "0"
+  const fmt = (n: number | null | undefined) => (n == null ? '—' : n)
+
   return (
-    <div className="page">
-      <h1 className="page-title">Trang chủ</h1>
-      <p className="muted">Chào mừng bạn quay lại học tiếng Anh 👋</p>
+    <div className="page page-wide dashboard">
+      <div className="dash-head">
+        <div>
+          <h1 className="dash-title">Chào mừng quay lại 👋</h1>
+          <p className="dash-sub">{dateLabel}</p>
+        </div>
+        <button className="dash-cta" onClick={() => onNavigate('flashcard')}>
+          🔁 Ôn tập ngay
+        </button>
+      </div>
 
       {error && <div className="alert error">{error}</div>}
 
-      <div className="stat-grid">
-        <div className="stat-card">
-          <div className="stat-num">{stats?.decks ?? '—'}</div>
-          <div className="stat-label">Bộ từ</div>
+      <div className="dash-stats">
+        <div className="dash-stat">
+          <div className="dash-ico i1">📇</div>
+          <div className="dash-num">{fmt(stats?.decks)}</div>
+          <div className="dash-lbl">Bộ từ</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-num">{stats?.cards ?? '—'}</div>
-          <div className="stat-label">Tổng số thẻ</div>
+        <div className="dash-stat">
+          <div className="dash-ico i2">🗂️</div>
+          <div className="dash-num">{fmt(stats?.cards)}</div>
+          <div className="dash-lbl">Tổng số thẻ</div>
         </div>
-        <div className="stat-card highlight">
-          <div className="stat-num">{stats?.due ?? '—'}</div>
-          <div className="stat-label">Thẻ cần ôn hôm nay</div>
+        <div className="dash-stat">
+          <div className="dash-ico i3">🔔</div>
+          <div className="dash-num">{fmt(stats?.due)}</div>
+          <div className="dash-lbl">Thẻ cần ôn hôm nay</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-num">🔥 {streak}</div>
-          <div className="stat-label">Ngày streak</div>
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-title">Hôm nay bạn đã học 📚</div>
-        <div className="stat-grid today-grid">
-          <div className="stat-card">
-            <div className="stat-num">⏱️ {todayStat?.minutes_studied ?? '—'}</div>
-            <div className="stat-label">Phút học</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-num">🔁 {todayStat?.cards_reviewed ?? '—'}</div>
-            <div className="stat-label">Thẻ đã ôn</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-num">✨ {todayStat?.new_words ?? '—'}</div>
-            <div className="stat-label">Từ mới</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-num">📝 {todayStat?.quizzes_done ?? '—'}</div>
-            <div className="stat-label">Quiz đã làm</div>
-          </div>
+        <div className="dash-stat">
+          <div className="dash-ico i4">🔥</div>
+          <div className="dash-num">{streak}</div>
+          <div className="dash-lbl">Ngày streak</div>
         </div>
       </div>
 
-      <div className="panel">
-        <div className="panel-title">Số thẻ đã ôn (14 ngày gần nhất)</div>
+      <div className="dash-card">
+        <div className="dash-card-head">
+          <div className="dash-card-title">📚 Hôm nay bạn đã học</div>
+          <span className="dash-note">Tự động ghi nhận</span>
+        </div>
+        <div className="dash-mini">
+          <div className="dash-mini-item">
+            <b>{fmt(todayStat?.minutes_studied)}</b>
+            <span>⏱️ Phút học</span>
+          </div>
+          <div className="dash-mini-item">
+            <b>{fmt(todayStat?.cards_reviewed)}</b>
+            <span>🔁 Thẻ đã ôn</span>
+          </div>
+          <div className="dash-mini-item">
+            <b>{fmt(todayStat?.new_words)}</b>
+            <span>✨ Từ mới</span>
+          </div>
+          <div className="dash-mini-item">
+            <b>{fmt(todayStat?.quizzes_done)}</b>
+            <span>📝 Quiz đã làm</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="dash-card">
+        <div className="dash-card-head">
+          <div className="dash-card-title">📈 Số thẻ đã ôn</div>
+          <span className="dash-note">14 ngày gần nhất</span>
+        </div>
         <BarChart data={byDay} />
       </div>
 
-      <div className="quick-actions">
-        <button className="btn primary" onClick={() => onNavigate('vocabulary')}>
-          📇 Quản lý từ vựng
+      <div className="dash-quick">
+        <button className="dash-quick-card" onClick={() => onNavigate('vocabulary')}>
+          <div className="dash-ico i1">📇</div>
+          <b>Quản lý từ vựng</b>
+          <p>Tạo bộ từ &amp; thêm thẻ mới</p>
         </button>
-        <button className="btn" onClick={() => onNavigate('flashcard')}>
-          🔁 Ôn tập ngay
+        <button className="dash-quick-card" onClick={() => onNavigate('flashcard')}>
+          <div className="dash-ico i2">🔁</div>
+          <b>Ôn tập ngay</b>
+          <p>{stats?.due ?? 0} thẻ đang chờ bạn</p>
         </button>
-        <button className="btn" onClick={() => onNavigate('reading')}>
-          📖 Đọc & tra từ
+        <button className="dash-quick-card" onClick={() => onNavigate('reading')}>
+          <div className="dash-ico i3">📖</div>
+          <b>Đọc &amp; tra từ</b>
+          <p>Bôi chữ để dịch tức thì</p>
         </button>
       </div>
     </div>

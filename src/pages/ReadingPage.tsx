@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { CloudApi, type Reading, type ReadingHighlight } from '../services/cloud/CloudApiClient'
 import { bestEnglishVoice, speak, ttsSupported } from '../services/tts'
+import '../styles/reading.css'
 
 // Bảng màu bôi (highlight) — class CSS tương ứng: .hl-yellow, .hl-green…
 const HL_COLORS = ['yellow', 'green', 'blue', 'pink'] as const
@@ -262,29 +263,29 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
   if (pos < text.length) parts.push(text.slice(pos))
 
   return (
-    <div className="page page-wide">
-      <button className="btn tiny" onClick={onBack}>
+    <div className="page page-wide read-page">
+      <button className="read-back" onClick={onBack}>
         ← Danh sách bài đọc
       </button>
-      <h1 className="page-title">
+      <h1 className="page-title read-title">
         {reading.title} {reading.level && <span className="level-badge">{reading.level}</span>}
       </h1>
 
       {/* Thanh công cụ: nghe đọc bài + gợi ý thao tác */}
-      <div className="reading-tools">
+      <div className="read-toolbar">
         {ttsSupported &&
           (tts === 'idle' ? (
-            <button className="btn small" onClick={startRead}>
+            <button className="btn small read-tts" onClick={startRead}>
               🔊 Nghe đọc bài
             </button>
           ) : (
             <>
               {tts === 'playing' ? (
-                <button className="btn small" onClick={pauseRead}>
+                <button className="btn small read-tts" onClick={pauseRead}>
                   ⏸ Tạm dừng
                 </button>
               ) : (
-                <button className="btn small" onClick={resumeRead}>
+                <button className="btn small read-tts" onClick={resumeRead}>
                   ▶️ Tiếp tục
                 </button>
               )}
@@ -293,8 +294,8 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
               </button>
             </>
           ))}
-        <span className="muted reading-hint">
-          Bôi chữ để dịch/bôi màu · bấm vùng đã bôi để thêm ghi chú
+        <span className="read-hint">
+          💡 Bôi chữ để dịch/bôi màu · bấm vùng đã bôi để thêm ghi chú
         </span>
       </div>
 
@@ -458,34 +459,39 @@ export default function ReadingPage() {
   const hasLevels = readings.some((r) => r.level)
 
   return (
-    <div className="page">
-      <h1 className="page-title">Đọc & tra từ</h1>
-      {error && <div className="alert error">{error}</div>}
-
-      <div className="toolbar">
+    <div className="page read-list-page">
+      <div className="read-head">
+        <div>
+          <h1 className="page-title">Đọc & tra từ</h1>
+          <p className="read-sub">
+            Thư viện bài đọc của bạn — bôi chữ để dịch và lưu từ mới.
+          </p>
+        </div>
         <button className="btn primary" onClick={() => setAdding((a) => !a)}>
           {adding ? '× Đóng' : '+ Thêm bài đọc'}
         </button>
-        {hasLevels && (
-          <div className="level-filter">
-            <button
-              className={levelFilter === '' ? 'tab active' : 'tab'}
-              onClick={() => setLevelFilter('')}
-            >
-              Tất cả
-            </button>
-            {LEVELS.filter((l) => readings.some((r) => r.level === l)).map((l) => (
-              <button
-                key={l}
-                className={levelFilter === l ? 'tab active' : 'tab'}
-                onClick={() => setLevelFilter(l)}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
+      {error && <div className="alert error">{error}</div>}
+
+      {hasLevels && (
+        <div className="read-filter">
+          <button
+            className={levelFilter === '' ? 'tab active' : 'tab'}
+            onClick={() => setLevelFilter('')}
+          >
+            Tất cả
+          </button>
+          {LEVELS.filter((l) => readings.some((r) => r.level === l)).map((l) => (
+            <button
+              key={l}
+              className={levelFilter === l ? 'tab active' : 'tab'}
+              onClick={() => setLevelFilter(l)}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      )}
 
       {adding && (
         <form className="card-form" onSubmit={create} style={{ flexDirection: 'column' }}>
@@ -525,15 +531,19 @@ export default function ReadingPage() {
       {readings.length === 0 ? (
         <p className="muted">Chưa có bài đọc nào. Thêm bài đầu tiên để luyện đọc & tra từ.</p>
       ) : (
-        <div className="deck-grid">
+        <div className="read-rows">
           {shown.map((r) => (
-            <div key={r.id} className="deck-card" onClick={() => setSelected(r)}>
-              <div className="deck-name">
-                {r.title} {r.level && <span className="level-badge">{r.level}</span>}
+            <div key={r.id} className="read-row" onClick={() => setSelected(r)}>
+              <div className="read-ico">📖</div>
+              <div className="read-row-main">
+                <div className="read-row-title">
+                  <span>{r.title}</span>
+                  {r.level && <span className="level-badge">{r.level}</span>}
+                </div>
+                <div className="read-row-sub">{(r.content ?? '').slice(0, 90)}…</div>
               </div>
-              <span className="muted">{(r.content ?? '').slice(0, 60)}…</span>
               <button
-                className="btn tiny danger"
+                className="btn tiny danger read-del"
                 onClick={(e) => {
                   e.stopPropagation()
                   remove(r)
