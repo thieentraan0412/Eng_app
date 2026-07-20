@@ -441,6 +441,12 @@ function Editor({
           className="write-textarea"
           placeholder="Viết bằng tiếng Anh… (gõ để nhận gợi ý; nhấn Tab để chèn gợi ý đầu tiên)"
           spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          data-lpignore="true"
+          data-form-type="other"
+          name="write-content"
           value={content}
           onChange={(e) => {
             setContent(e.target.value)

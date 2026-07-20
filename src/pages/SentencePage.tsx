@@ -1122,6 +1122,12 @@ const SentenceCard = memo(function SentenceCard({
               : 'Nhập câu tiếng Anh của bạn… (Enter để kiểm tra)'
           }
           spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          data-lpignore="true"
+          data-form-type="other"
+          name="sc-translation"
           rows={2}
           value={value}
           onChange={(e) => {
