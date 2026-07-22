@@ -4,6 +4,10 @@
 > tải về nền và cài đặt khi khởi động lại — người dùng không cần tải file thủ công.
 > Công cụ: **`electron-updater`** (cùng hệ sinh thái `electron-builder` đã dùng) + **GitHub Releases** làm nơi phát hành.
 >
+> **Cách phát hành: chỉ cần `push` lên nhánh `main` → GitHub Actions tự build (Windows) + tự tạo Release.**
+> Không tự tạo tag, không build tay. Việc duy nhất phải làm mỗi lần: **tăng `version` trong `package.json`**
+> (xem §Giai đoạn 4 + cheat sheet §3).
+>
 > Bản **web** (Vercel) KHÔNG cần cơ chế này — người dùng tải lại trang là có bản mới. Kế hoạch này chỉ cho desktop.
 
 ---
@@ -180,58 +184,89 @@ người dùng bấm  ──►  autoUpdater.quitAndInstall()  → cài + mở l
   - Desktop: đọc `window.api.appVersion()`.
   - Web: `window.api` không tồn tại → fallback đọc từ biến build `__APP_VERSION__` (define trong vite config từ `package.json`) hoặc chuỗi mặc định.
 
-### Giai đoạn 4 — Tự động build & phát hành bằng GitHub Actions ✅ (đã chọn)
+### Giai đoạn 4 — Tự động build & phát hành khi **push lên `main`** ✅ (đã chọn)
 
-> Quyết định: dùng **GitHub Actions** làm cách phát hành chính — không build tay. Chỉ cần
-> tăng version + push tag, phần build Windows + tạo Release để CI lo.
+> Quyết định: **chỉ cần push lên `main`** là GitHub tự build trên Windows + tạo Release —
+> KHÔNG cần tự tạo tag, KHÔNG build tay. Điều duy nhất phải làm mỗi lần phát hành là
+> **tăng `version` trong `package.json`** (đây là tín hiệu để CI biết có bản mới và để
+> electron-updater so sánh). Push mà không đổi version → CI bỏ qua, không tạo release trùng.
 
-Để mỗi lần đẩy tag `v*` là tự build trên máy Windows của GitHub và tạo Release:
+**Cơ chế "gated theo version":** workflow chạy mỗi lần push main, đọc `version` trong
+`package.json`, kiểm tra đã có Release/tag `v{version}` chưa — chưa có thì build & phát hành,
+có rồi thì thoát sớm (không làm gì).
 
 - [ ] Tạo `.github/workflows/release.yml`:
   ```yaml
   name: Release desktop
   on:
     push:
-      tags: ['v*']
+      branches: [main]
+
   jobs:
-    build:
+    release:
       runs-on: windows-latest
       steps:
         - uses: actions/checkout@v4
-        - uses: actions/setup-node@v4
+          with: { fetch-depth: 0 }        # cần đủ tag để kiểm tra
+
+        # Đọc version trong package.json
+        - id: ver
+          shell: bash
+          run: echo "v=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+        # Đã có Release cho version này chưa? (tránh phát hành trùng khi push không đổi version)
+        - id: check
+          shell: bash
+          run: |
+            if git ls-remote --tags origin "v${{ steps.ver.outputs.v }}" | grep -q .; then
+              echo "exists=true"  >> "$GITHUB_OUTPUT"
+            else
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+            fi
+
+        - if: steps.check.outputs.exists == 'false'
+          uses: actions/setup-node@v4
           with: { node-version: 20 }
-        - run: npm ci
-        - run: npm run release
+
+        - if: steps.check.outputs.exists == 'false'
+          run: npm ci
+
+        # Build + đẩy artifact (*.exe, latest.yml, *.blockmap) lên Release v{version}
+        - if: steps.check.outputs.exists == 'false'
+          run: npm run release
           env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # Actions cấp sẵn, đủ quyền tạo release
   ```
   - `secrets.GITHUB_TOKEN` **tự có** trong Actions, không cần tạo PAT thủ công.
-  - ⚠️ Lưu ý build native `uiohook-napi` + tải Electron trên CI: nếu lỗi, cân nhắc `optionalDependencies` / cache như đã ghi trong `checklist_deploy_vercel.md`.
-  - ⚠️ KHÔNG bật đồng thời auto-deploy Vercel cho tag này — Vercel chỉ theo push nhánh, không đụng tag, nên an toàn.
+  - `releaseType: release` (đã đặt ở §Giai đoạn 1) khiến electron-builder phát hành **Release công khai luôn** (không để ở dạng draft) và tự gắn tag `v{version}`.
+  - ⚠️ Build native `uiohook-napi` + tải Electron trên CI: nếu lỗi, cân nhắc `optionalDependencies` / cache như đã ghi trong `checklist_deploy_vercel.md`.
+  - ℹ️ **Không đụng Vercel:** Vercel auto-deploy bản web cũng theo push `main` — hai việc chạy song song, độc lập (một bên build web, một bên build desktop), không xung đột.
+  - 💡 *Muốn "chốt" hơn* để không lỡ tay phát hành: có thể đổi `on:` thành `push: paths: ['package.json']` — chỉ chạy khi `package.json` đổi. Nhưng cơ chế gated ở trên đã đủ an toàn.
 
 ---
 
 ## 3. Quy trình phát hành một phiên bản mới (cheat sheet)
 
+> Rút gọn còn 3 việc: **sửa code → tăng version → push main.** GitHub lo phần còn lại.
+
 1. Sửa code, kiểm tra chạy ổn.
-2. **Tăng version** trong `package.json` (vd `0.1.0` → `0.2.0`). Đây là số electron-updater đem so sánh — **bắt buộc tăng** thì client mới thấy bản mới.
-3. Commit + tạo tag:
+2. **Tăng version** trong `package.json` (vd `0.1.0` → `0.2.0`). Đây là số electron-updater đem so sánh — **bắt buộc tăng** thì client mới thấy bản mới. Push mà quên tăng → CI bỏ qua, không phát hành gì.
+3. Commit + push lên `main`:
    ```bash
    git commit -am "Release v0.2.0"
-   git tag v0.2.0
-   git push && git push --tags
+   git push
    ```
-4. Phát hành (**cách chính — GitHub Actions**): đẩy tag `v*` là xong, Actions tự build trên Windows + tạo Release.
-   - *Dự phòng khi cần build tay:* `\$env:GH_TOKEN="..."; npm run release` trên máy Windows.
-5. Kiểm tra Release trên GitHub có đủ 3 file: `*.exe`, `latest.yml`, `*.blockmap`.
+4. GitHub Actions (§Giai đoạn 4) tự chạy: đọc version → thấy chưa có Release `v0.2.0` → build trên Windows → tạo Release + upload `*.exe`, `latest.yml`, `*.blockmap`.
+   - *Dự phòng khi CI hỏng / muốn build tay:* `\$env:GH_TOKEN="..."; npm run release` trên máy Windows.
+5. Kiểm tra tab **Actions** thấy job xanh, và **Releases** có đủ 3 file (`*.exe`, `latest.yml`, `*.blockmap`).
 6. App của người dùng (bản NSIS) sẽ tự phát hiện trong ≤6 giờ hoặc ngay khi họ bấm "Kiểm tra cập nhật".
 
 ---
 
 ## 4. Kiểm thử (test checklist)
 
-- [ ] Build bản `0.1.0`, cài bằng NSIS (`release/EngMaster-Setup-0.1.0.exe`).
-- [ ] Tăng version lên `0.1.1`, `npm run release` → tạo Release `v0.1.1` trên GitHub.
+- [ ] Phát hành `0.1.0`: push `main` → Actions build → tải `EngMaster-Setup-0.1.0.exe` từ Release, cài bằng NSIS.
+- [ ] Tăng version lên `0.1.1` trong `package.json` → commit → **push `main`** → Actions tự tạo Release `v0.1.1`.
 - [ ] Mở app `0.1.0` đã cài → sau ~8s thấy trạng thái "Đang tải" → "Khởi động lại để cập nhật".
 - [ ] Bấm restart → app mở lại thành version `0.1.1` (kiểm tra ở Sidebar/Cài đặt).
 - [ ] Ngắt mạng → bấm "Kiểm tra cập nhật" → báo lỗi im lặng, không crash.
@@ -277,7 +312,7 @@ autoUpdater.forceDevUpdateConfig = true   // CHỈ để test, gỡ trước khi
 | `electron/preload.ts` | + `checkUpdate` / `installUpdate` / `appVersion` / `onUpdateStatus` |
 | `src/pages/SettingsPage.tsx` | + khối "Cập nhật ứng dụng" (chỉ desktop) |
 | `src/components/Sidebar.tsx` | Thay `v0.1.0` cứng bằng version động |
-| `.github/workflows/release.yml` | **MỚI** (tùy chọn) — tự build & phát hành khi push tag `v*` |
+| `.github/workflows/release.yml` | **MỚI** — tự build & phát hành khi **push `main`** (gated theo version) |
 | `dev-app-update.yml` | **MỚI** (tùy chọn) — chỉ để test ở dev |
 
 ---
@@ -286,7 +321,7 @@ autoUpdater.forceDevUpdateConfig = true   // CHỈ để test, gỡ trước khi
 
 1. **Bước tối thiểu chạy được:** Giai đoạn 1 + 2 với `autoDownload` + `autoInstallOnAppQuit` — người dùng không thấy UI nào, nhưng app tự cập nhật lặng lẽ khi thoát/mở lại. *Kiểm chứng cơ chế đúng trước.*
 2. **Thêm UI:** Giai đoạn 3 — nút "Kiểm tra cập nhật" + trạng thái + version động (đồng thời dọn nợ kỹ thuật "version hardcode" ở `upgrade.md` mục #10).
-3. **Tự động hóa:** Giai đoạn 4 — GitHub Actions để không phải build tay.
+3. **Tự động hóa:** Giai đoạn 4 — GitHub Actions: **push `main` là tự build + tự phát hành**, không build tay.
 4. **Về sau:** ký số để bỏ cảnh báo SmartScreen.
 
 > Liên hệ roadmap: mục này hiện thực hóa dòng *"Auto-update cho bản desktop (electron-updater) + đọc version động"* ở **Giai đoạn C** trong `upgrade.md`.
