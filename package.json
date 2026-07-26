@@ -30,6 +30,7 @@
     "directories": {
       "output": "release"
     },
+    "npmRebuild": false,
     "files": [
       "dist",
       "dist-electron",

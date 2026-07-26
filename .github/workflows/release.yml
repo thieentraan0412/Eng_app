@@ -18,7 +18,9 @@ concurrency:
 jobs:
   release:
     name: Build and publish Windows release
-    runs-on: windows-latest
+    # node-gyp 9 (qua electron-builder 25) chưa nhận diện Visual Studio 2026
+    # trên windows-latest. Ghim VS 2022 để native tooling luôn tương thích.
+    runs-on: windows-2022
 
     steps:
       - name: Checkout repository

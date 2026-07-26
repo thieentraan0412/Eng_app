@@ -207,7 +207,8 @@ có rồi thì thoát sớm (không làm gì).
 
   jobs:
     release:
-      runs-on: windows-latest
+      # Ghim Windows 2022/Visual Studio 2022: node-gyp 9 chưa nhận diện VS 2026
+      runs-on: windows-2022
       steps:
         - uses: actions/checkout@v4
           with: { fetch-depth: 0 }        # cần đủ tag để kiểm tra
@@ -242,6 +243,8 @@ có rồi thì thoát sớm (không làm gì).
   ```
   - `secrets.GITHUB_TOKEN` **tự có** trong Actions, không cần tạo PAT/GH_TOKEN cá nhân.
   - `permissions: contents: write` cấp quyền cho token tự động tạo tag/Release và tải artifact lên.
+  - Ghim `windows-2022` vì `windows-latest` hiện dùng Visual Studio 2026, trong khi `node-gyp 9` của chuỗi build chưa nhận diện được.
+  - Đặt `"npmRebuild": false` trong `build` của `package.json`: `uiohook-napi` đã kèm binary N-API cho Windows x64 nên không cần electron-builder biên dịch lại bằng Visual Studio.
   - `releaseType: release` (đã đặt ở §Giai đoạn 1) khiến electron-builder phát hành **Release công khai luôn** (không để ở dạng draft) và tự gắn tag `v{version}`.
   - ⚠️ Build native `uiohook-napi` + tải Electron trên CI: nếu lỗi, cân nhắc `optionalDependencies` / cache như đã ghi trong `checklist_deploy_vercel.md`.
   - ℹ️ **Không đụng Vercel:** Vercel auto-deploy bản web cũng theo push `main` — hai việc chạy song song, độc lập (một bên build web, một bên build desktop), không xung đột.
