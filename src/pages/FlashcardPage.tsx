@@ -310,18 +310,16 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
     if (!flipped && current && showTyping) answerRef.current?.focus()
   }, [idx, frontVi, flipped, current, showTyping])
 
-  // Tự phát âm khi SANG THẺ MỚI ở chiều Anh→Việt (từ hiện ngay mặt trước).
-  // Không phụ thuộc `flipped` để lật đi lật lại không đọc lại.
+  // Mỗi lần trạng thái hiển thị của thẻ thay đổi, luôn phát từ tiếng Anh nếu:
+  // - tự phát âm đang bật; và
+  // - từ tiếng Anh đang hiện (Anh→Việt luôn hiện, Việt→Anh chỉ hiện sau khi lật).
+  // Hẹn sang lượt render kế tiếp để thẻ đã xuất hiện hoàn chỉnh rồi mới phát âm.
   useEffect(() => {
-    if (autoSpeak && !frontVi && current) speak(current.word)
+    if (!autoSpeak || !current || (frontVi && !flipped)) return
+    const timer = window.setTimeout(() => speak(current.word), 0)
+    return () => window.clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, frontVi, autoSpeak, current?.id])
-
-  // Chiều Việt→Anh: chỉ phát khi LẬT ra đáp án (phát sớm hơn sẽ lộ đáp án)
-  useEffect(() => {
-    if (autoSpeak && frontVi && flipped && current) speak(current.word)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flipped, frontVi, autoSpeak, current?.id])
+  }, [idx, flipped, frontVi, autoSpeak, current?.id])
 
   // Bật/tắt tự phát âm (nhớ lựa chọn); tắt thì ngừng đọc ngay,
   // bật lại thì đọc luôn từ đang thấy (nếu từ đang hiển thị)
@@ -623,12 +621,14 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
               >
                 <input
                   ref={answerRef}
-                  key={current.id}
                   autoFocus
                   placeholder={frontVi ? 'Gõ từ tiếng Anh…' : 'Gõ lại từ để nhớ chính tả…'}
                   value={typed}
-                  readOnly={answerState === 'correct'}
-                  onChange={(e) => onTypeAnswer(e.target.value)}
+                  // Giữ cùng một input và không bật readOnly khi trả lời đúng:
+                  // mobile sẽ duy trì focus + bàn phím khi tự chuyển sang thẻ mới.
+                  onChange={(e) => {
+                    if (answerState !== 'correct') onTypeAnswer(e.target.value)
+                  }}
                   onKeyDown={(e) => {
                     // Đang gõ trong ô nhập: Tab = lật thẻ xem nghĩa (lật lại bằng Tab lần nữa —
                     // khi đó focus đã rời input nên phím tắt toàn trang xử lý)
