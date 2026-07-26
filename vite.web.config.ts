@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
+import packageJson from './package.json'
 
 // Cấu hình Vite cho bản WEB (trình duyệt).
 // Dùng chung toàn bộ code trong src/ với app desktop, chỉ khác:
@@ -8,6 +9,9 @@ import { resolve } from 'node:path'
 //  - Entry nằm ở web/ (index.html + main.tsx)
 //  - Build ra dist-web/ (SPA tĩnh để deploy)
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(packageJson.version),
+  },
   root: resolve(__dirname, 'web'),
   // .env (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) nằm ở gốc repo, dùng chung
   envDir: resolve(__dirname),

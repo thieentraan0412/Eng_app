@@ -32,6 +32,9 @@ export default function AppLayout() {
   const [page, setPage] = useState<PageKey>('dashboard')
   const [toast, setToast] = useState<string | null>(null)
   const [navOpen, setNavOpen] = useState(false) // drawer menu trên mobile
+  const [translateEnabled, setTranslateEnabled] = useState(
+    localStorage.getItem('desktop_translate_enabled') === '1',
+  )
 
   // Đo thời gian học khi đang ở một trang học (dừng khi rời trang / ẩn cửa sổ)
   useStudyTime(STUDY_PAGES.has(page))
@@ -136,6 +139,17 @@ export default function AppLayout() {
     }
   }, [])
 
+  // Công tắc dịch dùng chung cho cả tính năng toàn màn hình và popup bôi chữ
+  // bên trong app. Khi tắt, unmount popup để đóng kết quả đang mở và gỡ toàn
+  // bộ listener chọn văn bản ngay lập tức.
+  useEffect(() => {
+    const handleTranslateState = (event: Event) => {
+      setTranslateEnabled(Boolean((event as CustomEvent<boolean>).detail))
+    }
+    window.addEventListener('desktop-translate-changed', handleTranslateState)
+    return () => window.removeEventListener('desktop-translate-changed', handleTranslateState)
+  }, [])
+
   const renderPage = () => {
     switch (page) {
       case 'dashboard':
@@ -169,9 +183,9 @@ export default function AppLayout() {
           aria-label="Mở menu"
           aria-expanded={navOpen}
         >
-          <span />
-          <span />
-          <span />
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
         </button>
         <div className="mobile-brand">
           <span className="brand-badge">E</span>
@@ -190,7 +204,7 @@ export default function AppLayout() {
       <div className="main-area">
         <main className="content">{renderPage()}</main>
       </div>
-      <TranslatePopup onSave={handleSaveWord} />
+      {translateEnabled && <TranslatePopup onSave={handleSaveWord} />}
       {toast && <div className="app-toast">{toast}</div>}
     </div>
   )

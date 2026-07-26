@@ -13,6 +13,12 @@ interface SaveEntry {
   deckId?: string // bộ từ người dùng chọn để lưu vào
 }
 
+type UpdateStatus =
+  | { state: 'checking' | 'none' }
+  | { state: 'available' | 'ready'; version: string }
+  | { state: 'downloading'; percent: number }
+  | { state: 'error'; message: string }
+
 // Cầu nối an toàn giữa Renderer (React) và Main.
 // Renderer chỉ gọi được đúng các hàm expose ở đây (contextIsolation bật).
 contextBridge.exposeInMainWorld('api', {
@@ -23,6 +29,17 @@ contextBridge.exposeInMainWorld('api', {
   saveCred: (data: Cred): Promise<boolean> => ipcRenderer.invoke('cred:save', data),
   loadCred: (): Promise<Cred | null> => ipcRenderer.invoke('cred:load'),
   clearCred: (): Promise<boolean> => ipcRenderer.invoke('cred:clear'),
+
+  // ----- Cập nhật ứng dụng -----
+  checkUpdate: (): Promise<unknown> => ipcRenderer.invoke('update:check'),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke('update:install'),
+  appVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),
+  getUpdateStatus: (): Promise<UpdateStatus | null> => ipcRenderer.invoke('update:get-status'),
+  onUpdateStatus: (cb: (status: UpdateStatus) => void): (() => void) => {
+    const handler = (_event: IpcRendererEvent, status: UpdateStatus) => cb(status)
+    ipcRenderer.on('update:status', handler)
+    return () => ipcRenderer.removeListener('update:status', handler)
+  },
 
   // ----- Dịch nhanh toàn màn hình -----
   // (Cửa sổ chính) Bật/tắt tính năng tô-chữ-để-dịch trên toàn desktop

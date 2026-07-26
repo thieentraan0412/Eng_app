@@ -1,0 +1,71 @@
+name: Release desktop
+
+on:
+  push:
+    branches:
+      - main
+
+# GITHUB_TOKEN chỉ cần quyền tạo tag/Release và tải artifact lên repo này.
+permissions:
+  contents: write
+
+# Hai lần push sát nhau sẽ chạy tuần tự. Lần chạy sau kiểm tra lại tag và
+# bỏ qua nếu version đó đã được lần chạy trước phát hành.
+concurrency:
+  group: release-desktop-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish Windows release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read package version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (Get-Content -Raw -LiteralPath package.json | ConvertFrom-Json).version
+          if (-not $version) {
+            throw 'package.json does not contain a version'
+          }
+          "value=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Check whether version is already released
+        id: release_check
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.value }}'
+          $tag = git ls-remote --tags origin "refs/tags/v$version"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not check tag v$version on origin"
+          }
+          if ($tag) {
+            "exists=true" >> $env:GITHUB_OUTPUT
+            Write-Host "Release v$version already exists; skipping."
+          } else {
+            "exists=false" >> $env:GITHUB_OUTPUT
+            Write-Host "Release v$version does not exist; publishing."
+          }
+
+      - name: Set up Node.js
+        if: steps.release_check.outputs.exists == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.release_check.outputs.exists == 'false'
+        run: npm ci
+
+      - name: Build and publish release
+        if: steps.release_check.outputs.exists == 'false'
+        run: npm run release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -178,8 +178,19 @@ const WORD_RE = /[^\s.,!?;:"“”'’()\-]+/g
 // với chữ đang hiển thị, và tự cập nhật khi người dùng sửa.
 export function wrongWordSegments(userInput: string, refAnswer: string): WrongSegment[] {
   const diff = wordDiff(tokens(userInput), tokens(refAnswer))
-  // op của TỪ NGƯỜI DÙNG theo thứ tự (bỏ 'del' = từ đáp án còn thiếu)
-  const userOps = diff.filter((d) => d.op !== 'del').map((d) => d.op)
+  // Op của từng từ người dùng theo thứ tự. Nếu đáp án thiếu một từ ('del'),
+  // đánh dấu từ người dùng ngay sau chỗ thiếu là sai vị trí để người học nhìn
+  // thấy chính xác nơi cần chèn từ (VD: thiếu "this" trước "road" -> "road" đỏ).
+  const userOps: Array<'same' | 'add'> = []
+  let hasMissingBefore = false
+  for (const token of diff) {
+    if (token.op === 'del') {
+      hasMissingBefore = true
+      continue
+    }
+    userOps.push(token.op === 'add' || hasMissingBefore ? 'add' : 'same')
+    hasMissingBefore = false
+  }
 
   const segs: WrongSegment[] = []
   let last = 0

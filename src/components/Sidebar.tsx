@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { NAV, type PageKey } from '../pages/pages'
+import { isDesktop } from '../platform'
 
 interface Props {
   current: PageKey
@@ -7,6 +9,16 @@ interface Props {
 }
 
 export default function Sidebar({ current, onNavigate, onClose }: Props) {
+  const [version, setVersion] = useState(__APP_VERSION__)
+
+  useEffect(() => {
+    if (!isDesktop) return
+    void window.api
+      .appVersion()
+      .then((currentVersion) => setVersion(currentVersion))
+      .catch(() => {})
+  }, [])
+
   return (
     <nav className="sidebar">
       <div className="sidebar-head">
@@ -34,7 +46,7 @@ export default function Sidebar({ current, onNavigate, onClose }: Props) {
           </li>
         ))}
       </ul>
-      <div className="sidebar-foot">v0.1.0</div>
+      <div className="sidebar-foot">v{version}</div>
     </nav>
   )
 }

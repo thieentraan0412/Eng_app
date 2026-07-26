@@ -3,9 +3,13 @@ import react from '@vitejs/plugin-react'
 import electron from 'vite-plugin-electron'
 import renderer from 'vite-plugin-electron-renderer'
 import { resolve } from 'node:path'
+import packageJson from './package.json'
 
 // Cấu hình Vite + Electron cho EngMaster
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(packageJson.version),
+  },
   resolve: {
     alias: { '@': resolve(__dirname, 'src') },
   },

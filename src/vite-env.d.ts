@@ -14,11 +14,24 @@ export interface SaveEntry {
   deckId?: string // bộ từ người dùng chọn để lưu vào
 }
 
+export type UpdateStatus =
+  | { state: 'checking' | 'none' }
+  | { state: 'available' | 'ready'; version: string }
+  | { state: 'downloading'; percent: number }
+  | { state: 'error'; message: string }
+
 export interface EngMasterApi {
   netStatus: () => Promise<{ online: boolean }>
   saveCred: (data: Cred) => Promise<boolean>
   loadCred: () => Promise<Cred | null>
   clearCred: () => Promise<boolean>
+
+  // Cập nhật ứng dụng
+  checkUpdate: () => Promise<unknown>
+  installUpdate: () => Promise<void>
+  appVersion: () => Promise<string>
+  getUpdateStatus: () => Promise<UpdateStatus | null>
+  onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void
 
   // Dịch nhanh toàn màn hình
   setDesktopTranslate: (enabled: boolean) => Promise<boolean>
@@ -33,6 +46,8 @@ export interface EngMasterApi {
 }
 
 declare global {
+  const __APP_VERSION__: string
+
   interface Window {
     api: EngMasterApi
   }

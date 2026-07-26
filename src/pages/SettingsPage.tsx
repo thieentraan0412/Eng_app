@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { isDesktop } from '../platform'
+import type { UpdateStatus } from '../vite-env'
 import '../styles/settings.css'
 
 // Dựng chuỗi accelerator Electron từ sự kiện bàn phím (Ctrl+Alt+D, Ctrl+Shift+F2…).
@@ -43,11 +44,14 @@ export default function SettingsPage() {
   )
   const [recording, setRecording] = useState(false)
   const [hkErr, setHkErr] = useState<string | null>(null)
+  const [appVersion, setAppVersion] = useState(__APP_VERSION__)
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
 
   const toggleDeskTrans = () => {
     const next = !deskTrans
     setDeskTrans(next)
     localStorage.setItem('desktop_translate_enabled', next ? '1' : '0')
+    window.dispatchEvent(new CustomEvent('desktop-translate-changed', { detail: next }))
     window.api?.setDesktopTranslate(next)
   }
 
@@ -56,6 +60,36 @@ export default function SettingsPage() {
     const h = (e: Event) => setDeskTrans(!!(e as CustomEvent).detail)
     window.addEventListener('desktop-translate-changed', h)
     return () => window.removeEventListener('desktop-translate-changed', h)
+  }, [])
+
+  // Trạng thái cập nhật chỉ tồn tại ở Electron. Đọc lại trạng thái gần nhất để
+  // không bỏ lỡ trường hợp bản mới đã tải xong trước khi mở trang Cài đặt.
+  useEffect(() => {
+    if (!isDesktop) return
+
+    let active = true
+    const off = window.api.onUpdateStatus((status) => {
+      if (active) setUpdateStatus(status)
+    })
+
+    void window.api
+      .appVersion()
+      .then((version) => {
+        if (active) setAppVersion(version)
+      })
+      .catch(() => {})
+
+    void window.api
+      .getUpdateStatus()
+      .then((status) => {
+        if (active && status) setUpdateStatus(status)
+      })
+      .catch(() => {})
+
+    return () => {
+      active = false
+      off()
+    }
   }, [])
 
   // Lưu + đăng ký phím tắt mới (accel rỗng = gỡ bỏ)
@@ -108,6 +142,26 @@ export default function SettingsPage() {
     const next = !grammar
     setGrammar(next)
     localStorage.setItem('grammar_enabled', next ? '1' : '0')
+  }
+
+  const checkForUpdate = async () => {
+    setUpdateStatus({ state: 'checking' })
+    try {
+      const result = await window.api.checkUpdate()
+      if (result === null) {
+        setUpdateStatus((current) =>
+          current?.state === 'checking'
+            ? { state: 'error', message: 'Không thể kết nối dịch vụ cập nhật' }
+            : current,
+        )
+      }
+    } catch {
+      setUpdateStatus({ state: 'error', message: 'Không thể kết nối dịch vụ cập nhật' })
+    }
+  }
+
+  const installUpdate = () => {
+    void window.api.installUpdate()
   }
 
   // Chữ cái đầu của email cho ô avatar (thuần hiển thị, không đổi logic)
@@ -233,6 +287,79 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* Auto-update chỉ hỗ trợ bản desktop cài bằng NSIS. */}
+      {isDesktop && (
+        <div className="set-card set-section-gap">
+          <div className="set-card-title">Cập nhật ứng dụng</div>
+          <div className="set-row set-update-row">
+            <div className="set-ico set-i6">⬆️</div>
+            <div className="set-main">
+              <div className="set-title">EngMaster v{appVersion}</div>
+              <div className="set-desc">Phiên bản hiện tại trên máy của bạn</div>
+
+              {updateStatus && (
+                <div
+                  className={`set-update-status is-${updateStatus.state}`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {updateStatus.state === 'checking' && 'Đang kiểm tra cập nhật…'}
+                  {updateStatus.state === 'none' && 'Bạn đang dùng bản mới nhất ✓'}
+                  {updateStatus.state === 'available' &&
+                    `Đã tìm thấy bản v${updateStatus.version} · đang chuẩn bị tải…`}
+                  {updateStatus.state === 'downloading' && (
+                    <>
+                      <div className="set-update-progress-label">
+                        <span>Đang tải bản cập nhật…</span>
+                        <strong>{updateStatus.percent}%</strong>
+                      </div>
+                      <div
+                        className="set-update-progress"
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={updateStatus.percent}
+                      >
+                        <span style={{ width: `${updateStatus.percent}%` }} />
+                      </div>
+                    </>
+                  )}
+                  {updateStatus.state === 'ready' &&
+                    `Bản v${updateStatus.version} đã sẵn sàng để cài đặt.`}
+                  {updateStatus.state === 'error' &&
+                    'Không kiểm tra được cập nhật. Vui lòng thử lại khi có mạng.'}
+                </div>
+              )}
+            </div>
+
+            <div className="set-update-actions">
+              {updateStatus?.state === 'ready' ? (
+                <button className="btn primary" onClick={installUpdate}>
+                  Khởi động lại để cập nhật
+                </button>
+              ) : (
+                <button
+                  className="btn"
+                  onClick={() => void checkForUpdate()}
+                  disabled={
+                    updateStatus?.state === 'checking' ||
+                    updateStatus?.state === 'downloading' ||
+                    updateStatus?.state === 'available'
+                  }
+                >
+                  {updateStatus?.state === 'checking'
+                    ? 'Đang kiểm tra…'
+                    : updateStatus?.state === 'downloading' ||
+                        updateStatus?.state === 'available'
+                      ? 'Đang tải…'
+                      : 'Kiểm tra cập nhật'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

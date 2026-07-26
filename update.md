@@ -4,8 +4,9 @@
 > tải về nền và cài đặt khi khởi động lại — người dùng không cần tải file thủ công.
 > Công cụ: **`electron-updater`** (cùng hệ sinh thái `electron-builder` đã dùng) + **GitHub Releases** làm nơi phát hành.
 >
-> **Cách phát hành: chỉ cần `push` lên nhánh `main` → GitHub Actions tự build (Windows) + tự tạo Release.**
-> Không tự tạo tag, không build tay. Việc duy nhất phải làm mỗi lần: **tăng `version` trong `package.json`**
+> **Cách phát hành duy nhất: cập nhật code và `push` lên nhánh `main` → GitHub Actions tự build (Windows) + tự tạo Release.**
+> Không tạo token cá nhân, không tự tạo tag, không build/phát hành bằng máy cá nhân. Việc duy nhất phải làm mỗi lần:
+> **tăng `version` trong `package.json`**
 > (xem §Giai đoạn 4 + cheat sheet §3).
 >
 > Bản **web** (Vercel) KHÔNG cần cơ chế này — người dùng tải lại trang là có bản mới. Kế hoạch này chỉ cho desktop.
@@ -53,14 +54,14 @@ người dùng bấm  ──►  autoUpdater.quitAndInstall()  → cài + mở l
 
 ### Giai đoạn 1 — Cấu hình phát hành (build/publish)
 
-- [ ] **Cài phụ thuộc**
+- [x] **Cài phụ thuộc**
   ```bash
   npm i electron-updater
   npm i -D electron-log            # (khuyến nghị) ghi log update ra file để debug
   ```
   `electron-updater` là dependency **runtime** (main process require lúc chạy) → để ở `dependencies`, không phải devDependencies.
 
-- [ ] **Thêm `publish` vào `package.json` → `build`** (để electron-builder biết đẩy lên đâu và để nhúng thông tin provider vào `latest.yml`):
+- [x] **Thêm `publish` vào `package.json` → `build`** (để electron-builder biết đẩy lên đâu và để nhúng thông tin provider vào `latest.yml`):
   ```jsonc
   "build": {
     "appId": "com.engmaster.app",
@@ -78,22 +79,19 @@ người dùng bấm  ──►  autoUpdater.quitAndInstall()  → cài + mở l
   }
   ```
 
-- [ ] **Đảm bảo còn target `nsis`** (đã có). Có thể giữ `portable` cho ai muốn bản chạy trực tiếp, nhưng nhiểu rằng nó không auto-update.
+- [x] **Đảm bảo còn target `nsis`** (đã có). Có thể giữ `portable` cho ai muốn bản chạy trực tiếp, nhưng nhiểu rằng nó không auto-update.
 
-- [ ] **Thêm script phát hành** vào `scripts`:
+- [x] **Thêm script phát hành để CI sử dụng** vào `scripts`:
   ```jsonc
   "release": "npm run build && electron-builder --win --publish always"
   ```
-  - `--publish always`: build xong tự tạo/đẩy artifact + `latest.yml` lên GitHub Release.
-  - Cần biến môi trường **`GH_TOKEN`** (Personal Access Token, quyền `repo` — hoặc fine-grained: Contents = Read/Write cho repo này) để electron-builder có quyền tạo release & upload. Token này **chỉ dùng lúc build ở máy dev / CI**, KHÔNG nhúng vào app.
-  ```bash
-  # PowerShell
-  $env:GH_TOKEN = "ghp_xxx"; npm run release
-  ```
+  - `--publish always`: CI build xong tự tạo/đẩy artifact + `latest.yml` lên GitHub Release.
+  - **Không chạy `npm run release` trên máy cá nhân.** Workflow ở Giai đoạn 4 sẽ gọi script này.
+  - **Không cần tạo PAT/GH_TOKEN cá nhân.** GitHub Actions tự cấp `secrets.GITHUB_TOKEN`; workflow truyền token này vào biến `GH_TOKEN` chỉ trong lúc chạy CI.
 
 ### Giai đoạn 2 — Tích hợp autoUpdater vào Electron main
 
-- [ ] **Tạo `electron/updater.ts`** — gói toàn bộ logic cập nhật, khởi tạo IPC + sự kiện:
+- [x] **Tạo `electron/updater.ts`** — gói toàn bộ logic cập nhật, khởi tạo IPC + sự kiện:
   ```ts
   import { autoUpdater } from 'electron-updater'
   import log from 'electron-log'
@@ -133,7 +131,7 @@ người dùng bấm  ──►  autoUpdater.quitAndInstall()  → cài + mở l
   }
   ```
 
-- [ ] **Gọi trong `electron/main.ts`** `app.whenReady()`:
+- [x] **Gọi trong `electron/main.ts`** `app.whenReady()`:
   ```ts
   import { initAutoUpdate } from './updater'
   ...
@@ -144,11 +142,11 @@ người dùng bấm  ──►  autoUpdater.quitAndInstall()  → cài + mở l
   })
   ```
 
-- [ ] **Vite**: `electron/updater.ts` được `main.ts` import nên tự vào bundle main — không cần đổi `vite.config.ts`. Lưu ý `electron-updater` không phải native module nên KHÔNG cần thêm vào `external` (khác `uiohook-napi`).
+- [x] **Vite**: `electron/updater.ts` được `main.ts` import nên tự vào bundle main — không cần đổi `vite.config.ts`. Lưu ý `electron-updater` không phải native module nên KHÔNG cần thêm vào `external` (khác `uiohook-napi`).
 
 ### Giai đoạn 3 — Cầu nối preload + UI trong app
 
-- [ ] **Bổ sung `electron/preload.ts`** (thêm vào object `api`):
+- [x] **Bổ sung `electron/preload.ts`** (thêm vào object `api`):
   ```ts
   // ----- Cập nhật ứng dụng -----
   checkUpdate: (): Promise<unknown> => ipcRenderer.invoke('update:check'),
@@ -169,7 +167,7 @@ người dùng bấm  ──►  autoUpdater.quitAndInstall()  → cài + mở l
     | { state: 'error'; message: string }
   ```
 
-- [ ] **UI ở trang Cài đặt (`SettingsPage.tsx`)** — chỉ hiện trên desktop (ẩn trên web, giống các tính năng desktop khác):
+- [x] **UI ở trang Cài đặt (`SettingsPage.tsx`)** — chỉ hiện trên desktop (ẩn trên web, giống các tính năng desktop khác):
   - Dòng "Phiên bản hiện tại: **vX.Y.Z**" (đọc bằng `window.api.appVersion()`).
   - Nút **"Kiểm tra cập nhật"** → gọi `checkUpdate()`.
   - Vùng trạng thái phản ánh theo `onUpdateStatus`:
@@ -180,14 +178,15 @@ người dùng bấm  ──►  autoUpdater.quitAndInstall()  → cài + mở l
     - `ready` → nút **"Khởi động lại để cập nhật"** → gọi `installUpdate()`
     - `error` → "Không kiểm tra được cập nhật" (im lặng nếu do mất mạng)
 
-- [ ] **Thay version hardcode**: [Sidebar.tsx:37](src/components/Sidebar.tsx#L37) đang cứng `v0.1.0`.
+- [x] **Thay version hardcode**: [Sidebar.tsx:37](src/components/Sidebar.tsx#L37) đang cứng `v0.1.0`.
   - Desktop: đọc `window.api.appVersion()`.
   - Web: `window.api` không tồn tại → fallback đọc từ biến build `__APP_VERSION__` (define trong vite config từ `package.json`) hoặc chuỗi mặc định.
 
 ### Giai đoạn 4 — Tự động build & phát hành khi **push lên `main`** ✅ (đã chọn)
 
 > Quyết định: **chỉ cần push lên `main`** là GitHub tự build trên Windows + tạo Release —
-> KHÔNG cần tự tạo tag, KHÔNG build tay. Điều duy nhất phải làm mỗi lần phát hành là
+> KHÔNG cần token cá nhân, KHÔNG cần tự tạo tag, KHÔNG build/phát hành trên máy cá nhân.
+> Điều duy nhất phải làm mỗi lần phát hành là
 > **tăng `version` trong `package.json`** (đây là tín hiệu để CI biết có bản mới và để
 > electron-updater so sánh). Push mà không đổi version → CI bỏ qua, không tạo release trùng.
 
@@ -195,12 +194,16 @@ người dùng bấm  ──►  autoUpdater.quitAndInstall()  → cài + mở l
 `package.json`, kiểm tra đã có Release/tag `v{version}` chưa — chưa có thì build & phát hành,
 có rồi thì thoát sớm (không làm gì).
 
-- [ ] Tạo `.github/workflows/release.yml`:
+- [x] Tạo `.github/workflows/release.yml`:
   ```yaml
   name: Release desktop
   on:
     push:
       branches: [main]
+
+  # Cho phép GITHUB_TOKEN tự động tạo tag/Release và upload artifact
+  permissions:
+    contents: write
 
   jobs:
     release:
@@ -237,7 +240,8 @@ có rồi thì thoát sớm (không làm gì).
           env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # Actions cấp sẵn, đủ quyền tạo release
   ```
-  - `secrets.GITHUB_TOKEN` **tự có** trong Actions, không cần tạo PAT thủ công.
+  - `secrets.GITHUB_TOKEN` **tự có** trong Actions, không cần tạo PAT/GH_TOKEN cá nhân.
+  - `permissions: contents: write` cấp quyền cho token tự động tạo tag/Release và tải artifact lên.
   - `releaseType: release` (đã đặt ở §Giai đoạn 1) khiến electron-builder phát hành **Release công khai luôn** (không để ở dạng draft) và tự gắn tag `v{version}`.
   - ⚠️ Build native `uiohook-napi` + tải Electron trên CI: nếu lỗi, cân nhắc `optionalDependencies` / cache như đã ghi trong `checklist_deploy_vercel.md`.
   - ℹ️ **Không đụng Vercel:** Vercel auto-deploy bản web cũng theo push `main` — hai việc chạy song song, độc lập (một bên build web, một bên build desktop), không xung đột.
@@ -257,7 +261,7 @@ có rồi thì thoát sớm (không làm gì).
    git push
    ```
 4. GitHub Actions (§Giai đoạn 4) tự chạy: đọc version → thấy chưa có Release `v0.2.0` → build trên Windows → tạo Release + upload `*.exe`, `latest.yml`, `*.blockmap`.
-   - *Dự phòng khi CI hỏng / muốn build tay:* `\$env:GH_TOKEN="..."; npm run release` trên máy Windows.
+   - Không phát hành thủ công. Nếu CI lỗi, sửa workflow/code rồi chạy lại job hoặc push bản sửa lên `main`.
 5. Kiểm tra tab **Actions** thấy job xanh, và **Releases** có đủ 3 file (`*.exe`, `latest.yml`, `*.blockmap`).
 6. App của người dùng (bản NSIS) sẽ tự phát hiện trong ≤6 giờ hoặc ngay khi họ bấm "Kiểm tra cập nhật".
 

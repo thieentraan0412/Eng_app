@@ -49,6 +49,17 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
 }
 
+// Ô luyện dịch chỉ nhận tiếng Anh: giữ chữ Latin ASCII, số, xuống dòng và
+// dấu câu; chuẩn hóa một số dấu câu “thông minh” thường gặp khi dán văn bản.
+function sanitizeEnglishInput(value: string): string {
+  return value
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[–—]/g, '-')
+    .replace(/…/g, '...')
+    .replace(/[^\x20-\x7E\n]/g, '')
+}
+
 // Màn hẹp (mobile) -> dùng chế độ luyện tập "tập trung" 1 câu/màn.
 // Màn rộng (desktop) -> giữ danh sách như cũ.
 function useIsNarrow(maxWidth = 860): boolean {
@@ -905,10 +916,8 @@ const SentenceCard = memo(function SentenceCard({
     if (!result || result.status === 'correct') return null
     return wrongWordSegments(value, result.bestAnswer)
   }, [result, value])
-  // Chỉ bật lớp phủ tô đỏ khi ô KHÔNG focus. Khi đang gõ (focus) hiển thị chữ
-  // thật bình thường — tránh lỗi trên mobile: chữ trong suốt + backdrop lệch
-  // metrics khiến chữ vừa gõ như bị "ẩn mất".
-  const showOverlay = !focused && !!wrongSegs && wrongSegs.some((s) => s.wrong)
+  // Giữ lớp đánh dấu cả khi đang focus để vị trí sai luôn hiện đỏ ngay trong ô.
+  const showOverlay = !!wrongSegs && wrongSegs.some((s) => s.wrong)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [active, setActive] = useState(0)
   const [open, setOpen] = useState(false)
@@ -1134,8 +1143,9 @@ const SentenceCard = memo(function SentenceCard({
           rows={2}
           value={value}
           onChange={(e) => {
-            onChange(item.id, e.target.value)
-            setCaret(e.target.selectionStart)
+            const nextValue = sanitizeEnglishInput(e.target.value)
+            onChange(item.id, nextValue)
+            setCaret(Math.min(e.target.selectionStart, nextValue.length))
           }}
           onKeyUp={syncCaret}
           onClick={syncCaret}

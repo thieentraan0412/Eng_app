@@ -8,6 +8,7 @@ import {
   setDesktopTranslateEnabled,
   isDesktopTranslateEnabled,
 } from './globalTranslate'
+import { initAutoUpdate } from './updater'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -25,8 +26,10 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1200,
     height: 800,
-    minWidth: 900,
-    minHeight: 600,
+    // Cho phép thu nhỏ cửa sổ desktop xuống kích thước điện thoại để các
+    // breakpoint responsive (<= 860px) chuyển sang giao diện mobile.
+    minWidth: 360,
+    minHeight: 500,
     title: 'EngMaster',
     autoHideMenuBar: true,
     webPreferences: {
@@ -144,6 +147,7 @@ ipcMain.handle('cred:clear', (): boolean => {
 app.whenReady().then(() => {
   createWindow()
   setupGlobalTranslate()
+  initAutoUpdate(() => win)
 })
 
 app.on('window-all-closed', () => {
