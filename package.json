@@ -1,6 +1,6 @@
 {
   "name": "engmaster",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Ứng dụng học tiếng Anh - EngMaster (Electron + React + TypeScript + Supabase)",
   "main": "dist-electron/main.js",
   "author": "",
@@ -46,11 +46,15 @@
       ]
     },
     "nsis": {
+      "artifactName": "EngMaster-Setup-${version}.${ext}",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "shortcutName": "EngMaster"
+    },
+    "portable": {
+      "artifactName": "EngMaster-Portable-${version}.${ext}"
     }
   },
   "dependencies": {

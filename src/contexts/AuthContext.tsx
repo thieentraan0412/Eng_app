@@ -18,6 +18,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setLoading(false)
+      return
+    }
+
     // Lấy phiên hiện tại (ghi nhớ đăng nhập)
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null)
@@ -32,16 +37,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
+    if (!isSupabaseConfigured) throw new Error('Ứng dụng chưa được cấu hình Supabase')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
   }
 
   const signUp = async (email: string, password: string) => {
+    if (!isSupabaseConfigured) throw new Error('Ứng dụng chưa được cấu hình Supabase')
     const { error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
   }
 
   const signOut = async () => {
+    if (!isSupabaseConfigured) return
     await supabase.auth.signOut()
   }
 

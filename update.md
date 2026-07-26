@@ -235,14 +235,31 @@ có rồi thì thoát sớm (không làm gì).
         - if: steps.check.outputs.exists == 'false'
           run: npm ci
 
+        # Chặn phát hành bản trắng do CI không có file .env cục bộ
+        - if: steps.check.outputs.exists == 'false'
+          shell: pwsh
+          env:
+            VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+            VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          run: |
+            if ([string]::IsNullOrWhiteSpace($env:VITE_SUPABASE_URL)) {
+              throw 'Missing repository secret: VITE_SUPABASE_URL'
+            }
+            if ([string]::IsNullOrWhiteSpace($env:VITE_SUPABASE_ANON_KEY)) {
+              throw 'Missing repository secret: VITE_SUPABASE_ANON_KEY'
+            }
+
         # Build + đẩy artifact (*.exe, latest.yml, *.blockmap) lên Release v{version}
         - if: steps.check.outputs.exists == 'false'
           run: npm run release
           env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # Actions cấp sẵn, đủ quyền tạo release
+            VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+            VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
   ```
   - `secrets.GITHUB_TOKEN` **tự có** trong Actions, không cần tạo PAT/GH_TOKEN cá nhân.
   - `permissions: contents: write` cấp quyền cho token tự động tạo tag/Release và tải artifact lên.
+  - Tạo hai Repository secrets `VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY` trong **Settings → Secrets and variables → Actions**. Vite cần hai giá trị này ngay lúc build; workflow sẽ dừng với lỗi rõ ràng nếu thiếu, thay vì phát hành app mở lên bị trắng.
   - Ghim `windows-2022` vì `windows-latest` hiện dùng Visual Studio 2026, trong khi `node-gyp 9` của chuỗi build chưa nhận diện được.
   - Đặt `"npmRebuild": false` trong `build` của `package.json`: `uiohook-napi` đã kèm binary N-API cho Windows x64 nên không cần electron-builder biên dịch lại bằng Visual Studio.
   - `releaseType: release` (đã đặt ở §Giai đoạn 1) khiến electron-builder phát hành **Release công khai luôn** (không để ở dạng draft) và tự gắn tag `v{version}`.
@@ -265,7 +282,7 @@ có rồi thì thoát sớm (không làm gì).
    ```
 4. GitHub Actions (§Giai đoạn 4) tự chạy: đọc version → thấy chưa có Release `v0.2.0` → build trên Windows → tạo Release + upload `*.exe`, `latest.yml`, `*.blockmap`.
    - Không phát hành thủ công. Nếu CI lỗi, sửa workflow/code rồi chạy lại job hoặc push bản sửa lên `main`.
-5. Kiểm tra tab **Actions** thấy job xanh, và **Releases** có đủ 3 file (`*.exe`, `latest.yml`, `*.blockmap`).
+5. Kiểm tra tab **Actions** thấy job xanh, và **Releases** có đủ bản cài `EngMaster-Setup-*.exe`, bản chạy thẳng `EngMaster-Portable-*.exe`, `latest.yml` và `*.blockmap`.
 6. App của người dùng (bản NSIS) sẽ tự phát hiện trong ≤6 giờ hoặc ngay khi họ bấm "Kiểm tra cập nhật".
 
 ---
