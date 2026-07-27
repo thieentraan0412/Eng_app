@@ -1,101 +1,133 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ôn tập · EngMaster</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<style></style>
+<style>
+  .due-banner{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:15px 18px;margin-bottom:16px;
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  }
+  .due-banner .ring{--p:0}
+  .due-txt b{display:block;font-size:14.5px;font-weight:600;letter-spacing:-.016em}
+  .due-txt span{display:block;font-size:12.5px;color:var(--text-3);margin-top:1px}
+  .deck-stats{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3);
+    font-variant-numeric:tabular-nums}
+  .dot-sep{width:2.5px;height:2.5px;border-radius:50%;background:var(--text-4);flex:0 0 auto}
+  .mode-note{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--text-2);
+    padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:var(--r-md);margin-top:18px}
+  .mode-note .ico{width:15px;height:15px;color:var(--text-3);margin-top:1px}
+  @media (max-width:920px){ .due-banner .btn{width:100%} }
+</style>
 </head>
-<body>
-<header class="topbar">
-  <button class="burger" id="burger" aria-label="Mở menu">☰</button>
-  <div class="brand-mark">E</div>
-  <div class="topbar-title">Ôn tập</div>
-</header>
-<div class="overlay" id="overlay"></div>
-<div class="app">
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-mark">E</div>
-      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
-      <button class="side-close" id="sideClose" aria-label="Đóng menu">✕</button>
-    </div>
-    <ul class="nav">
-      <li><a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a></li>
-      <li><a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a></li>
-      <li><a href="../04-on-tap/index.html" class="active"><span class="ico">🔁</span>Ôn tập</a></li>
-      <li><a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a></li>
-      <li><a href="../06-doc/index.html"><span class="ico">📖</span>Đọc</a></li>
-      <li><a href="../07-viet/index.html"><span class="ico">✍️</span>Viết</a></li>
-      <li><a href="../08-chep-cau/index.html"><span class="ico">✏️</span>Chép câu</a></li>
-      <li><a href="../09-thong-ke/index.html"><span class="ico">📊</span>Thống kê</a></li>
-      <li><a href="../10-cai-dat/index.html"><span class="ico">⚙️</span>Cài đặt</a></li>
-    </ul>
-    <div class="side-user">
-      <div class="ava">T</div>
-      <div><b>thieentraan</b><span>Gói miễn phí</span></div>
-    </div>
-    <div class="side-foot"><span>v0.1.0</span><span>© EngMaster</span></div>
-  </aside>
-  <main class="content">
+<body class="app" data-page="on-tap" data-depth="1" data-title="Ôn tập">
 
-    <div class="page-head">
-      <h1 class="page-title">Ôn tập (Flashcard)</h1>
-      <p class="page-sub">Chọn một bộ để bắt đầu ôn những thẻ đến hạn hôm nay.</p>
-    </div>
+<div class="main">
+<div class="wrap">
 
-    <div class="deck-grid">
-      <a class="deck-card" href="flashcard.html">
-        <div class="deck-name">Silk (Reading)</div>
-        <div class="deck-desc">Đã học 41/73 từ · 56%</div>
-        <div class="progress" style="margin-top:12px"><div class="progress-fill" style="width:56%"></div></div>
-        <div class="head-row" style="margin-top:14px"><span class="badge badge-due">🔔 73 thẻ đến hạn</span><span class="deck-open" style="margin:0">→</span></div>
-      </a>
-      <a class="deck-card" href="flashcard.html">
-        <div class="deck-name">Parttern</div>
-        <div class="deck-desc">Đã học 0/5 từ · 0%</div>
-        <div class="progress" style="margin-top:12px"><div class="progress-fill" style="width:2%"></div></div>
-        <div class="head-row" style="margin-top:14px"><span class="badge badge-due">🔔 5 thẻ đến hạn</span><span class="deck-open" style="margin:0">→</span></div>
-      </a>
-      <a class="deck-card" href="flashcard.html">
-        <div class="deck-name">Từ đã lưu khi đọc</div>
-        <div class="deck-desc">Đã học 0/4 từ · 0%</div>
-        <div class="progress" style="margin-top:12px"><div class="progress-fill" style="width:2%"></div></div>
-        <div class="head-row" style="margin-top:14px"><span class="badge badge-due">🔔 4 thẻ đến hạn</span><span class="deck-open" style="margin:0">→</span></div>
-      </a>
-      <a class="deck-card" href="flashcard.html">
-        <div class="deck-name">ADV</div>
-        <div class="deck-desc">Đã học 1/5 từ · 20%</div>
-        <div class="progress" style="margin-top:12px"><div class="progress-fill" style="width:20%"></div></div>
-        <div class="head-row" style="margin-top:14px"><span class="badge badge-due">🔔 5 thẻ đến hạn</span><span class="deck-open" style="margin:0">→</span></div>
-      </a>
+  <div class="page-head anim">
+    <div>
+      <h1>Ôn tập</h1>
+      <p>Lịch lặp lại ngắt quãng (SRS) — chọn một bộ để ôn những thẻ đến hạn hôm nay.</p>
     </div>
+    <div class="page-actions">
+      <div class="segmented">
+        <button class="is-active"><i data-ico="repeat"></i> Anh → Việt</button>
+        <button><i data-ico="lang"></i> Việt → Anh</button>
+      </div>
+    </div>
+  </div>
 
-  </main>
+  <!-- ------------------------------------------------------- Tổng quan -->
+  <div class="due-banner anim">
+    <span class="ring" style="--p:0"><span>0%</span></span>
+    <span class="due-txt">
+      <b>98 thẻ đến hạn hôm nay</b>
+      <span>Chưa ôn thẻ nào — bắt đầu để giữ chuỗi ngày học.</span>
+    </span>
+    <span class="spacer"></span>
+    <a class="btn btn-primary btn-lg" href="flashcard.html"><i data-ico="play"></i> Ôn tất cả</a>
+  </div>
+
+  <!-- --------------------------------------------------------- Chọn bộ -->
+  <h2 class="t-label" style="margin:22px 0 10px">Chọn bộ để ôn</h2>
+  <section class="grid g-auto anim anim-1">
+
+    <a class="deck" href="flashcard.html">
+      <span class="deck-top">
+        <span class="deck-mark">S</span>
+        <span>
+          <span class="deck-name">Silk (Reading)</span>
+          <span class="deck-desc">Đã học 71 / 73 từ · 97%</span>
+        </span>
+      </span>
+      <span class="bar bar-accent"><i style="width:97%"></i></span>
+      <span class="deck-meta">
+        <span class="badge badge-warn badge-dot">73 đến hạn</span>
+        <span class="deck-go">Bắt đầu <i data-ico="right"></i></span>
+      </span>
+    </a>
+
+    <a class="deck" href="flashcard.html">
+      <span class="deck-top">
+        <span class="deck-mark">P</span>
+        <span>
+          <span class="deck-name">Parttern</span>
+          <span class="deck-desc">Đã học 10 / 10 từ · 100%</span>
+        </span>
+      </span>
+      <span class="bar bar-accent"><i style="width:100%"></i></span>
+      <span class="deck-meta">
+        <span class="badge badge-warn badge-dot">10 đến hạn</span>
+        <span class="deck-go">Bắt đầu <i data-ico="right"></i></span>
+      </span>
+    </a>
+
+    <a class="deck" href="flashcard.html">
+      <span class="deck-top">
+        <span class="deck-mark"><i data-ico="bulb"></i></span>
+        <span>
+          <span class="deck-name">Từ đã lưu khi đọc</span>
+          <span class="deck-desc">Đã học 0 / 10 từ · 0%</span>
+        </span>
+      </span>
+      <span class="bar bar-accent"><i style="width:0%"></i></span>
+      <span class="deck-meta">
+        <span class="badge badge-warn badge-dot">10 đến hạn</span>
+        <span class="deck-go">Bắt đầu <i data-ico="right"></i></span>
+      </span>
+    </a>
+
+    <a class="deck" href="flashcard.html">
+      <span class="deck-top">
+        <span class="deck-mark">A</span>
+        <span>
+          <span class="deck-name">ADV</span>
+          <span class="deck-desc">Đã học 2 / 5 từ · 40%</span>
+        </span>
+      </span>
+      <span class="bar bar-accent"><i style="width:40%"></i></span>
+      <span class="deck-meta">
+        <span class="badge badge-warn badge-dot">5 đến hạn</span>
+        <span class="deck-go">Bắt đầu <i data-ico="right"></i></span>
+      </span>
+    </a>
+
+  </section>
+
+  <p class="mode-note anim anim-2">
+    <i data-ico="bulb"></i>
+    <span>Trong phiên ôn bạn có thể bật <b>Gõ từ</b> để tự kiểm tra chính tả, hoặc <b>Ví dụ</b>
+      để xem câu minh họa ở mặt sau. Đánh giá bằng phím <span class="kbd">1</span>–<span class="kbd">4</span>.</span>
+  </p>
+
 </div>
-<nav class="tabbar">
-  <a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a>
-  <a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a>
-  <a href="../04-on-tap/index.html" class="active"><span class="ico">🔁</span>Ôn tập</a>
-  <a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a>
-  <button id="tabMenu"><span class="ico">☰</span>Menu</button>
-</nav>
-<script>
-var sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
-function menu(o){sb.classList.toggle('open',o);ov.classList.toggle('show',o);}
-document.getElementById('burger').onclick=function(){menu(true)};
-document.getElementById('sideClose').onclick=function(){menu(false)};
-ov.onclick=function(){menu(false)};
-var tm=document.getElementById('tabMenu'); if(tm) tm.onclick=function(){menu(true)};
-document.querySelectorAll('[data-flip]').forEach(function(f){
-  f.addEventListener('click',function(){f.classList.toggle('flipped')});
-  f.querySelectorAll('input,textarea,button').forEach(function(i){i.addEventListener('click',function(e){e.stopPropagation()})});
-});
-document.querySelectorAll('.tabs:not([data-static])').forEach(function(g){g.querySelectorAll('.tab').forEach(function(t){if(t.tagName==='BUTTON')t.onclick=function(){g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-document.querySelectorAll('.pills').forEach(function(g){g.querySelectorAll('.pill').forEach(function(t){t.onclick=function(){g.querySelectorAll('.pill').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-</script>
+</div>
 
+<script src="../app.js"></script>
 </body>
 </html>

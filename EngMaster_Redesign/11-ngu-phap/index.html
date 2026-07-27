@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ngữ pháp · EngMaster</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* ---- Nhãn cấp độ CEFR: chỉ dùng chữ + viền, không thêm màu mới ---- */
+  .lv{
+    font-size:10.5px;font-weight:700;letter-spacing:.04em;
+    color:var(--text-3);background:var(--surface-2);border:1px solid var(--border);
+    height:18px;padding:0 6px;display:inline-flex;align-items:center;border-radius:4px;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* ---- Khối "Ưu tiên hôm nay" ---- */
+  .today-row{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+    padding:11px 20px;border-bottom:1px solid var(--border);
+    transition:background var(--t-fast);
+  }
+  .today-row:last-of-type{border-bottom:none}
+  .today-row:hover{background:var(--surface-2)}
+  .today-main{flex:1 1 auto;min-width:0}
+  .today-name{display:block;font-size:13.8px;font-weight:500;letter-spacing:-.012em}
+  .today-why{display:block;font-size:12.2px;color:var(--text-3);margin-top:1px}
+  .today-side{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+  .mini-bar{width:64px;height:4px;border-radius:99px;background:var(--surface-3);overflow:hidden}
+  .mini-bar i{display:block;height:100%;border-radius:99px;background:var(--text-4)}
+  .mini-num{font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+
+  /* ---- Thẻ chủ điểm ---- */
+  .topic-mark{
+    width:34px;height:34px;flex:0 0 auto;border-radius:var(--r-sm);
+    display:grid;place-items:center;
+    background:var(--surface-2);border:1px solid var(--border);
+  }
+  .topic-mark .ico{width:16px;height:16px;color:var(--text-3)}
+  .topic-tags{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
+  .topic-foot{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    margin-top:10px;font-size:11.8px;color:var(--text-3);font-variant-numeric:tabular-nums;
+  }
+
+  /* ---- Thẻ thêm chủ điểm ---- */
+  .new-deck{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+    min-height:120px;padding:16px;text-align:center;
+    border:1px dashed var(--border-2);border-radius:var(--r-lg);background:transparent;
+    color:var(--text-3);transition:all var(--t-fast);
+  }
+  .new-deck:hover{border-color:var(--accent);color:var(--accent-text);background:var(--accent-soft)}
+  .new-deck .ico{width:19px;height:19px}
+  .new-deck b{font-size:13.5px;font-weight:600}
+  .new-deck span{font-size:12px;line-height:1.5}
+
+  /* ---- Bẫy người Việt ---- */
+  .trap{padding:15px 20px;border-bottom:1px solid var(--border)}
+  .trap:last-child{border-bottom:none}
+  .trap-head{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+  .trap-no{
+    width:20px;height:20px;flex:0 0 auto;border-radius:5px;display:grid;place-items:center;
+    font-size:11px;font-weight:700;color:var(--text-3);
+    background:var(--surface-2);border:1px solid var(--border);font-variant-numeric:tabular-nums;
+  }
+  .trap-name{font-size:13.8px;font-weight:600;letter-spacing:-.014em}
+  .trap-freq{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .freq-bar{width:88px;height:4px;border-radius:99px;background:var(--surface-3);overflow:hidden}
+  .freq-bar i{display:block;height:100%;border-radius:99px;background:var(--text-4)}
+  .sent{
+    display:flex;align-items:baseline;gap:8px;font-size:13px;line-height:1.6;
+    margin-top:3px;
+  }
+  .sent-tag{
+    flex:0 0 auto;width:15px;height:15px;border-radius:4px;display:grid;place-items:center;
+    font-size:10px;font-weight:700;line-height:1;
+  }
+  .sent-bad  .sent-tag{background:var(--err-soft);border:1px solid var(--err-border);color:var(--err)}
+  .sent-good .sent-tag{background:var(--ok-soft); border:1px solid var(--ok-border); color:var(--ok)}
+  .sent-bad  em{font-style:normal;color:var(--err);text-decoration:line-through;
+    text-decoration-thickness:1px;text-underline-offset:2px}
+  .sent-good em{font-style:normal;color:var(--ok);font-weight:600}
+  .trap-why{font-size:12.3px;color:var(--text-3);margin-top:8px;padding-left:23px;line-height:1.55}
+
+  @media (max-width:920px){
+    .today-row{padding:11px 16px}
+    .trap{padding:14px 16px}
+    .trap-freq{display:none}
+    .mini-bar{display:none}
+  }
+</style>
+</head>
+<body class="app" data-page="ngu-phap" data-depth="1" data-title="Ngữ pháp">
+
+<div class="main">
+<div class="wrap">
+
+  <div class="page-head anim">
+    <div>
+      <h1>Ngữ pháp</h1>
+      <p id="sub">16 chủ điểm từ A1 đến C1. Học quy tắc, luyện bằng 4 dạng bài, rồi sửa đúng những lỗi bạn hay mắc.</p>
+    </div>
+    <div class="page-actions">
+      <a class="btn" href="so-loi.html"><i data-ico="flag"></i> Sổ lỗi <span class="badge badge-err" style="margin-left:2px">12</span></a>
+      <a class="btn" href="them-chu-diem.html"><i data-ico="plus"></i> Thêm chủ điểm</a>
+      <a class="btn btn-primary" href="luyen-tap.html"><i data-ico="play"></i> Luyện 10 phút</a>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------------------ Chỉ số -->
+  <section class="grid g-4 anim anim-1" style="margin-bottom:14px">
+
+    <div class="stat">
+      <span class="stat-top"><span class="stat-label">Chủ điểm đã nắm</span><i data-ico="grammar"></i></span>
+      <span class="stat-value">6<span style="font-size:15px;font-weight:500;color:var(--text-4)">/16</span></span>
+      <span class="stat-sub">Mức nắm vững ≥ 80%</span>
+    </div>
+
+    <div class="stat">
+      <span class="stat-top"><span class="stat-label">Độ chính xác 7 ngày</span><i data-ico="target"></i></span>
+      <span class="stat-value">74%</span>
+      <span class="stat-sub"><span class="stat-delta up"><i data-ico="trend" class="ico" style="width:12px;height:12px"></i> +6%</span> so với tuần trước</span>
+    </div>
+
+    <div class="stat">
+      <span class="stat-top"><span class="stat-label">Lỗi đang theo dõi</span><i data-ico="flag"></i></span>
+      <span class="stat-value">12</span>
+      <span class="stat-sub">4 lỗi đến hạn ôn hôm nay</span>
+    </div>
+
+    <div class="stat">
+      <span class="stat-top"><span class="stat-label">Chuỗi ngày</span><i data-ico="flame"></i></span>
+      <span class="stat-value">9</span>
+      <span class="stat-sub">Kỷ lục 21 ngày</span>
+    </div>
+
+  </section>
+
+  <!-- --------------------------------------------------- Ưu tiên hôm nay -->
+  <section class="card anim anim-2" style="margin-bottom:20px">
+    <div class="card-head">
+      <h2><i data-ico="zap"></i> Ưu tiên hôm nay</h2>
+      <span class="hint">Chọn theo lịch ôn và độ chính xác gần đây</span>
+    </div>
+
+    <a class="today-row" href="chi-tiet.html">
+      <span class="topic-mark"><i data-ico="clock"></i></span>
+      <span class="today-main">
+        <span class="today-name">Thì hiện tại hoàn thành</span>
+        <span class="today-why">Đến hạn ôn · bạn hay dùng quá khứ đơn thay cho thì này</span>
+      </span>
+      <span class="today-side">
+        <span class="mini-bar"><i style="width:48%"></i></span>
+        <span class="mini-num">48%</span>
+        <span class="badge badge-warn"><i data-ico="bell"></i> Đến hạn</span>
+      </span>
+    </a>
+
+    <a class="today-row" href="chi-tiet.html">
+      <span class="topic-mark"><i data-ico="type"></i></span>
+      <span class="today-main">
+        <span class="today-name">Mạo từ a / an / the</span>
+        <span class="today-why">Nhóm lỗi bạn mắc nhiều nhất — 5 lần trong 7 ngày qua</span>
+      </span>
+      <span class="today-side">
+        <span class="mini-bar"><i style="width:36%"></i></span>
+        <span class="mini-num">36%</span>
+        <span class="badge badge-err"><i data-ico="alert"></i> Yếu</span>
+      </span>
+    </a>
+
+    <a class="today-row" href="chi-tiet.html">
+      <span class="topic-mark"><i data-ico="layers"></i></span>
+      <span class="today-main">
+        <span class="today-name">Danh từ số nhiều &amp; đếm được</span>
+        <span class="today-why">Đã 6 ngày chưa ôn — sắp rơi khỏi trí nhớ dài hạn</span>
+      </span>
+      <span class="today-side">
+        <span class="mini-bar"><i style="width:71%"></i></span>
+        <span class="mini-num">71%</span>
+        <span class="badge"><i data-ico="calendar"></i> 6 ngày</span>
+      </span>
+    </a>
+
+    <div class="card-body" style="border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <a class="btn btn-primary" href="luyen-tap.html"><i data-ico="play"></i> Luyện 3 chủ điểm này</a>
+      <span class="muted-2 t-xs">18 câu · khoảng 10 phút · trộn cả 4 dạng bài</span>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------- 3 tab -->
+  <nav class="tabs anim anim-2">
+    <button class="is-active" data-tab="all"><i data-ico="grammar"></i> Tất cả chủ điểm</button>
+    <button data-tab="weak"><i data-ico="alert"></i> Điểm yếu của tôi</button>
+    <button data-tab="trap"><i data-ico="lang"></i> Bẫy với người Việt</button>
+  </nav>
+
+  <!-- ============================================== TAB TẤT CẢ CHỦ ĐIỂM -->
+  <section id="tab-all">
+
+    <div class="row wrapping anim" style="margin-bottom:14px">
+      <div class="chipset" id="lvFilter">
+        <button class="chip is-active" data-lv="all">Tất cả</button>
+        <button class="chip" data-lv="A1">A1</button>
+        <button class="chip" data-lv="A2">A2</button>
+        <button class="chip" data-lv="B1">B1</button>
+        <button class="chip" data-lv="B2">B2</button>
+        <button class="chip" data-lv="C1">C1</button>
+      </div>
+      <span class="spacer"></span>
+      <span class="muted-2 t-xs num" id="lvCount">16 chủ điểm</span>
+    </div>
+
+    <div class="grid g-auto anim anim-1" id="topicGrid">
+
+      <!-- A1 -->
+      <a class="deck" href="chi-tiet.html" data-lv="A1">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="layers"></i></span>
+          <span><span class="deck-name">Danh từ số nhiều &amp; đếm được</span>
+            <span class="topic-tags"><span class="lv">A1</span><span class="badge badge-err badge-dot">Bẫy người Việt</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:71%"></i></span>
+        <span class="topic-foot"><span>6 quy tắc · 24 câu</span><span>Nắm vững 71%</span></span>
+      </a>
+
+      <a class="deck" href="chi-tiet.html" data-lv="A1">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="type"></i></span>
+          <span><span class="deck-name">Mạo từ a / an / the / Ø</span>
+            <span class="topic-tags"><span class="lv">A1</span><span class="badge badge-err badge-dot">Bẫy người Việt</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:36%"></i></span>
+        <span class="topic-foot"><span>8 quy tắc · 32 câu</span><span>Nắm vững 36%</span></span>
+      </a>
+
+      <a class="deck" href="chi-tiet.html" data-lv="A1">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="clock"></i></span>
+          <span><span class="deck-name">Hiện tại đơn &amp; tiếp diễn</span>
+            <span class="topic-tags"><span class="lv">A1</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:92%"></i></span>
+        <span class="topic-foot"><span>7 quy tắc · 28 câu</span><span>Nắm vững 92%</span></span>
+      </a>
+
+      <a class="deck" href="chi-tiet.html" data-lv="A1">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="shuffle"></i></span>
+          <span><span class="deck-name">Trật tự từ &amp; câu hỏi</span>
+            <span class="topic-tags"><span class="lv">A1</span><span class="badge badge-err badge-dot">Bẫy người Việt</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:84%"></i></span>
+        <span class="topic-foot"><span>5 quy tắc · 20 câu</span><span>Nắm vững 84%</span></span>
+      </a>
+
+      <!-- A2 -->
+      <a class="deck" href="chi-tiet.html" data-lv="A2">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="undo"></i></span>
+          <span><span class="deck-name">Quá khứ đơn &amp; tiếp diễn</span>
+            <span class="topic-tags"><span class="lv">A2</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:88%"></i></span>
+        <span class="topic-foot"><span>6 quy tắc · 26 câu</span><span>Nắm vững 88%</span></span>
+      </a>
+
+      <a class="deck" href="chi-tiet.html" data-lv="A2">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="check"></i></span>
+          <span><span class="deck-name">Hòa hợp chủ ngữ – động từ</span>
+            <span class="topic-tags"><span class="lv">A2</span><span class="badge badge-err badge-dot">Bẫy người Việt</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:62%"></i></span>
+        <span class="topic-foot"><span>5 quy tắc · 22 câu</span><span>Nắm vững 62%</span></span>
+      </a>
+
+      <a class="deck" href="chi-tiet.html" data-lv="A2">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="target"></i></span>
+          <span><span class="deck-name">Giới từ thời gian &amp; nơi chốn</span>
+            <span class="topic-tags"><span class="lv">A2</span><span class="badge badge-err badge-dot">Bẫy người Việt</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:54%"></i></span>
+        <span class="topic-foot"><span>9 quy tắc · 34 câu</span><span>Nắm vững 54%</span></span>
+      </a>
+
+      <a class="deck" href="chi-tiet.html" data-lv="A2">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="trend"></i></span>
+          <span><span class="deck-name">So sánh hơn &amp; so sánh nhất</span>
+            <span class="topic-tags"><span class="lv">A2</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:80%"></i></span>
+        <span class="topic-foot"><span>6 quy tắc · 24 câu</span><span>Nắm vững 80%</span></span>
+      </a>
+
+      <!-- B1 -->
+      <a class="deck" href="chi-tiet.html" data-lv="B1">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="clock"></i></span>
+          <span><span class="deck-name">Thì hiện tại hoàn thành</span>
+            <span class="topic-tags"><span class="lv">B1</span><span class="badge badge-warn badge-dot">Đến hạn</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:48%"></i></span>
+        <span class="topic-foot"><span>8 quy tắc · 30 câu</span><span>Nắm vững 48%</span></span>
+      </a>
+
+      <a class="deck" href="chi-tiet.html" data-lv="B1">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="bulb"></i></span>
+          <span><span class="deck-name">Động từ khuyết thiếu</span>
+            <span class="topic-tags"><span class="lv">B1</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:66%"></i></span>
+        <span class="topic-foot"><span>9 quy tắc · 30 câu</span><span>Nắm vững 66%</span></span>
+      </a>
+
+      <a class="deck" href="chi-tiet.html" data-lv="B1">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="repeat"></i></span>
+          <span><span class="deck-name">Câu bị động</span>
+            <span class="topic-tags"><span class="lv">B1</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:58%"></i></span>
+        <span class="topic-foot"><span>7 quy tắc · 28 câu</span><span>Nắm vững 58%</span></span>
+      </a>
+
+      <a class="deck" href="chi-tiet.html" data-lv="B1">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="stack"></i></span>
+          <span><span class="deck-name">Mệnh đề quan hệ</span>
+            <span class="topic-tags"><span class="lv">B1</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:44%"></i></span>
+        <span class="topic-foot"><span>8 quy tắc · 26 câu</span><span>Nắm vững 44%</span></span>
+      </a>
+
+      <!-- B2 -->
+      <a class="deck" href="chi-tiet.html" data-lv="B2">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="shuffle"></i></span>
+          <span><span class="deck-name">Câu điều kiện</span>
+            <span class="topic-tags"><span class="lv">B2</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:32%"></i></span>
+        <span class="topic-foot"><span>7 quy tắc · 28 câu</span><span>Nắm vững 32%</span></span>
+      </a>
+
+      <a class="deck" href="chi-tiet.html" data-lv="B2">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="pen"></i></span>
+          <span><span class="deck-name">Gerund &amp; Infinitive</span>
+            <span class="topic-tags"><span class="lv">B2</span><span class="badge badge-err badge-dot">Bẫy người Việt</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:26%"></i></span>
+        <span class="topic-foot"><span>6 quy tắc · 32 câu</span><span>Nắm vững 26%</span></span>
+      </a>
+
+      <a class="deck" href="chi-tiet.html" data-lv="B2">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="speak"></i></span>
+          <span><span class="deck-name">Câu tường thuật</span>
+            <span class="topic-tags"><span class="lv">B2</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:18%"></i></span>
+        <span class="topic-foot"><span>7 quy tắc · 24 câu</span><span>Nắm vững 18%</span></span>
+      </a>
+
+      <!-- C1 -->
+      <a class="deck" href="chi-tiet.html" data-lv="C1">
+        <span class="deck-top">
+          <span class="topic-mark"><i data-ico="sparkle"></i></span>
+          <span><span class="deck-name">Đảo ngữ &amp; cấu trúc nhấn mạnh</span>
+            <span class="topic-tags"><span class="lv">C1</span></span></span>
+        </span>
+        <span class="bar bar-accent"><i style="width:0%"></i></span>
+        <span class="topic-foot"><span>6 quy tắc · 20 câu</span><span>Chưa bắt đầu</span></span>
+      </a>
+
+      <a class="new-deck" href="them-chu-diem.html">
+        <i data-ico="plus"></i>
+        <b>Thêm chủ điểm</b>
+        <span>Soạn mới, hoặc chép từ thư viện mẫu CEFR</span>
+      </a>
+
+    </div>
+
+    <div class="empty anim" id="lvEmpty" hidden style="margin-top:4px">
+      <i data-ico="search"></i>
+      <b>Chưa có chủ điểm ở cấp độ này</b>
+      <p>Chọn một cấp độ khác hoặc xem tất cả chủ điểm.</p>
+    </div>
+  </section>
+
+  <!-- ================================================ TAB ĐIỂM YẾU -->
+  <section id="tab-weak" hidden>
+
+    <div class="card anim" style="margin-bottom:14px">
+      <div class="card-head">
+        <h2><i data-ico="alert"></i> 5 chủ điểm cần ưu tiên</h2>
+        <span class="hint">Sắp theo độ chính xác 30 ngày gần nhất</span>
+      </div>
+
+      <a class="today-row" href="chi-tiet.html">
+        <span class="topic-mark"><i data-ico="speak"></i></span>
+        <span class="today-main">
+          <span class="today-name">Câu tường thuật <span class="lv" style="margin-left:4px">B2</span></span>
+          <span class="today-why">4 / 22 câu đúng · sai nhiều nhất ở lùi thì và đổi trạng ngữ thời gian</span>
+        </span>
+        <span class="today-side"><span class="mini-bar"><i style="width:18%"></i></span><span class="mini-num">18%</span></span>
+      </a>
+
+      <a class="today-row" href="chi-tiet.html">
+        <span class="topic-mark"><i data-ico="pen"></i></span>
+        <span class="today-main">
+          <span class="today-name">Gerund &amp; Infinitive <span class="lv" style="margin-left:4px">B2</span></span>
+          <span class="today-why">7 / 27 câu đúng · nhầm giữa <span class="mono">stop doing</span> và <span class="mono">stop to do</span></span>
+        </span>
+        <span class="today-side"><span class="mini-bar"><i style="width:26%"></i></span><span class="mini-num">26%</span></span>
+      </a>
+
+      <a class="today-row" href="chi-tiet.html">
+        <span class="topic-mark"><i data-ico="shuffle"></i></span>
+        <span class="today-main">
+          <span class="today-name">Câu điều kiện <span class="lv" style="margin-left:4px">B2</span></span>
+          <span class="today-why">9 / 28 câu đúng · dùng <span class="mono">will</span> trong mệnh đề <span class="mono">if</span></span>
+        </span>
+        <span class="today-side"><span class="mini-bar"><i style="width:32%"></i></span><span class="mini-num">32%</span></span>
+      </a>
+
+      <a class="today-row" href="chi-tiet.html">
+        <span class="topic-mark"><i data-ico="type"></i></span>
+        <span class="today-main">
+          <span class="today-name">Mạo từ a / an / the / Ø <span class="lv" style="margin-left:4px">A1</span></span>
+          <span class="today-why">11 / 31 câu đúng · thường bỏ hẳn mạo từ trước danh từ đếm được số ít</span>
+        </span>
+        <span class="today-side"><span class="mini-bar"><i style="width:36%"></i></span><span class="mini-num">36%</span></span>
+      </a>
+
+      <a class="today-row" href="chi-tiet.html">
+        <span class="topic-mark"><i data-ico="stack"></i></span>
+        <span class="today-main">
+          <span class="today-name">Mệnh đề quan hệ <span class="lv" style="margin-left:4px">B1</span></span>
+          <span class="today-why">11 / 25 câu đúng · nhầm <span class="mono">which</span> với <span class="mono">who</span>, thừa đại từ sau mệnh đề</span>
+        </span>
+        <span class="today-side"><span class="mini-bar"><i style="width:44%"></i></span><span class="mini-num">44%</span></span>
+      </a>
+
+      <div class="card-body" style="border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <a class="btn btn-primary" href="luyen-tap.html"><i data-ico="target"></i> Luyện riêng điểm yếu</a>
+        <a class="btn" href="so-loi.html"><i data-ico="flag"></i> Mở sổ lỗi</a>
+      </div>
+    </div>
+
+    <div class="panel anim anim-1">
+      <b class="t-h3" style="display:flex;align-items:center;gap:7px"><i data-ico="bulb" class="ico ico-sm"></i> Gợi ý</b>
+      <p class="t-xs muted-2" style="margin-top:5px">
+        Ba chủ điểm yếu nhất đều là B2 và đều liên quan tới việc <b>biến đổi cấu trúc câu</b>.
+        Nên luyện chủ yếu bằng dạng <b>viết lại câu</b> thay vì trắc nghiệm — trắc nghiệm cho phép đoán,
+        còn viết lại câu thì không.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================ TAB BẪY NGƯỜI VIỆT -->
+  <section id="tab-trap" hidden>
+
+    <div class="panel anim" style="margin-bottom:14px">
+      <p class="t-sm muted">
+        Tiếng Việt không có đuôi chia thì, không có đuôi số nhiều, không có mạo từ.
+        Vì vậy lỗi của người học Việt Nam <b>không rải đều</b> mà dồn vào 7 điểm rất hẹp dưới đây —
+        sửa đúng 7 điểm này là xử lý được phần lớn lỗi trong bài viết.
+      </p>
+    </div>
+
+    <div class="card anim anim-1">
+      <div class="card-head">
+        <h2><i data-ico="lang"></i> 7 lỗi thường gặp nhất</h2>
+        <span class="hint">Thanh bên phải: tần suất bạn mắc trong 30 ngày</span>
+      </div>
+
+      <div class="trap">
+        <div class="trap-head">
+          <span class="trap-no">1</span><span class="trap-name">Thiếu đuôi <span class="mono">-s</span> số nhiều</span>
+          <span class="trap-freq"><span class="freq-bar"><i style="width:100%"></i></span><span class="mini-num">14</span></span>
+        </div>
+        <p class="sent sent-bad"><span class="sent-tag">✕</span><span>I bought three <em>book</em> yesterday.</span></p>
+        <p class="sent sent-good"><span class="sent-tag">✓</span><span>I bought three <em>books</em> yesterday.</span></p>
+        <p class="trap-why">Tiếng Việt không đánh dấu số nhiều trên danh từ — “ba quyển sách” đã đủ nghĩa nên đuôi <span class="mono">-s</span> dễ bị bỏ quên.</p>
+      </div>
+
+      <div class="trap">
+        <div class="trap-head">
+          <span class="trap-no">2</span><span class="trap-name">Thiếu hoặc thừa mạo từ</span>
+          <span class="trap-freq"><span class="freq-bar"><i style="width:79%"></i></span><span class="mini-num">11</span></span>
+        </div>
+        <p class="sent sent-bad"><span class="sent-tag">✕</span><span>My sister is <em>teacher</em> at a primary school.</span></p>
+        <p class="sent sent-good"><span class="sent-tag">✓</span><span>My sister is <em>a teacher</em> at a primary school.</span></p>
+        <p class="trap-why">Tiếng Việt không có <span class="mono">a / an / the</span>. Quy tắc gốc: danh từ đếm được số ít <b>luôn</b> cần một từ hạn định đứng trước.</p>
+      </div>
+
+      <div class="trap">
+        <div class="trap-head">
+          <span class="trap-no">3</span><span class="trap-name">Thiếu <span class="mono">-s</span> ở ngôi thứ ba số ít</span>
+          <span class="trap-freq"><span class="freq-bar"><i style="width:64%"></i></span><span class="mini-num">9</span></span>
+        </div>
+        <p class="sent sent-bad"><span class="sent-tag">✕</span><span>He <em>go</em> to the gym every morning.</span></p>
+        <p class="sent sent-good"><span class="sent-tag">✓</span><span>He <em>goes</em> to the gym every morning.</span></p>
+        <p class="trap-why">Động từ tiếng Việt không đổi theo chủ ngữ, nên bước hòa hợp chủ ngữ – động từ hoàn toàn không tồn tại trong tiếng mẹ đẻ.</p>
+      </div>
+
+      <div class="trap">
+        <div class="trap-head">
+          <span class="trap-no">4</span><span class="trap-name">Quá khứ đơn thay cho hiện tại hoàn thành</span>
+          <span class="trap-freq"><span class="freq-bar"><i style="width:57%"></i></span><span class="mini-num">8</span></span>
+        </div>
+        <p class="sent sent-bad"><span class="sent-tag">✕</span><span>I <em>already finished</em> my homework.</span></p>
+        <p class="sent sent-good"><span class="sent-tag">✓</span><span>I <em>have already finished</em> my homework.</span></p>
+        <p class="trap-why">Một chữ “đã” trong tiếng Việt gánh cả quá khứ đơn lẫn hiện tại hoàn thành, nên người học không thấy lý do phải phân biệt.</p>
+      </div>
+
+      <div class="trap">
+        <div class="trap-head">
+          <span class="trap-no">5</span><span class="trap-name">Thiếu động từ <span class="mono">to be</span> trước tính từ</span>
+          <span class="trap-freq"><span class="freq-bar"><i style="width:43%"></i></span><span class="mini-num">6</span></span>
+        </div>
+        <p class="sent sent-bad"><span class="sent-tag">✕</span><span>She <em>very tired</em> after the trip.</span></p>
+        <p class="sent sent-good"><span class="sent-tag">✓</span><span>She <em>is very tired</em> after the trip.</span></p>
+        <p class="trap-why">Tiếng Việt nói thẳng “Cô ấy rất mệt”, không cần hệ từ. Trong tiếng Anh, tính từ làm vị ngữ <b>bắt buộc</b> có <span class="mono">be</span>.</p>
+      </div>
+
+      <div class="trap">
+        <div class="trap-head">
+          <span class="trap-no">6</span><span class="trap-name">Trật tự tính từ – danh từ</span>
+          <span class="trap-freq"><span class="freq-bar"><i style="width:36%"></i></span><span class="mini-num">5</span></span>
+        </div>
+        <p class="sent sent-bad"><span class="sent-tag">✕</span><span>He drives a <em>car red</em>.</span></p>
+        <p class="sent sent-good"><span class="sent-tag">✓</span><span>He drives a <em>red car</em>.</span></p>
+        <p class="trap-why">Tiếng Việt đặt tính từ <b>sau</b> danh từ (“xe màu đỏ”), tiếng Anh đặt <b>trước</b>.</p>
+      </div>
+
+      <div class="trap">
+        <div class="trap-head">
+          <span class="trap-no">7</span><span class="trap-name">Giới từ dịch từng chữ</span>
+          <span class="trap-freq"><span class="freq-bar"><i style="width:29%"></i></span><span class="mini-num">4</span></span>
+        </div>
+        <p class="sent sent-bad"><span class="sent-tag">✕</span><span>It <em>depends of</em> the weather.</span></p>
+        <p class="sent sent-good"><span class="sent-tag">✓</span><span>It <em>depends on</em> the weather.</span></p>
+        <p class="trap-why">“Phụ thuộc <b>vào</b>” không dịch thành <span class="mono">of</span>. Giới từ phải học theo cụm cố định, không dịch rời từng chữ.</p>
+      </div>
+    </div>
+
+    <div class="row wrapping anim anim-2" style="margin-top:14px">
+      <a class="btn btn-primary" href="luyen-tap.html"><i data-ico="target"></i> Luyện riêng 7 lỗi này</a>
+      <a class="btn" href="so-loi.html"><i data-ico="flag"></i> Xem lỗi tôi đã mắc</a>
+    </div>
+  </section>
+
+</div>
+</div>
+
+<script src="../app.js"></script>
+<script>
+(function () {
+  /* ---- Đổi tab ---- */
+  var SUB = {
+    all:  '16 chủ điểm từ A1 đến C1. Học quy tắc, luyện bằng 4 dạng bài, rồi sửa đúng những lỗi bạn hay mắc.',
+    weak: 'Những chủ điểm bạn trả lời sai nhiều nhất trong 30 ngày qua — luyện ở đây hiệu quả hơn học lại từ đầu.',
+    trap: 'Bảy lỗi sinh ra từ khác biệt giữa tiếng Việt và tiếng Anh — nhóm lỗi chiếm phần lớn bài viết của người học Việt.'
+  };
+  var sections = { all: 'tab-all', weak: 'tab-weak', trap: 'tab-trap' };
+
+  document.querySelectorAll('.tabs button').forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll('.tabs button').forEach(function (x) { x.classList.remove('is-active'); });
+      b.classList.add('is-active');
+      var t = b.dataset.tab;
+      Object.keys(sections).forEach(function (k) {
+        document.getElementById(sections[k]).hidden = (k !== t);
+      });
+      document.getElementById('sub').textContent = SUB[t];
+    };
+  });
+
+  /* ---- Lọc theo cấp độ CEFR ---- */
+  var cards = Array.prototype.slice.call(document.querySelectorAll('#topicGrid .deck'));
+  var count = document.getElementById('lvCount');
+  var empty = document.getElementById('lvEmpty');
+
+  document.querySelectorAll('#lvFilter .chip').forEach(function (c) {
+    c.onclick = function () {
+      document.querySelectorAll('#lvFilter .chip').forEach(function (x) { x.classList.remove('is-active'); });
+      c.classList.add('is-active');
+      var lv = c.dataset.lv, n = 0;
+      cards.forEach(function (card) {
+        var show = (lv === 'all' || card.dataset.lv === lv);
+        card.style.display = show ? '' : 'none';
+        if (show) n++;
+      });
+      count.textContent = n + ' chủ điểm';
+      empty.hidden = n > 0;
+    };
+  });
+})();
+</script>
+</body>
+</html>

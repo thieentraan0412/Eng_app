@@ -1,4 +1,6 @@
 // Danh sách các trang trong app + nhãn tiếng Việt cho sidebar
+import type { IconName } from '../components/Icon'
+
 export type PageKey =
   | 'dashboard'
   | 'vocabulary'
@@ -10,14 +12,41 @@ export type PageKey =
   | 'usage'
   | 'settings'
 
-export const NAV: { key: PageKey; label: string; icon: string }[] = [
-  { key: 'dashboard', label: 'Trang chủ', icon: '🏠' },
-  { key: 'vocabulary', label: 'Từ vựng', icon: '📇' },
-  { key: 'flashcard', label: 'Ôn tập', icon: '🔁' },
-  { key: 'exercise', label: 'Bài tập', icon: '📝' },
-  { key: 'reading', label: 'Đọc', icon: '📖' },
-  { key: 'writing', label: 'Viết', icon: '✍️' },
-  { key: 'sentence', label: 'Chép câu', icon: '✏️' },
-  { key: 'usage', label: 'Thống kê', icon: '📊' },
-  { key: 'settings', label: 'Cài đặt', icon: '⚙️' },
+export interface NavItem {
+  key: PageKey
+  label: string
+  icon: IconName
+  /** Chỉ số hiện bên phải mục: tổng thẻ (cards) hoặc thẻ đến hạn (due) */
+  count?: 'cards' | 'due'
+}
+
+// Nhóm theo mockup EngMaster_Redesign: nhóm đầu không có nhãn
+export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
+  {
+    label: '',
+    items: [{ key: 'dashboard', label: 'Trang chủ', icon: 'home' }],
+  },
+  {
+    label: 'Luyện tập',
+    items: [
+      { key: 'vocabulary', label: 'Từ vựng', icon: 'layers', count: 'cards' },
+      { key: 'flashcard', label: 'Ôn tập', icon: 'repeat', count: 'due' },
+      { key: 'exercise', label: 'Bài tập', icon: 'tasks' },
+    ],
+  },
+  {
+    label: 'Kỹ năng',
+    items: [
+      { key: 'reading', label: 'Đọc', icon: 'book' },
+      { key: 'writing', label: 'Viết', icon: 'pen' },
+      { key: 'sentence', label: 'Chép câu', icon: 'keyboard' },
+    ],
+  },
+  {
+    label: 'Khác',
+    items: [
+      { key: 'usage', label: 'Thống kê', icon: 'chart' },
+      { key: 'settings', label: 'Cài đặt', icon: 'settings' },
+    ],
+  },
 ]

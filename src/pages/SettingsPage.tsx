@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { isDesktop } from '../platform'
+import Icon from '../components/Icon'
 import type { UpdateStatus } from '../vite-env'
 import '../styles/settings.css'
 
@@ -42,10 +43,27 @@ export default function SettingsPage() {
   const [hotkey, setHotkey] = useState(
     localStorage.getItem('desktop_translate_hotkey') ?? 'Ctrl+Alt+D',
   )
+  // Cửa sổ desktop: luôn nổi trên cùng + thu gọn kiểu hình-trong-hình.
+  // alwaysOnTop được nhớ giữa các lần mở app; mini chỉ tính trong phiên đang chạy.
+  const [onTop, setOnTop] = useState(localStorage.getItem('always_on_top') === '1')
+  const [mini, setMini] = useState(false)
   const [recording, setRecording] = useState(false)
   const [hkErr, setHkErr] = useState<string | null>(null)
   const [appVersion, setAppVersion] = useState(__APP_VERSION__)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
+  // Tùy chọn phiên ôn — dùng chung khóa localStorage với trang Ôn tập
+  const [frontVi, setFrontVi] = useState(localStorage.getItem('fc_front_vi') === '1')
+  const [autoSpeak, setAutoSpeak] = useState(localStorage.getItem('fc_autospeak') !== '0')
+
+  const chooseFront = (vi: boolean) => {
+    setFrontVi(vi)
+    localStorage.setItem('fc_front_vi', vi ? '1' : '0')
+  }
+  const toggleAutoSpeak = () => {
+    const next = !autoSpeak
+    setAutoSpeak(next)
+    localStorage.setItem('fc_autospeak', next ? '1' : '0')
+  }
 
   const toggleDeskTrans = () => {
     const next = !deskTrans
@@ -54,6 +72,44 @@ export default function SettingsPage() {
     window.dispatchEvent(new CustomEvent('desktop-translate-changed', { detail: next }))
     window.api?.setDesktopTranslate(next)
   }
+
+  const toggleOnTop = () => {
+    const next = !onTop
+    setOnTop(next)
+    localStorage.setItem('always_on_top', next ? '1' : '0')
+    void window.api?.setAlwaysOnTop(next)
+  }
+
+  // Mini tự kéo theo "luôn nổi" (main bật khi vào, trả lại trạng thái cũ khi ra)
+  // -> đọc lại trạng thái thật thay vì tự đoán.
+  const toggleMini = async () => {
+    const next = !mini
+    setMini(next)
+    await window.api?.setMiniWindow(next)
+    const s = await window.api?.getWindowState()
+    if (s) {
+      setMini(s.mini)
+      setOnTop(s.alwaysOnTop)
+    }
+  }
+
+  // Cửa sổ có thể đã đổi trạng thái ở nơi khác (hoặc trang này vừa mở lại)
+  // -> đọc trạng thái thật từ main để công tắc không hiển thị sai.
+  useEffect(() => {
+    if (!isDesktop) return
+    let active = true
+    void window.api
+      .getWindowState()
+      .then((s) => {
+        if (!active) return
+        setOnTop(s.alwaysOnTop)
+        setMini(s.mini)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
 
   // Phím tắt toàn cục vừa bật/tắt tính năng (AppLayout bắn event) -> đồng bộ nút
   useEffect(() => {
@@ -170,196 +226,319 @@ export default function SettingsPage() {
   return (
     <div className="page set-page">
       <div className="set-head">
-        <h1 className="page-title">Cài đặt</h1>
-        <p className="set-sub">Tài khoản, giao diện và trợ lý viết</p>
+        <h1>Cài đặt</h1>
+        <p>Tài khoản, giao diện và trợ lý viết.</p>
       </div>
 
-      {/* Tài khoản */}
-      <div className="set-card">
+      {/* ------------------------------------------------- Tài khoản */}
+      <section className="set-card">
         <div className="set-row">
-          <div className="set-ico set-ava">{initial}</div>
-          <div className="set-main">
-            <div className="set-title">{user?.email}</div>
-            <div className="set-desc">Tài khoản · đồng bộ đám mây</div>
-          </div>
-          <button className="btn set-signout" onClick={signOut}>
-            Đăng xuất
-          </button>
-        </div>
-      </div>
-
-      {/* Tùy chọn */}
-      <div className="set-card set-section-gap">
-        <div className="set-card-title">Tùy chọn</div>
-
-        <div className="set-row">
-          <div className="set-ico set-i1">🌗</div>
-          <div className="set-main">
-            <div className="set-title">Giao diện</div>
-            <div className="set-desc">Chế độ hiển thị Sáng / Tối</div>
-          </div>
-          <div className="set-seg">
-            <button
-              className={`set-seg-btn${theme !== 'dark' ? ' active' : ''}`}
-              onClick={() => theme === 'dark' && toggle()}
-            >
-              ☀️ Sáng
+          <span className="set-ava">{initial}</span>
+          <span className="set-main">
+            <span className="set-title">{user?.email}</span>
+            <span className="set-desc">Tài khoản · đồng bộ đám mây</span>
+          </span>
+          <span className="set-side">
+            <button className="set-btn set-btn-danger" onClick={signOut}>
+              <Icon name="logout" /> Đăng xuất
             </button>
-            <button
-              className={`set-seg-btn${theme === 'dark' ? ' active' : ''}`}
-              onClick={() => theme !== 'dark' && toggle()}
-            >
-              🌙 Tối
-            </button>
-          </div>
+          </span>
         </div>
+      </section>
 
+      {/* --------------------------------------------------- Giao diện */}
+      <h2 className="set-label">Giao diện</h2>
+      <section className="set-card">
         <div className="set-row">
-          <div className="set-ico set-i2">✨</div>
-          <div className="set-main">
-            <div className="set-title">Gợi ý từ khi viết</div>
-            <div className="set-desc">Hiện gợi ý từ tiếp theo khi bạn gõ</div>
-          </div>
-          <label className="switch">
-            <input type="checkbox" checked={suggest} onChange={toggleSuggest} />
-            <span className="slider"></span>
-          </label>
+          <span className="set-ico">
+            <Icon name="moon" />
+          </span>
+          <span className="set-main">
+            <span className="set-title">Chế độ hiển thị</span>
+            <span className="set-desc">Sáng hoặc Tối — áp dụng cho toàn bộ ứng dụng</span>
+          </span>
+          <span className="set-side">
+            <span className="set-seg">
+              <button
+                className={theme !== 'dark' ? 'is-active' : ''}
+                onClick={() => theme === 'dark' && toggle()}
+              >
+                <Icon name="sun" /> Sáng
+              </button>
+              <button
+                className={theme === 'dark' ? 'is-active' : ''}
+                onClick={() => theme !== 'dark' && toggle()}
+              >
+                <Icon name="moon" /> Tối
+              </button>
+            </span>
+          </span>
         </div>
+      </section>
 
-        <div className="set-row">
-          <div className="set-ico set-i3">🔤</div>
-          <div className="set-main">
-            <div className="set-title">Kiểm tra chính tả</div>
-            <div className="set-desc">Gạch chân từ sai + gợi ý sửa</div>
-          </div>
-          <label className="switch">
-            <input type="checkbox" checked={spell} onChange={toggleSpell} />
-            <span className="slider"></span>
-          </label>
-        </div>
-
-        <div className="set-row">
-          <div className="set-ico set-i4">🧠</div>
-          <div className="set-main">
-            <div className="set-title">Kiểm tra câu</div>
-            <div className="set-desc">
-              Ngữ pháp, văn phong, dùng từ, collocation (cần mạng)
+      {/* Cửa sổ nổi / thu gọn — chỉ có ở bản desktop (web không điều khiển được cửa sổ) */}
+      {isDesktop && (
+        <>
+          <h2 className="set-label">Cửa sổ</h2>
+          <section className="set-card">
+            <div className="set-row">
+              <span className="set-ico">
+                <Icon name="pin" />
+              </span>
+              <span className="set-main">
+                <span className="set-title">Luôn nổi trên cùng</span>
+                <span className="set-desc">
+                  {mini
+                    ? 'Đang bật theo chế độ hình trong hình — tắt chế độ đó để đổi lại'
+                    : 'Giữ EngMaster nằm trên các ứng dụng khác để vừa học vừa làm việc'}
+                </span>
+              </span>
+              <span className="set-side">
+                <label className="set-switch">
+                  <input
+                    type="checkbox"
+                    checked={onTop}
+                    disabled={mini}
+                    onChange={toggleOnTop}
+                  />
+                  <span className="track" />
+                </label>
+              </span>
             </div>
-          </div>
-          <label className="switch">
-            <input type="checkbox" checked={grammar} onChange={toggleGrammar} />
-            <span className="slider"></span>
-          </label>
+
+            <div className="set-row">
+              <span className="set-ico">
+                <Icon name="pip" />
+              </span>
+              <span className="set-main">
+                <span className="set-title">Chế độ hình trong hình</span>
+                <span className="set-desc">
+                  Thu cửa sổ về góc phải-dưới màn hình (420×640) và luôn nổi trên các ứng dụng
+                  khác — tắt để trả lại kích thước cũ
+                </span>
+              </span>
+              <span className="set-side">
+                <label className="set-switch">
+                  <input type="checkbox" checked={mini} onChange={toggleMini} />
+                  <span className="track" />
+                </label>
+              </span>
+            </div>
+          </section>
+        </>
+      )}
+
+      {/* ------------------------------------------------ Trợ lý viết */}
+      <h2 className="set-label">Trợ lý viết</h2>
+      <section className="set-card">
+        <div className="set-row">
+          <span className="set-ico">
+            <Icon name="sparkle" />
+          </span>
+          <span className="set-main">
+            <span className="set-title">Gợi ý từ khi viết</span>
+            <span className="set-desc">Hiện gợi ý từ tiếp theo khi bạn gõ</span>
+          </span>
+          <span className="set-side">
+            <label className="set-switch">
+              <input type="checkbox" checked={suggest} onChange={toggleSuggest} />
+              <span className="track" />
+            </label>
+          </span>
+        </div>
+
+        <div className="set-row">
+          <span className="set-ico">
+            <Icon name="type" />
+          </span>
+          <span className="set-main">
+            <span className="set-title">Kiểm tra chính tả</span>
+            <span className="set-desc">Gạch chân từ sai kèm gợi ý sửa</span>
+          </span>
+          <span className="set-side">
+            <label className="set-switch">
+              <input type="checkbox" checked={spell} onChange={toggleSpell} />
+              <span className="track" />
+            </label>
+          </span>
+        </div>
+
+        <div className="set-row">
+          <span className="set-ico">
+            <Icon name="target" />
+          </span>
+          <span className="set-main">
+            <span className="set-title">Kiểm tra câu</span>
+            <span className="set-desc">
+              Ngữ pháp, văn phong, dùng từ, collocation (cần mạng)
+            </span>
+          </span>
+          <span className="set-side">
+            <label className="set-switch">
+              <input type="checkbox" checked={grammar} onChange={toggleGrammar} />
+              <span className="track" />
+            </label>
+          </span>
         </div>
 
         {/* Dịch toàn màn hình là tính năng nền của desktop → ẩn trên web */}
         {isDesktop && (
           <div className="set-row">
-            <div className="set-ico set-i5">🌐</div>
-            <div className="set-main">
-              <div className="set-title">Dịch nhanh toàn màn hình</div>
-              <div className="set-desc">
+            <span className="set-ico">
+              <Icon name="lang" />
+            </span>
+            <span className="set-main">
+              <span className="set-title">Dịch nhanh toàn màn hình</span>
+              <span className="set-desc">
                 {deskTrans
                   ? 'Bôi/tô chữ ở BẤT KỲ app nào (trình duyệt, Word, PDF…) để dịch'
                   : 'Bôi/tô chữ ở bất kỳ ứng dụng nào để dịch nhanh'}
-              </div>
-              <div className="hotkey-line muted">
+              </span>
+              <span className="set-hotkey">
                 Phím tắt bật/tắt:{' '}
                 {recording ? (
-                  <span className="hotkey-recording">
+                  <span className="set-recording">
                     nhấn tổ hợp phím (kèm Ctrl/Alt)… · Esc hủy · Backspace gỡ
                   </span>
                 ) : (
                   <>
-                    <kbd className="hotkey-kbd">{hotkey || 'chưa đặt'}</kbd>
-                    <button className="btn tiny" onClick={() => setRecording(true)}>
+                    <kbd className="set-kbd">{hotkey || 'chưa đặt'}</kbd>
+                    <button className="set-btn set-btn-sm" onClick={() => setRecording(true)}>
                       Đổi
                     </button>
                   </>
                 )}
-                {hkErr && <span className="hotkey-err">⚠️ {hkErr}</span>}
-              </div>
-            </div>
-            <label className="switch">
-              <input type="checkbox" checked={deskTrans} onChange={toggleDeskTrans} />
-              <span className="slider"></span>
-            </label>
+                {hkErr && <span className="set-hotkey-err">{hkErr}</span>}
+              </span>
+            </span>
+            <span className="set-side">
+              <label className="set-switch">
+                <input type="checkbox" checked={deskTrans} onChange={toggleDeskTrans} />
+                <span className="track" />
+              </label>
+            </span>
           </div>
         )}
-      </div>
+      </section>
+
+      {/* ----------------------------------------------------- Ôn tập */}
+      <h2 className="set-label">Ôn tập</h2>
+      <section className="set-card">
+        <div className="set-row">
+          <span className="set-ico">
+            <Icon name="repeat" />
+          </span>
+          <span className="set-main">
+            <span className="set-title">Chiều ôn mặc định</span>
+            <span className="set-desc">Áp dụng khi bắt đầu một phiên ôn mới</span>
+          </span>
+          <span className="set-side">
+            <select
+              className="set-select"
+              value={frontVi ? 'vi' : 'en'}
+              onChange={(e) => chooseFront(e.target.value === 'vi')}
+            >
+              <option value="en">Anh → Việt</option>
+              <option value="vi">Việt → Anh</option>
+            </select>
+          </span>
+        </div>
+
+        <div className="set-row">
+          <span className="set-ico">
+            <Icon name="speak" />
+          </span>
+          <span className="set-main">
+            <span className="set-title">Tự phát âm khi lật thẻ</span>
+            <span className="set-desc">Đọc từ tiếng Anh bằng giọng hệ thống</span>
+          </span>
+          <span className="set-side">
+            <label className="set-switch">
+              <input type="checkbox" checked={autoSpeak} onChange={toggleAutoSpeak} />
+              <span className="track" />
+            </label>
+          </span>
+        </div>
+      </section>
 
       {/* Auto-update chỉ hỗ trợ bản desktop cài bằng NSIS. */}
       {isDesktop && (
-        <div className="set-card set-section-gap">
-          <div className="set-card-title">Cập nhật ứng dụng</div>
-          <div className="set-row set-update-row">
-            <div className="set-ico set-i6">⬆️</div>
-            <div className="set-main">
-              <div className="set-title">EngMaster v{appVersion}</div>
-              <div className="set-desc">Phiên bản hiện tại trên máy của bạn</div>
+        <>
+          <h2 className="set-label">Cập nhật ứng dụng</h2>
+          <section className="set-card">
+            <div className="set-row set-update-row">
+              <span className="set-ico">
+                <Icon name="refresh" />
+              </span>
+              <span className="set-main">
+                <span className="set-title">EngMaster v{appVersion}</span>
+                <span className="set-desc">Phiên bản hiện tại trên máy của bạn</span>
 
-              {updateStatus && (
-                <div
-                  className={`set-update-status is-${updateStatus.state}`}
-                  role="status"
-                  aria-live="polite"
-                >
-                  {updateStatus.state === 'checking' && 'Đang kiểm tra cập nhật…'}
-                  {updateStatus.state === 'none' && 'Bạn đang dùng bản mới nhất ✓'}
-                  {updateStatus.state === 'available' &&
-                    `Đã tìm thấy bản v${updateStatus.version} · đang chuẩn bị tải…`}
-                  {updateStatus.state === 'downloading' && (
-                    <>
-                      <div className="set-update-progress-label">
-                        <span>Đang tải bản cập nhật…</span>
-                        <strong>{updateStatus.percent}%</strong>
-                      </div>
-                      <div
-                        className="set-update-progress"
-                        role="progressbar"
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                        aria-valuenow={updateStatus.percent}
-                      >
-                        <span style={{ width: `${updateStatus.percent}%` }} />
-                      </div>
-                    </>
-                  )}
-                  {updateStatus.state === 'ready' &&
-                    `Bản v${updateStatus.version} đã sẵn sàng để cài đặt.`}
-                  {updateStatus.state === 'error' &&
-                    'Không kiểm tra được cập nhật. Vui lòng thử lại khi có mạng.'}
-                </div>
-              )}
-            </div>
+                {updateStatus && (
+                  <div
+                    className={`set-update-status is-${updateStatus.state}`}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {updateStatus.state === 'checking' && 'Đang kiểm tra cập nhật…'}
+                    {updateStatus.state === 'none' && 'Bạn đang dùng bản mới nhất'}
+                    {updateStatus.state === 'available' &&
+                      `Đã tìm thấy bản v${updateStatus.version} · đang chuẩn bị tải…`}
+                    {updateStatus.state === 'downloading' && (
+                      <>
+                        <div className="set-update-progress-label">
+                          <span>Đang tải bản cập nhật…</span>
+                          <strong>{updateStatus.percent}%</strong>
+                        </div>
+                        <div
+                          className="set-update-progress"
+                          role="progressbar"
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={updateStatus.percent}
+                        >
+                          <span style={{ width: `${updateStatus.percent}%` }} />
+                        </div>
+                      </>
+                    )}
+                    {updateStatus.state === 'ready' &&
+                      `Bản v${updateStatus.version} đã sẵn sàng để cài đặt.`}
+                    {updateStatus.state === 'error' &&
+                      'Không kiểm tra được cập nhật. Vui lòng thử lại khi có mạng.'}
+                  </div>
+                )}
+              </span>
 
-            <div className="set-update-actions">
-              {updateStatus?.state === 'ready' ? (
-                <button className="btn primary" onClick={installUpdate}>
-                  Khởi động lại để cập nhật
-                </button>
-              ) : (
-                <button
-                  className="btn"
-                  onClick={() => void checkForUpdate()}
-                  disabled={
-                    updateStatus?.state === 'checking' ||
-                    updateStatus?.state === 'downloading' ||
-                    updateStatus?.state === 'available'
-                  }
-                >
-                  {updateStatus?.state === 'checking'
-                    ? 'Đang kiểm tra…'
-                    : updateStatus?.state === 'downloading' ||
-                        updateStatus?.state === 'available'
-                      ? 'Đang tải…'
-                      : 'Kiểm tra cập nhật'}
-                </button>
-              )}
+              <span className="set-side">
+                {updateStatus?.state === 'ready' ? (
+                  <button className="set-btn set-btn-primary" onClick={installUpdate}>
+                    Khởi động lại để cập nhật
+                  </button>
+                ) : (
+                  <button
+                    className="set-btn"
+                    onClick={() => void checkForUpdate()}
+                    disabled={
+                      updateStatus?.state === 'checking' ||
+                      updateStatus?.state === 'downloading' ||
+                      updateStatus?.state === 'available'
+                    }
+                  >
+                    {updateStatus?.state === 'checking'
+                      ? 'Đang kiểm tra…'
+                      : updateStatus?.state === 'downloading' ||
+                          updateStatus?.state === 'available'
+                        ? 'Đang tải…'
+                        : 'Kiểm tra cập nhật'}
+                  </button>
+                )}
+              </span>
             </div>
-          </div>
-        </div>
+          </section>
+        </>
       )}
+
+      <p className="set-version">EngMaster v{appVersion}</p>
     </div>
   )
 }

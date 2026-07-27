@@ -1,0 +1,514 @@
+/* ============================================================
+   Trang chủ (Dashboard) — port từ mockup 02-trang-chu
+   Phong cách "Quiet Premium": viền mảnh, bóng tiết chế, một màu
+   nhấn duy nhất, số liệu dùng tabular-nums.
+   Dùng token dùng chung (var(--...)) để giữ dark mode.
+   Tiền tố: dash-
+   ============================================================ */
+
+.page.dashboard {
+  max-width: 1120px;
+}
+
+/* ---------- Icon nét mảnh dùng trong trang ---------- */
+.dashboard .ico {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- Dải chào + hành động chính (mockup .hero) ---------- */
+.dash-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-xs);
+}
+.dash-hero h1 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.028em;
+  line-height: 1.3;
+  color: var(--text);
+}
+.dash-hero p {
+  margin: 3px 0 0;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.dash-hero-due {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ---------- Nhãn trạng thái (mockup .badge) ---------- */
+.dash-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+}
+.dash-badge::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.85;
+}
+.dash-badge.warn {
+  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--warn) 34%, var(--border));
+  color: var(--warn);
+}
+.dash-badge.plain::before {
+  display: none;
+}
+
+/* ---------- Nút chính (mockup .btn-primary) ---------- */
+.dash-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.008em;
+  white-space: nowrap;
+  cursor: pointer;
+  color: #fff;
+  background: var(--primary);
+  box-shadow: var(--shadow-primary);
+  transition: background 0.14s, transform 0.14s;
+}
+.dash-btn:hover {
+  background: var(--primary-hover);
+}
+.dash-btn:active {
+  transform: translateY(0.5px);
+}
+.dash-btn .ico {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.75;
+}
+
+/* ---------- 4 thẻ chỉ số (mockup .stat) ---------- */
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.dash-stat {
+  display: flex;
+  flex-direction: column;
+  padding: 15px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  transition: border-color 0.14s;
+}
+.dash-stat:hover {
+  border-color: var(--border-strong);
+}
+.dash-stat-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.dash-stat-top .ico {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+.dash-stat-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-soft);
+  letter-spacing: -0.005em;
+}
+.dash-stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.038em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.dash-stat-sub {
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Thẻ chung (mockup .card) ---------- */
+.dash-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  margin-bottom: 12px;
+}
+.dash-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.dash-card-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  color: var(--text);
+}
+.dash-card-head h2 .ico {
+  width: 16px;
+  height: 16px;
+  color: var(--text-soft);
+}
+.dash-card-hint {
+  font-size: 12px;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+}
+button.dash-card-hint {
+  cursor: pointer;
+  transition: color 0.14s;
+}
+button.dash-card-hint:hover {
+  color: var(--text);
+}
+.dash-card-body {
+  padding: 18px 20px;
+}
+
+/* ---------- 4 chỉ số "hôm nay" trong 1 thẻ ---------- */
+.dash-today {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.dash-today > div {
+  padding: 16px 18px;
+  border-right: 1px solid var(--border);
+}
+.dash-today > div:last-child {
+  border-right: none;
+}
+.dash-today b {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.dash-today span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.dash-today .ico {
+  width: 13px;
+  height: 13px;
+  color: var(--muted);
+}
+
+/* ---------- Hàng biểu đồ + tiến độ theo bộ ---------- */
+.dash-row {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: start;
+}
+
+/* Biểu đồ cột 14 ngày (mockup .chart) */
+.dash-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 132px;
+  padding-top: 6px;
+}
+.dash-chart-col {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  height: 100%;
+  min-width: 0;
+}
+.dash-chart-track {
+  flex: 1 1 auto;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.dash-chart-fill {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 4px;
+  background: var(--primary);
+  transition: background 0.14s, height 0.42s cubic-bezier(0.2, 0, 0.2, 1);
+}
+.dash-chart-col:hover .dash-chart-fill {
+  background: var(--primary-hover);
+}
+.dash-chart-col.is-zero .dash-chart-fill {
+  background: var(--border-strong);
+}
+.dash-chart-x {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.dash-chart-col.is-today .dash-chart-x {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* Tiến độ theo bộ (mockup .deck-line) */
+.dash-deck {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.dash-deck:last-child {
+  border-bottom: none;
+}
+.dash-deck-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13.3px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-bar {
+  width: 132px;
+  flex: 0 0 auto;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.dash-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--primary);
+  transition: width 0.42s cubic-bezier(0.2, 0, 0.2, 1);
+}
+.dash-deck-num {
+  width: 74px;
+  flex: 0 0 auto;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+.dash-deck-empty {
+  padding: 18px 20px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* ---------- Lối tắt (mockup .shortcut) ---------- */
+.dash-section-label {
+  margin: 22px 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+.dash-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.dash-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+.dash-shortcut:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+.dash-shortcut-mark {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.dash-shortcut-mark .ico {
+  width: 15px;
+  height: 15px;
+  color: var(--text-soft);
+}
+.dash-shortcut-txt {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.dash-shortcut-txt b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+}
+.dash-shortcut-txt span {
+  display: block;
+  margin-top: 1px;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.dash-shortcut > .ico {
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+  transition: transform 0.14s, color 0.14s;
+}
+.dash-shortcut:hover > .ico {
+  transform: translateX(2px);
+  color: var(--primary);
+}
+
+/* ============================================================
+   MOBILE  <= 860px — xếp chồng, giảm mật độ, vùng chạm to hơn
+   ============================================================ */
+@media (max-width: 860px) {
+  .dash-hero {
+    padding: 16px;
+  }
+  .dash-hero h1 {
+    font-size: 19px;
+  }
+  .dash-hero-due {
+    width: 100%;
+  }
+  .dash-hero-due .dash-btn {
+    flex: 1 1 auto;
+    height: 38px;
+  }
+
+  .dash-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .dash-stat-value {
+    font-size: 23px;
+  }
+
+  .dash-today {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .dash-today > div:nth-child(2n) {
+    border-right: none;
+  }
+  .dash-today > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dash-card-head {
+    padding: 12px 16px;
+  }
+  .dash-card-body {
+    padding: 15px 16px;
+  }
+
+  .dash-row {
+    grid-template-columns: 1fr;
+  }
+  .dash-chart {
+    height: 104px;
+  }
+
+  .dash-deck {
+    padding: 11px 16px;
+  }
+  .dash-bar {
+    width: 64px;
+  }
+  .dash-deck-num {
+    width: 64px;
+    font-size: 11.5px;
+  }
+
+  .dash-shortcuts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 400px) {
+  .dash-stats {
+    grid-template-columns: 1fr;
+  }
+}

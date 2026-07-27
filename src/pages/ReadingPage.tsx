@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { CloudApi, type Reading, type ReadingHighlight } from '../services/cloud/CloudApiClient'
 import { bestEnglishVoice, speak, ttsSupported } from '../services/tts'
+import Icon from '../components/Icon'
 import '../styles/reading.css'
 
 // Bảng màu bôi (highlight) — class CSS tương ứng: .hl-yellow, .hl-green…
@@ -8,6 +9,22 @@ const HL_COLORS = ['yellow', 'green', 'blue', 'pink'] as const
 
 // Cấp độ CEFR cho bài đọc (cột `level` trong DB)
 const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const
+
+// Bộ từ do AppLayout tạo khi lưu từ lúc bôi dịch
+const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
+
+// Cỡ chữ vùng đọc (mockup: nhỏ / vừa / lớn) — nhớ lựa chọn của người dùng
+const READ_SIZES = [
+  { v: 15, label: 'A', size: 11, title: 'Cỡ chữ nhỏ' },
+  { v: 17, label: 'A', size: 13, title: 'Cỡ chữ vừa' },
+  { v: 19.5, label: 'A', size: 15, title: 'Cỡ chữ lớn' },
+] as const
+
+// Ước lượng thời gian đọc: ~150 từ / phút
+function readMinutes(text: string): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length
+  return Math.max(1, Math.round(words / 150))
+}
 
 // Bỏ phần giao nhau với [start, end) khỏi danh sách vùng bôi (cắt đôi nếu cần)
 function subtractRange(ranges: ReadingHighlight[], start: number, end: number): ReadingHighlight[] {
@@ -101,6 +118,69 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
   })
   // Trạng thái đọc bài bằng TTS
   const [tts, setTts] = useState<'idle' | 'playing' | 'paused'>('idle')
+  // Cỡ chữ vùng đọc (nhớ lựa chọn) · chế độ tập trung · tiến độ đọc
+  const [fontSize, setFontSize] = useState<number>(() => {
+    const v = Number(localStorage.getItem('read_font_size'))
+    return READ_SIZES.some((s) => s.v === v) ? v : 17
+  })
+  const [focus, setFocus] = useState(false)
+  const [progress, setProgress] = useState(0)
+
+  const applyFontSize = (v: number) => {
+    setFontSize(v)
+    localStorage.setItem('read_font_size', String(v))
+  }
+
+  // Chế độ tập trung: ẩn sidebar + cột tra từ (CSS bám vào class trên <body>)
+  useEffect(() => {
+    document.body.classList.toggle('read-focus', focus)
+    return () => document.body.classList.remove('read-focus')
+  }, [focus])
+
+  // Esc: thoát chế độ tập trung
+  useEffect(() => {
+    if (!focus) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFocus(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [focus])
+
+  // Tiến độ đọc theo vị trí cuộn của vùng bài (vùng cuộn là .content, không phải window
+  // -> dùng listener ở pha capture để vẫn bắt được sự kiện scroll)
+  useEffect(() => {
+    const update = () => {
+      const el = contentRef.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      const total = r.height - window.innerHeight * 0.75
+      const done = -r.top + window.innerHeight * 0.25
+      const p = total <= 0 ? 1 : done / total
+      setProgress(Math.max(0, Math.min(1, p)) * 100)
+    }
+    update()
+    document.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      document.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [fontSize])
+
+  // Cuộn tới vùng đã bôi khi bấm ở cột bên phải + nháy sáng để dễ thấy
+  const scrollToHighlight = (h: ReadingHighlight) => {
+    const el = contentRef.current?.querySelector<HTMLElement>(
+      `mark[data-range="${h.start}-${h.end}"]`,
+    )
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.remove('is-flash')
+    void el.offsetWidth // ép trình duyệt tính lại để animation chạy lại
+    el.classList.add('is-flash')
+  }
+
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length
 
   // Đóng thanh màu / popover ghi chú khi bấm ra ngoài
   useEffect(() => {
@@ -236,6 +316,7 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
     parts.push(
       <mark
         key={`${h.start}-${h.end}`}
+        data-range={`${h.start}-${h.end}`}
         className={`hl hl-${h.color}${h.note ? ' has-note' : ''}`}
         title={h.note || 'Bấm để thêm ghi chú'}
         onClick={(e) => {
@@ -255,7 +336,6 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
         }}
       >
         {text.slice(h.start, h.end)}
-        {h.note && <span className="hl-note-dot">📝</span>}
       </mark>,
     )
     pos = h.end
@@ -264,64 +344,166 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
 
   return (
     <div className="page page-wide read-page">
-      <button className="read-back" onClick={onBack}>
-        ← Danh sách bài đọc
+      <button className="read-crumb" onClick={onBack}>
+        <Icon name="left" /> Thư viện bài đọc
       </button>
-      <h1 className="page-title read-title">
-        {reading.title} {reading.level && <span className="level-badge">{reading.level}</span>}
-      </h1>
 
-      {/* Thanh công cụ: nghe đọc bài + gợi ý thao tác */}
-      <div className="read-toolbar">
-        {ttsSupported &&
-          (tts === 'idle' ? (
-            <button className="btn small read-tts" onClick={startRead}>
-              🔊 Nghe đọc bài
-            </button>
-          ) : (
-            <>
-              {tts === 'playing' ? (
-                <button className="btn small read-tts" onClick={pauseRead}>
-                  ⏸ Tạm dừng
+      <div className="read-doc-head">
+        <h1>{reading.title}</h1>
+        <p className="read-doc-meta">
+          {reading.level && <span className="read-badge">{reading.level}</span>}
+          <span>
+            {wordCount.toLocaleString('vi-VN')} từ · khoảng {readMinutes(text)} phút đọc
+          </span>
+          <span>· {highlights.length} vùng đã bôi</span>
+        </p>
+      </div>
+
+      <div className="read-grid2">
+        <div className="read-col">
+          {/* Thanh công cụ dính: nghe đọc · cỡ chữ · tập trung · tiến độ */}
+          <div className="read-bar">
+            {ttsSupported &&
+              (tts === 'idle' ? (
+                <button className="read-btn read-btn-sm" onClick={startRead}>
+                  <Icon name="speak" /> <span className="read-btn-label">Nghe đọc bài</span>
                 </button>
               ) : (
-                <button className="btn small read-tts" onClick={resumeRead}>
-                  ▶️ Tiếp tục
+                <>
+                  {tts === 'playing' ? (
+                    <button className="read-btn read-btn-sm" onClick={pauseRead}>
+                      <Icon name="x" /> <span className="read-btn-label">Tạm dừng</span>
+                    </button>
+                  ) : (
+                    <button className="read-btn read-btn-sm" onClick={resumeRead}>
+                      <Icon name="play" /> <span className="read-btn-label">Tiếp tục</span>
+                    </button>
+                  )}
+                  <button className="read-btn read-btn-sm" onClick={stopRead}>
+                    <span className="read-btn-label">Dừng</span>
+                  </button>
+                </>
+              ))}
+
+            <div className="read-seg" role="group" aria-label="Cỡ chữ">
+              {READ_SIZES.map((s) => (
+                <button
+                  key={s.v}
+                  className={fontSize === s.v ? 'is-active' : ''}
+                  title={s.title}
+                  style={{ fontSize: s.size }}
+                  onClick={() => applyFontSize(s.v)}
+                >
+                  {s.label}
                 </button>
-              )}
-              <button className="btn small" onClick={stopRead}>
-                ⏹ Dừng
-              </button>
-            </>
-          ))}
-        <span className="read-hint">
-          💡 Bôi chữ để dịch/bôi màu · bấm vùng đã bôi để thêm ghi chú
-        </span>
-      </div>
+              ))}
+            </div>
 
-      {/* Thống kê từ đã tra trong bài này */}
-      {lookups.length > 0 && (
-        <details className="lookup-stats">
-          <summary>
-            🔍 Đã tra <strong>{lookups.length}</strong> từ trong bài
-          </summary>
-          <div className="lookup-chips">
-            {lookups.map((w) => (
-              <span className="wc-chip" key={w}>
-                {w}
-              </span>
-            ))}
+            <button
+              className={focus ? 'read-btn read-btn-sm read-btn-primary' : 'read-btn read-btn-sm'}
+              onClick={() => setFocus((f) => !f)}
+            >
+              <Icon name={focus ? 'x' : 'target'} />{' '}
+              <span className="read-btn-label">{focus ? 'Thoát tập trung' : 'Tập trung'}</span>
+            </button>
+
+            <div className="read-spacer" />
+            <span className="read-bar-hint">
+              <Icon name="bulb" /> Bôi chữ để tra nghĩa · bấm vùng đã bôi để ghi chú
+            </span>
+            <div className="read-prog">
+              <i style={{ width: `${progress}%` }} />
+            </div>
           </div>
-          <button className="btn tiny" onClick={clearLookups}>
-            Xóa lịch sử tra
-          </button>
-        </details>
-      )}
 
-      <div className="reading-text" ref={contentRef} onMouseUp={handleMouseUp}>
-        {parts}
+          <article
+            className="reading-text"
+            ref={contentRef}
+            onMouseUp={handleMouseUp}
+            style={{ ['--read-size' as string]: `${fontSize}px` }}
+          >
+            {parts}
+          </article>
+        </div>
+
+        {/* ------------------------------------------- Cột bên phải */}
+        <aside className="read-aside">
+          <div className="read-card-box">
+            <div className="read-card-head">
+              <h2>
+                <Icon name="bulb" /> Vùng đã bôi
+              </h2>
+              <span className="read-card-hint">{highlights.length}</span>
+            </div>
+            {highlights.length === 0 ? (
+              <p className="read-saved-empty">
+                Chưa bôi vùng nào. Bôi chữ trong bài rồi chọn màu để đánh dấu, bấm lại vùng đã
+                bôi để thêm ghi chú.
+              </p>
+            ) : (
+              highlights.map((h) => (
+                <div key={`${h.start}-${h.end}`}>
+                  <button
+                    className="read-saved-row"
+                    onClick={() => scrollToHighlight(h)}
+                    title="Bấm để tới vị trí trong bài"
+                  >
+                    <span className={`read-saved-dot hl-${h.color}`} />
+                    <b>{text.slice(h.start, h.end)}</b>
+                    <span
+                      className="read-ibtn danger"
+                      role="button"
+                      tabIndex={0}
+                      title="Bỏ bôi"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        save(subtractRange(highlights, h.start, h.end))
+                      }}
+                    >
+                      <Icon name="trash" />
+                    </span>
+                  </button>
+                  {h.note && (
+                    <span className="read-saved-note">
+                      <Icon name="pencil" /> {h.note}
+                    </span>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="read-card-box">
+            <div className="read-card-head">
+              <h2>
+                <Icon name="search" /> Từ đã tra
+              </h2>
+              {lookups.length > 0 ? (
+                <button className="read-card-hint" onClick={clearLookups}>
+                  Xóa lịch sử
+                </button>
+              ) : (
+                <span className="read-card-hint">0</span>
+              )}
+            </div>
+            {lookups.length === 0 ? (
+              <p className="read-saved-empty">
+                Bôi một từ trong bài để tra nghĩa — các từ đã tra sẽ được liệt kê ở đây.
+              </p>
+            ) : (
+              <div className="read-lookup-chips">
+                {lookups.map((w) => (
+                  <span className="read-tok" key={w}>
+                    {w}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </aside>
       </div>
 
+      {/* Thanh nổi khi bôi chữ (mockup .sel-pop) */}
       {bar && (
         <div className="hl-toolbar" style={{ left: bar.x, top: bar.y }}>
           {HL_COLORS.map((c) => (
@@ -333,23 +515,24 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
               onClick={() => applyColor(c)}
             />
           ))}
+          <span className="hl-sep" />
           {ttsSupported && (
             <button
-              className="hl-eraser"
+              className="hl-act"
               title="Đọc đoạn đang chọn"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => speak(text.slice(bar.start, bar.end))}
             >
-              🔊
+              <Icon name="speak" />
             </button>
           )}
           <button
-            className="hl-eraser"
+            className="hl-act danger"
             title="Xóa bôi màu"
             onMouseDown={(e) => e.preventDefault()}
             onClick={erase}
           >
-            ⌫
+            <Icon name="trash" />
           </button>
         </div>
       )}
@@ -357,7 +540,10 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
       {/* Popover ghi chú cho vùng bôi màu */}
       {notePop && (
         <div className="hl-note-pop" style={{ left: notePop.x, top: notePop.y }}>
-          <div className="hl-note-title">📝 Ghi chú cho “{text.slice(notePop.start, notePop.end).slice(0, 40)}”</div>
+          <div className="hl-note-title">
+            <Icon name="pencil" /> Ghi chú cho “
+            {text.slice(notePop.start, notePop.end).slice(0, 40)}”
+          </div>
           <textarea
             autoFocus
             rows={3}
@@ -370,12 +556,12 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
             }}
           />
           <div className="hl-note-actions">
-            <button className="btn tiny primary" onClick={saveNote}>
-              💾 Lưu
+            <button className="read-btn read-btn-sm read-btn-primary" onClick={saveNote}>
+              <Icon name="save" /> Lưu
             </button>
             {notePop.draft.trim() && (
               <button
-                className="btn tiny danger"
+                className="read-btn read-btn-sm"
                 onClick={() => {
                   setNotePop({ ...notePop, draft: '' })
                   save(
@@ -391,7 +577,7 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
                 Xóa ghi chú
               </button>
             )}
-            <button className="btn tiny" onClick={() => setNotePop(null)}>
+            <button className="read-btn read-btn-sm" onClick={() => setNotePop(null)}>
               Đóng
             </button>
           </div>
@@ -408,8 +594,11 @@ export default function ReadingPage() {
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState({ title: '', content: '', level: '' })
-  // Lọc danh sách theo cấp độ (chip A1–C2)
+  // Lọc danh sách theo cấp độ (chip A1–C2) + ô tìm theo tiêu đề/nội dung
   const [levelFilter, setLevelFilter] = useState('')
+  const [query, setQuery] = useState('')
+  // Số từ đang có trong bộ "Từ đã lưu khi đọc" — hiện ở nhãn cạnh ô tìm
+  const [savedWords, setSavedWords] = useState(0)
 
   const load = async () => {
     try {
@@ -420,6 +609,9 @@ export default function ReadingPage() {
   }
   useEffect(() => {
     load()
+    CloudApi.statsByDeck()
+      .then((rows) => setSavedWords(rows.find((d) => d.name === SAVED_DECK_NAME)?.total ?? 0))
+      .catch(() => setSavedWords(0))
   }, [])
 
   const create = async (e: FormEvent) => {
@@ -454,55 +646,90 @@ export default function ReadingPage() {
     )
   }
 
-  const shown = levelFilter ? readings.filter((r) => r.level === levelFilter) : readings
+  const q = query.trim().toLowerCase()
+  const shown = readings.filter(
+    (r) =>
+      (!levelFilter || r.level === levelFilter) &&
+      (!q ||
+        r.title.toLowerCase().includes(q) ||
+        (r.content ?? '').toLowerCase().includes(q)),
+  )
   // Chỉ hiện hàng lọc khi có bài gắn cấp độ
   const hasLevels = readings.some((r) => r.level)
+
+  const openForm = () => {
+    setAdding(true)
+    window.setTimeout(() => document.getElementById('readTitle')?.focus(), 0)
+  }
 
   return (
     <div className="page read-list-page">
       <div className="read-head">
         <div>
-          <h1 className="page-title">Đọc & tra từ</h1>
-          <p className="read-sub">
-            Thư viện bài đọc của bạn — bôi chữ để dịch và lưu từ mới.
+          <h1>Đọc &amp; tra từ</h1>
+          <p>
+            Thư viện bài đọc của bạn — bôi chữ để dịch và lưu từ mới vào bộ “{SAVED_DECK_NAME}”.
           </p>
         </div>
-        <button className="btn primary" onClick={() => setAdding((a) => !a)}>
-          {adding ? '× Đóng' : '+ Thêm bài đọc'}
+        <button className="read-btn read-btn-primary" onClick={openForm}>
+          <Icon name="plus" /> Thêm bài đọc
         </button>
       </div>
+
       {error && <div className="alert error">{error}</div>}
 
-      {hasLevels && (
-        <div className="read-filter">
-          <button
-            className={levelFilter === '' ? 'tab active' : 'tab'}
-            onClick={() => setLevelFilter('')}
-          >
-            Tất cả
-          </button>
-          {LEVELS.filter((l) => readings.some((r) => r.level === l)).map((l) => (
+      <div className="read-toolbar">
+        <label className="read-search">
+          <Icon name="search" />
+          <input
+            className="read-input"
+            type="search"
+            placeholder="Tìm bài đọc…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+
+        {hasLevels && (
+          <div className="read-chipset">
             <button
-              key={l}
-              className={levelFilter === l ? 'tab active' : 'tab'}
-              onClick={() => setLevelFilter(l)}
+              className={levelFilter ? 'read-chip' : 'read-chip is-active'}
+              onClick={() => setLevelFilter('')}
             >
-              {l}
+              Tất cả
             </button>
-          ))}
-        </div>
-      )}
+            {LEVELS.filter((l) => readings.some((r) => r.level === l)).map((l) => (
+              <button
+                key={l}
+                className={levelFilter === l ? 'read-chip is-active' : 'read-chip'}
+                onClick={() => setLevelFilter(levelFilter === l ? '' : l)}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="read-spacer" />
+        {savedWords > 0 && (
+          <span className="read-badge" title={`Bộ “${SAVED_DECK_NAME}”`}>
+            <Icon name="bulb" /> {savedWords} từ đã lưu khi đọc
+          </span>
+        )}
+      </div>
 
       {adding && (
-        <form className="card-form" onSubmit={create} style={{ flexDirection: 'column' }}>
-          <div className="reading-form-row">
+        <form className="read-form" onSubmit={create}>
+          <div className="read-form-row">
             <input
+              id="readTitle"
+              className="read-input"
               placeholder="Tiêu đề bài đọc"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
             />
             <select
-              className="level-select"
+              className="read-select"
               value={form.level}
               onChange={(e) => setForm({ ...form, level: e.target.value })}
               title="Cấp độ CEFR của bài (tùy chọn)"
@@ -516,44 +743,84 @@ export default function ReadingPage() {
             </select>
           </div>
           <textarea
-            className="reading-editor"
-            placeholder="Dán/nhập nội dung tiếng Anh…"
-            rows={8}
+            className="read-textarea"
+            placeholder="Dán/nhập nội dung tiếng Anh bất kỳ…"
             value={form.content}
             onChange={(e) => setForm({ ...form, content: e.target.value })}
           />
-          <button className="btn primary" type="submit">
-            Lưu bài đọc
-          </button>
+          <div className="read-form-row">
+            <button className="read-btn read-btn-primary" type="submit">
+              <Icon name="save" /> Lưu bài đọc
+            </button>
+            <button className="read-btn" type="button" onClick={() => setAdding(false)}>
+              Hủy
+            </button>
+          </div>
         </form>
       )}
 
       {readings.length === 0 ? (
-        <p className="muted">Chưa có bài đọc nào. Thêm bài đầu tiên để luyện đọc & tra từ.</p>
+        <div className="read-empty">
+          <Icon name="book" />
+          <b>Chưa có bài đọc nào</b>
+          <p>Dán một đoạn văn bản tiếng Anh bất kỳ để bắt đầu đọc và tra từ.</p>
+        </div>
+      ) : shown.length === 0 ? (
+        <div className="read-empty">
+          <Icon name="search" />
+          <b>Không tìm thấy bài đọc</b>
+          <p>Không có bài nào khớp bộ lọc hiện tại. Thử từ khóa hoặc cấp độ khác.</p>
+        </div>
       ) : (
-        <div className="read-rows">
+        <section className="read-grid">
           {shown.map((r) => (
-            <div key={r.id} className="read-row" onClick={() => setSelected(r)}>
-              <div className="read-ico">📖</div>
-              <div className="read-row-main">
-                <div className="read-row-title">
-                  <span>{r.title}</span>
-                  {r.level && <span className="level-badge">{r.level}</span>}
-                </div>
-                <div className="read-row-sub">{(r.content ?? '').slice(0, 90)}…</div>
-              </div>
-              <button
-                className="btn tiny danger read-del"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  remove(r)
-                }}
-              >
-                Xóa
-              </button>
+            <div
+              key={r.id}
+              className="read-card"
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelected(r)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setSelected(r)
+                }
+              }}
+            >
+              <span className="read-cover">
+                <Icon name="book" />
+              </span>
+              <span className="read-body">
+                <span className="read-card-title">{r.title}</span>
+                <span className="read-excerpt">{(r.content ?? '').slice(0, 160)}</span>
+                <span className="read-foot">
+                  {r.level && <span className="read-badge">{r.level}</span>}
+                  <span className="read-badge">
+                    <Icon name="clock" /> ~{readMinutes(r.content ?? '')} phút
+                  </span>
+                  <span className="read-tools">
+                    <button
+                      className="read-ibtn danger"
+                      title="Xóa bài đọc"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        remove(r)
+                      }}
+                    >
+                      <Icon name="trash" />
+                    </button>
+                  </span>
+                </span>
+              </span>
             </div>
           ))}
-        </div>
+
+          <button className="read-add-card" onClick={openForm}>
+            <Icon name="plus" />
+            <b>Thêm bài đọc</b>
+            <span>Dán văn bản tiếng Anh bất kỳ để bắt đầu đọc</span>
+          </button>
+        </section>
       )}
     </div>
   )

@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
-import { NAV, type PageKey } from '../pages/pages'
+import { NAV_GROUPS, type PageKey } from '../pages/pages'
+import { CloudApi } from '../services/cloud/CloudApiClient'
+import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
+import Icon from './Icon'
 import { isDesktop } from '../platform'
 
 interface Props {
@@ -10,6 +14,9 @@ interface Props {
 
 export default function Sidebar({ current, onNavigate, onClose }: Props) {
   const [version, setVersion] = useState(__APP_VERSION__)
+  const [counts, setCounts] = useState<{ cards: number; due: number } | null>(null)
+  const { user } = useAuth()
+  const { theme, toggle } = useTheme()
 
   useEffect(() => {
     if (!isDesktop) return
@@ -19,34 +26,68 @@ export default function Sidebar({ current, onNavigate, onClose }: Props) {
       .catch(() => {})
   }, [])
 
+  // Chỉ số cạnh mục Từ vựng / Ôn tập — lỗi thì đơn giản là không hiện
+  useEffect(() => {
+    CloudApi.summary()
+      .then((s) => setCounts({ cards: s.cards, due: s.due }))
+      .catch(() => setCounts(null))
+  }, [])
+
+  // Tên hiển thị: phần trước @ của email
+  const name = user?.email?.split('@')[0] ?? 'Khách'
+
   return (
-    <nav className="sidebar">
+    <nav className="sidebar" title={`EngMaster v${version}`}>
       <div className="sidebar-head">
-        <div className="brand-badge">E</div>
-        <div className="brand-text">
-          <div className="sidebar-brand">EngMaster</div>
-          <div className="sidebar-tag">Học tiếng Anh</div>
-        </div>
+        <span className="brand-badge">E</span>
+        <span className="sidebar-brand">EngMaster</span>
+        <span className="sidebar-spacer" />
         {onClose && (
           <button className="sidebar-close" onClick={onClose} aria-label="Đóng menu">
-            ✕
+            <Icon name="x" />
           </button>
         )}
       </div>
-      <ul className="nav-list">
-        {NAV.map((item) => (
-          <li key={item.key}>
-            <button
-              className={current === item.key ? 'nav-item active' : 'nav-item'}
-              onClick={() => onNavigate(item.key)}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span>{item.label}</span>
-            </button>
-          </li>
+
+      <div className="sidebar-scroll">
+        {NAV_GROUPS.map((group) => (
+          <div className="nav-group" key={group.label || 'main'}>
+            {group.label && <div className="nav-group-label">{group.label}</div>}
+            {group.items.map((item) => {
+              const n = item.count && counts ? counts[item.count] : 0
+              return (
+                <button
+                  key={item.key}
+                  className={current === item.key ? 'nav-item is-active' : 'nav-item'}
+                  onClick={() => onNavigate(item.key)}
+                >
+                  <Icon name={item.icon} />
+                  <span>{item.label}</span>
+                  {n > 0 && <span className="nav-count">{n}</span>}
+                </button>
+              )
+            })}
+          </div>
         ))}
-      </ul>
-      <div className="sidebar-foot">v{version}</div>
+      </div>
+
+      <div className="sidebar-foot">
+        <button className="sidebar-user" onClick={() => onNavigate('settings')}>
+          <span className="sidebar-avatar">{name.charAt(0).toUpperCase()}</span>
+          <span className="sidebar-user-txt">
+            <b>{name}</b>
+            <span>{user ? 'Đã đồng bộ' : 'Chưa đăng nhập'}</span>
+          </span>
+        </button>
+        <button
+          className="sidebar-theme"
+          onClick={toggle}
+          title={theme === 'dark' ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
+          aria-label="Đổi giao diện"
+        >
+          <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+        </button>
+      </div>
     </nav>
   )
 }

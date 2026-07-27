@@ -41,6 +41,12 @@ contextBridge.exposeInMainWorld('api', {
     return () => ipcRenderer.removeListener('update:status', handler)
   },
 
+  // ----- Cửa sổ: luôn nổi trên cùng + thu gọn kiểu hình-trong-hình -----
+  setAlwaysOnTop: (on: boolean): Promise<boolean> => ipcRenderer.invoke('window:always-on-top', on),
+  setMiniWindow: (on: boolean): Promise<boolean> => ipcRenderer.invoke('window:mini', on),
+  getWindowState: (): Promise<{ alwaysOnTop: boolean; mini: boolean }> =>
+    ipcRenderer.invoke('window:get-state'),
+
   // ----- Dịch nhanh toàn màn hình -----
   // (Cửa sổ chính) Bật/tắt tính năng tô-chữ-để-dịch trên toàn desktop
   setDesktopTranslate: (enabled: boolean): Promise<boolean> =>

@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thêm chủ điểm · Ngữ pháp · EngMaster</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .lv{
+    font-size:10.5px;font-weight:700;letter-spacing:.04em;
+    color:var(--text-3);background:var(--surface-2);border:1px solid var(--border);
+    height:18px;padding:0 6px;display:inline-flex;align-items:center;border-radius:4px;
+  }
+
+  /* ------------------------------------------------- Màn hình chọn cách bắt đầu */
+  .start-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .start-card{
+    display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left;width:100%;
+    padding:22px;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--r-lg);transition:all var(--t-fast);
+  }
+  .start-card:hover{border-color:var(--accent);box-shadow:var(--sh-sm);transform:translateY(-1px)}
+  .start-mark{
+    width:40px;height:40px;border-radius:var(--r-md);display:grid;place-items:center;
+    background:var(--surface-2);border:1px solid var(--border);margin-bottom:13px;
+  }
+  .start-card:hover .start-mark{background:var(--accent-soft);border-color:var(--accent-border)}
+  .start-mark .ico{width:19px;height:19px;color:var(--text-2)}
+  .start-card:hover .start-mark .ico{color:var(--accent-text)}
+  .start-card b{font-size:15px;font-weight:600;letter-spacing:-.018em}
+  .start-card p{font-size:12.8px;color:var(--text-3);line-height:1.55;margin-top:5px}
+  .start-card .go{
+    display:inline-flex;align-items:center;gap:5px;margin-top:14px;
+    font-size:12.5px;font-weight:500;color:var(--text-2);
+  }
+  .start-card:hover .go{color:var(--accent-text)}
+  .start-card .go .ico{width:13px;height:13px;transition:transform var(--t-fast)}
+  .start-card:hover .go .ico{transform:translateX(2px)}
+
+  /* ------------------------------------------------------------- Thanh bước */
+  .steps{display:flex;align-items:center;gap:0;margin-bottom:22px;overflow-x:auto;scrollbar-width:none}
+  .steps::-webkit-scrollbar{display:none}
+  .stp{display:flex;align-items:center;gap:8px;flex:0 0 auto;padding-right:4px}
+  .stp-no{
+    width:22px;height:22px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;
+    font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;
+    background:var(--surface-2);border:1px solid var(--border);color:var(--text-4);
+    transition:all var(--t-fast);
+  }
+  .stp-no .ico{width:12px;height:12px;stroke-width:2.4}
+  .stp-name{font-size:12.8px;font-weight:500;color:var(--text-4);white-space:nowrap}
+  .stp.is-done .stp-no{background:var(--ok-soft);border-color:var(--ok-border);color:var(--ok)}
+  .stp.is-done .stp-name{color:var(--text-3)}
+  .stp.is-now .stp-no{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+  .stp.is-now .stp-name{color:var(--text);font-weight:600}
+  .stp-line{flex:1 1 26px;min-width:18px;height:1px;background:var(--border);margin:0 8px}
+
+  /* ------------------------------------------------------------------ Form */
+  .f-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .f-grid .full{grid-column:1/-1}
+  .req{color:var(--err);font-weight:600}
+  .hint-line{font-size:11.8px;color:var(--text-4);margin-top:4px;line-height:1.5}
+  .field.is-bad .input,.field.is-bad .textarea{border-color:var(--err)}
+  .err-msg{font-size:11.8px;color:var(--err);margin-top:4px;display:none}
+  .field.is-bad .err-msg{display:block}
+
+  /* Chọn icon */
+  .icon-pick{display:flex;flex-wrap:wrap;gap:6px}
+  .icon-pick button{
+    width:34px;height:34px;border-radius:var(--r-sm);display:grid;place-items:center;
+    background:var(--surface);border:1px solid var(--border-2);color:var(--text-3);
+    transition:all var(--t-fast);
+  }
+  .icon-pick button:hover{border-color:var(--text-4);color:var(--text)}
+  .icon-pick button.is-active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-text)}
+
+  /* Hàng động (bảng công thức, bẫy) */
+  .rowset{display:flex;flex-direction:column;gap:8px}
+  .rrow{display:grid;grid-template-columns:150px 1fr 1fr 30px;gap:8px;align-items:start}
+  .rrow .icon-btn{margin-top:2px}
+  .rowset-head{
+    display:grid;grid-template-columns:150px 1fr 1fr 30px;gap:8px;
+    font-size:10.5px;font-weight:600;letter-spacing:.055em;text-transform:uppercase;
+    color:var(--text-4);margin-bottom:2px;
+  }
+  .tblock{
+    display:grid;grid-template-columns:1fr 1fr 30px;gap:8px;align-items:start;
+    padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);
+  }
+  .tblock .full{grid-column:1/-1}
+  .use-no{
+    display:flex;align-items:center;gap:6px;
+    font-size:10.5px;font-weight:600;letter-spacing:.055em;text-transform:uppercase;color:var(--text-4);
+  }
+  .use-no .ico{color:var(--text-3)}
+  .use-no span{font-variant-numeric:tabular-nums}
+
+  /* Chip nhập tay */
+  .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+  .chip-x{
+    display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 6px 0 10px;
+    border-radius:var(--r-full);font-size:12.5px;font-weight:500;color:var(--text-2);
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    background:var(--surface-2);border:1px solid var(--border);
+  }
+  .chip-x button{display:grid;place-items:center;width:16px;height:16px;border-radius:50%;color:var(--text-4)}
+  .chip-x button:hover{background:var(--err-soft);color:var(--err)}
+  .chip-x .ico{width:10px;height:10px;stroke-width:2.4}
+
+  /* ------------------------------------------------------- Bảng cú pháp */
+  .syn{width:100%;border-collapse:collapse;font-size:12.8px}
+  .syn th{
+    text-align:left;font-size:10.5px;font-weight:600;letter-spacing:.055em;text-transform:uppercase;
+    color:var(--text-4);padding:8px 16px;border-bottom:1px solid var(--border);
+  }
+  .syn td{padding:9px 16px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.5}
+  .syn tr:last-child td{border-bottom:none}
+  .syn code{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;
+    background:var(--surface-2);border:1px solid var(--border);
+    padding:1px 6px;border-radius:5px;white-space:nowrap;
+  }
+  .syn .ex{color:var(--text-3);font-size:12.2px;display:block;margin-top:3px;
+    font-family:ui-monospace,Menlo,Consolas,monospace}
+
+  .paste{
+    width:100%;min-height:190px;padding:12px 14px;line-height:1.75;
+    font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;font-size:12.8px;
+    background:var(--surface);color:var(--text);
+    border:1px solid var(--border-2);border-radius:var(--r-sm);resize:vertical;
+    white-space:pre;overflow-x:auto;
+  }
+  .paste:focus{outline:none;border-color:var(--accent);box-shadow:var(--sh-focus)}
+
+  /* Vùng thả file */
+  .drop{
+    display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;
+    padding:34px 24px;border:1px dashed var(--border-2);border-radius:var(--r-lg);
+    background:var(--surface);transition:all var(--t-fast);cursor:pointer;
+  }
+  .drop:hover,.drop.is-over{border-color:var(--accent);background:var(--accent-soft)}
+  .drop .ico{width:24px;height:24px;color:var(--text-4);margin-bottom:5px}
+  .drop:hover .ico,.drop.is-over .ico{color:var(--accent-text)}
+  .drop b{font-size:13.5px;font-weight:600}
+  .drop span{font-size:12.3px;color:var(--text-3)}
+
+  /* ------------------------------------------------------- Bảng duyệt câu */
+  .rev-bar{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface-2);
+  }
+  .rev{
+    display:grid;grid-template-columns:104px 1fr 30px;gap:11px;align-items:start;
+    padding:11px 16px;border-bottom:1px solid var(--border);
+  }
+  .rev:last-child{border-bottom:none}
+  .rev-q{font-size:13.2px;line-height:1.6;min-width:0;word-break:break-word}
+  .rev-q mark{background:var(--accent-soft);color:var(--accent-text);font-weight:600;
+    padding:0 5px;border-radius:4px}
+  .rev-q s{color:var(--err);text-decoration-thickness:1px}
+  .rev-q b{color:var(--ok)}
+  .rev-why{display:block;font-size:11.8px;color:var(--text-4);margin-top:3px;line-height:1.5}
+  .rev.is-bad{background:var(--err-soft)}
+  .rev.is-bad .rev-q{color:var(--err);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.3px}
+
+  /* ---------------------------------------------------------- Xem trước */
+  .prev-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+  .chk-row{
+    display:flex;align-items:flex-start;gap:9px;padding:9px 16px;
+    border-bottom:1px solid var(--border);font-size:13px;
+  }
+  .chk-row:last-child{border-bottom:none}
+  .chk-row .ico{width:15px;height:15px;flex:0 0 auto;margin-top:2px}
+  .chk-ok .ico{color:var(--ok)}
+  .chk-warn .ico{color:var(--warn)}
+  .chk-row span{display:block;font-size:11.8px;color:var(--text-4);margin-top:1px}
+
+  .topic-mark{
+    width:34px;height:34px;flex:0 0 auto;border-radius:var(--r-sm);display:grid;place-items:center;
+    background:var(--surface-2);border:1px solid var(--border);
+  }
+  .topic-mark .ico{width:16px;height:16px;color:var(--text-3)}
+  .topic-tags{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
+  .topic-foot{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    margin-top:10px;font-size:11.8px;color:var(--text-3);font-variant-numeric:tabular-nums;
+  }
+
+  /* --------------------------------------------------------- Chân wizard */
+  .wiz-foot{
+    position:sticky;bottom:0;z-index:10;margin-top:18px;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:12px 0;background:linear-gradient(to top,var(--bg) 76%,transparent);
+  }
+
+  @media (max-width:920px){
+    .start-grid,.f-grid,.prev-grid{grid-template-columns:1fr}
+    .rrow,.rowset-head{grid-template-columns:1fr;gap:6px}
+    .rowset-head{display:none}
+    .rrow{padding:11px;background:var(--surface-2);border:1px solid var(--border);
+      border-radius:var(--r-md);grid-template-columns:1fr 30px}
+    .rrow .input:first-child{grid-column:1/-1}
+    .tblock{grid-template-columns:1fr 30px}
+    .rev{grid-template-columns:1fr 30px;gap:7px}
+    .rev .badge{justify-self:start}
+    .stp-name{display:none}
+    .stp.is-now .stp-name{display:block}
+    .syn td,.syn th{padding:8px 12px}
+    body{padding-bottom:calc(var(--tabbar-h) + 60px)}
+  }
+</style>
+</head>
+<body class="app" data-page="ngu-phap" data-depth="1" data-title="Thêm chủ điểm">
+
+<div class="main">
+<div class="wrap" style="max-width:960px">
+
+  <a class="crumb" href="index.html" id="crumb"><i data-ico="left"></i> Ngữ pháp</a>
+
+  <!-- ==================================================== 0. CHỌN CÁCH BẮT ĐẦU -->
+  <section id="scr-start">
+    <div class="page-head anim">
+      <div>
+        <h1>Thêm chủ điểm ngữ pháp</h1>
+        <p>Một chủ điểm gồm phần lý thuyết (công thức, từ tín hiệu, bẫy với người Việt)
+           và bộ câu luyện tập. Bạn có thể soạn từ đầu, hoặc chép một chủ điểm chuẩn rồi sửa lại.</p>
+      </div>
+    </div>
+
+    <div class="start-grid anim anim-1">
+      <button class="start-card" id="goBlank">
+        <span class="start-mark"><i data-ico="pencil"></i></span>
+        <b>Tạo mới từ đầu</b>
+        <p>Tự đặt tên, chọn cấp độ, soạn công thức và bẫy thường gặp.
+           Câu luyện tập nhập bằng cách dán hàng loạt hoặc tải file lên.</p>
+        <span class="go">Bắt đầu soạn <i data-ico="right"></i></span>
+      </button>
+
+      <button class="start-card" id="goTpl">
+        <span class="start-mark"><i data-ico="layers"></i></span>
+        <b>Chép từ thư viện mẫu</b>
+        <p>8 chủ điểm chuẩn CEFR chưa có trong thư viện của bạn, đã kèm sẵn công thức,
+           bẫy và câu luyện. Chép về rồi sửa lại theo ý mình.</p>
+        <span class="go">Xem thư viện mẫu <i data-ico="right"></i></span>
+      </button>
+    </div>
+
+    <div class="panel anim anim-2" style="margin-top:14px">
+      <b class="t-h3 row" style="gap:7px"><i data-ico="bulb" class="ico ico-sm"></i> Nên bắt đầu từ đâu</b>
+      <p class="t-xs muted-2" style="margin-top:6px">
+        Nếu bạn đang ôn thi và muốn bám sát giáo trình riêng thì chọn <b>tạo mới</b>.
+        Nếu chỉ muốn lấp chỗ trống trong lộ trình A1–C1 thì <b>chép từ mẫu</b> nhanh hơn nhiều —
+        chép xong vẫn sửa được mọi phần.
+      </p>
+    </div>
+  </section>
+
+  <!-- ======================================================= T. THƯ VIỆN MẪU -->
+  <section id="scr-tpl" hidden>
+    <div class="page-head anim">
+      <div>
+        <h1>Thư viện chủ điểm mẫu</h1>
+        <p id="tplSub">8 chủ điểm chuẩn CEFR chưa có trong thư viện của bạn. Chép về là có ngay công thức, bẫy và câu luyện.</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn" id="tplBack"><i data-ico="left"></i> Quay lại</button>
+      </div>
+    </div>
+
+    <div class="row wrapping anim" style="margin-bottom:14px">
+      <div class="chipset" id="tplFilter">
+        <button class="chip is-active" data-lv="all">Tất cả</button>
+        <button class="chip" data-lv="A2">A2</button>
+        <button class="chip" data-lv="B1">B1</button>
+        <button class="chip" data-lv="B2">B2</button>
+        <button class="chip" data-lv="C1">C1</button>
+      </div>
+      <span class="spacer"></span>
+      <span class="muted-2 t-xs num" id="tplCount">8 mẫu</span>
+    </div>
+
+    <div class="grid g-auto anim anim-1" id="tplGrid"></div>
+
+    <div class="empty anim" id="tplEmpty" hidden style="margin-top:4px">
+      <i data-ico="search"></i>
+      <b>Không có mẫu nào ở cấp độ này</b>
+      <p>Chọn cấp độ khác, hoặc quay lại và tự soạn một chủ điểm mới.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ W. WIZARD -->
+  <section id="scr-wiz" hidden>
+
+    <div class="page-head anim">
+      <div>
+        <h1 id="wizTitle">Chủ điểm mới</h1>
+        <p id="wizSub">Bốn bước. Bạn có thể quay lại sửa bất cứ lúc nào trước khi lưu.</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-ghost" id="wizCancel">Hủy</button>
+      </div>
+    </div>
+
+    <nav class="steps anim anim-1" id="steps">
+      <span class="stp is-now" data-s="1"><span class="stp-no">1</span><span class="stp-name">Thông tin</span></span>
+      <span class="stp-line"></span>
+      <span class="stp" data-s="2"><span class="stp-no">2</span><span class="stp-name">Nội dung bài học</span></span>
+      <span class="stp-line"></span>
+      <span class="stp" data-s="3"><span class="stp-no">3</span><span class="stp-name">Câu luyện tập</span></span>
+      <span class="stp-line"></span>
+      <span class="stp" data-s="4"><span class="stp-no">4</span><span class="stp-name">Xem trước &amp; lưu</span></span>
+    </nav>
+
+    <!-- ------------------------------------------------- BƯỚC 1 · THÔNG TIN -->
+    <div id="pane-1">
+      <div class="card anim anim-2">
+        <div class="card-head"><h2><i data-ico="file"></i> Thông tin chủ điểm</h2></div>
+        <div class="card-body">
+          <div class="f-grid">
+
+            <div class="field" id="fName">
+              <label>Tên chủ điểm <span class="req">*</span></label>
+              <input class="input" id="inName" placeholder="VD: Thì quá khứ hoàn thành" autocomplete="off">
+              <p class="err-msg">Hãy đặt tên cho chủ điểm.</p>
+            </div>
+
+            <div class="field">
+              <label>Tên tiếng Anh</label>
+              <input class="input" id="inNameEn" placeholder="VD: Past perfect" autocomplete="off">
+              <p class="hint-line">Hiện dưới tên tiếng Việt trong trang bài học.</p>
+            </div>
+
+            <div class="field">
+              <label>Cấp độ CEFR</label>
+              <div class="segmented" id="inLevel">
+                <button data-v="A1">A1</button>
+                <button data-v="A2">A2</button>
+                <button class="is-active" data-v="B1">B1</button>
+                <button data-v="B2">B2</button>
+                <button data-v="C1">C1</button>
+              </div>
+              <p class="hint-line">Dùng để xếp chủ điểm vào bộ lọc cấp độ ở trang thư viện.</p>
+            </div>
+
+            <div class="field">
+              <label>Nhóm</label>
+              <select class="select" id="inGroup">
+                <option>Thì động từ</option>
+                <option>Danh từ &amp; mạo từ</option>
+                <option>Động từ &amp; cấu trúc</option>
+                <option>Câu phức</option>
+                <option>Trật tự từ &amp; nhấn mạnh</option>
+              </select>
+            </div>
+
+            <div class="field full">
+              <label>Mô tả ngắn</label>
+              <textarea class="textarea" id="inDesc" style="min-height:66px"
+                placeholder="Một hai câu nói rõ chủ điểm này dùng khi nào và hay bị nhầm với cái gì."></textarea>
+            </div>
+
+            <div class="field full">
+              <label>Icon</label>
+              <div class="icon-pick" id="inIcon">
+                <button class="is-active" data-v="clock"><i data-ico="clock"></i></button>
+                <button data-v="layers"><i data-ico="layers"></i></button>
+                <button data-v="type"><i data-ico="type"></i></button>
+                <button data-v="shuffle"><i data-ico="shuffle"></i></button>
+                <button data-v="stack"><i data-ico="stack"></i></button>
+                <button data-v="repeat"><i data-ico="repeat"></i></button>
+                <button data-v="trend"><i data-ico="trend"></i></button>
+                <button data-v="speak"><i data-ico="speak"></i></button>
+                <button data-v="pen"><i data-ico="pen"></i></button>
+                <button data-v="bulb"><i data-ico="bulb"></i></button>
+                <button data-v="target"><i data-ico="target"></i></button>
+                <button data-v="sparkle"><i data-ico="sparkle"></i></button>
+              </div>
+            </div>
+
+            <div class="field full">
+              <label>Nhóm lỗi người Việt liên quan</label>
+              <div class="chipset" id="inTags">
+                <button class="chip" data-v="Thiếu -s số nhiều">Thiếu -s số nhiều</button>
+                <button class="chip" data-v="Thiếu mạo từ">Thiếu mạo từ</button>
+                <button class="chip" data-v="Thiếu -s ngôi 3">Thiếu -s ngôi 3</button>
+                <button class="chip" data-v="Nhầm thì">Nhầm thì</button>
+                <button class="chip" data-v="Thiếu to be">Thiếu to be</button>
+                <button class="chip" data-v="Trật tự từ">Trật tự từ</button>
+                <button class="chip" data-v="Giới từ">Giới từ</button>
+              </div>
+              <p class="hint-line">Chọn nhóm nào thì lỗi sinh ra từ chủ điểm này sẽ được gắn nhãn đó trong sổ lỗi,
+                 và chủ điểm sẽ xuất hiện ở tab “Bẫy với người Việt”.</p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- --------------------------------------------- BƯỚC 2 · NỘI DUNG BÀI HỌC -->
+    <div id="pane-2" hidden>
+
+      <div class="card anim" style="margin-bottom:14px">
+        <div class="card-head">
+          <h2><i data-ico="grammar"></i> Bảng công thức</h2>
+          <span class="hint">Hiện ở đầu trang bài học</span>
+        </div>
+        <div class="card-body">
+          <div class="rowset-head"><span>Dạng</span><span>Cấu trúc</span><span>Ví dụ</span><span></span></div>
+          <div class="rowset" id="formRows"></div>
+          <button class="btn btn-sm" id="addForm" style="margin-top:10px"><i data-ico="plus"></i> Thêm dòng</button>
+        </div>
+      </div>
+
+      <div class="card anim anim-1" style="margin-bottom:14px">
+        <div class="card-head">
+          <h2><i data-ico="bulb"></i> Các trường hợp dùng</h2>
+          <span class="hint">Hiện thành lưới thẻ giữa trang bài học</span>
+        </div>
+        <div class="card-body">
+          <div class="rowset" id="useRows"></div>
+          <button class="btn btn-sm" id="addUse" style="margin-top:10px"><i data-ico="plus"></i> Thêm trường hợp</button>
+          <p class="hint-line" style="margin-top:9px">
+            Mỗi trường hợp gồm tên ngắn gọn, một câu ví dụ và một dòng giải thích tiếng Việt.
+            Bọc phần cần tô đậm trong câu ví dụ bằng <b>{ }</b> — giống cú pháp ở bước 3.
+            Icon được gán tự động theo thứ tự.
+          </p>
+        </div>
+      </div>
+
+      <div class="card anim anim-1" style="margin-bottom:14px">
+        <div class="card-head">
+          <h2><i data-ico="search"></i> Từ tín hiệu</h2>
+          <span class="hint">Gõ rồi bấm Enter</span>
+        </div>
+        <div class="card-body">
+          <input class="input" id="sigIn" placeholder="already, yet, since… — gõ một từ rồi Enter" autocomplete="off">
+          <div class="chips" id="sigList"></div>
+        </div>
+      </div>
+
+      <div class="card anim anim-2" style="margin-bottom:14px">
+        <div class="card-head">
+          <h2><i data-ico="shuffle"></i> Đối chiếu với chủ điểm dễ nhầm</h2>
+          <span class="hint">Bảng 2 cột ở cuối bài học</span>
+        </div>
+        <div class="card-body">
+          <div class="field" style="max-width:340px;margin-bottom:12px">
+            <label>Chủ điểm hay bị nhầm với chủ điểm này</label>
+            <input class="input" id="inCmp" placeholder="VD: Quá khứ đơn" autocomplete="off">
+          </div>
+          <div class="rowset-head"><span>Tiêu chí</span><span id="cmpHeadA">Chủ điểm kia</span>
+            <span id="cmpHeadB">Chủ điểm này</span><span></span></div>
+          <div class="rowset" id="cmpRows"></div>
+          <button class="btn btn-sm" id="addCmp" style="margin-top:10px"><i data-ico="plus"></i> Thêm tiêu chí</button>
+          <p class="hint-line" style="margin-top:9px">
+            Bỏ trống phần này nếu chủ điểm không có cặp dễ nhầm — bảng đối chiếu sẽ không hiện trong bài học.
+          </p>
+        </div>
+      </div>
+
+      <div class="card anim anim-2">
+        <div class="card-head">
+          <h2><i data-ico="lang"></i> Bẫy với người Việt</h2>
+          <span class="hint">Phần có giá trị nhất của bài học</span>
+        </div>
+        <div class="card-body">
+          <div class="rowset" id="trapRows"></div>
+          <button class="btn btn-sm" id="addTrap" style="margin-top:10px"><i data-ico="plus"></i> Thêm bẫy</button>
+          <p class="hint-line" style="margin-top:9px">
+            Mỗi bẫy gồm câu sai người Việt hay viết, câu đúng tương ứng, và một dòng giải thích
+            nguyên nhân đến từ tiếng mẹ đẻ.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------- BƯỚC 3 · CÂU LUYỆN TẬP -->
+    <div id="pane-3" hidden>
+
+      <nav class="tabs anim">
+        <button class="is-active" data-src="paste"><i data-ico="pencil"></i> Dán hàng loạt</button>
+        <button data-src="file"><i data-ico="upload"></i> Nhập từ file</button>
+      </nav>
+
+      <!-- ---- Dán hàng loạt ---- -->
+      <div id="src-paste">
+        <div class="card anim anim-1" style="margin-bottom:14px">
+          <div class="card-head">
+            <h2><i data-ico="grid"></i> Cú pháp — mỗi dòng một câu</h2>
+            <span class="hint">Dạng bài được nhận diện tự động</span>
+          </div>
+          <table class="syn">
+            <thead><tr><th>Dạng bài</th><th>Đánh dấu</th><th>Ví dụ</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Điền vào chỗ trống</td><td><code>{đáp án}</code></td>
+                <td><span class="ex">She {has lived} in Hue for six years. (live)</span></td>
+              </tr>
+              <tr>
+                <td>Trắc nghiệm</td><td><code>{đúng | sai | sai}</code></td>
+                <td><span class="ex">He has worked here {for | since | from} five years.</span></td>
+              </tr>
+              <tr>
+                <td>Sửa lỗi sai</td><td><code>[sai &gt; đúng]</code></td>
+                <td><span class="ex">My sister is [teacher &gt; a teacher] at school.</span></td>
+              </tr>
+              <tr>
+                <td>Viết lại câu</td><td><code>gốc &gt;&gt; đích</code></td>
+                <td><span class="ex">They built it in 1990. &gt;&gt; It was built in 1990.</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="card-body" style="border-top:1px solid var(--border)">
+            <p class="t-xs muted-2">
+              Thêm <code style="font-family:ui-monospace,Menlo,monospace;background:var(--surface-2);border:1px solid var(--border);padding:1px 5px;border-radius:4px">(gợi ý)</code>
+              ở cuối câu điền để hiện từ gốc cần chia ·
+              thêm <code style="font-family:ui-monospace,Menlo,monospace;background:var(--surface-2);border:1px solid var(--border);padding:1px 5px;border-radius:4px">// giải thích</code>
+              ở cuối bất kỳ dòng nào để viết phần “Vì sao” hiện sau khi chấm ·
+              dòng bắt đầu bằng <code style="font-family:ui-monospace,Menlo,monospace;background:var(--surface-2);border:1px solid var(--border);padding:1px 5px;border-radius:4px">#</code> là ghi chú, bị bỏ qua.
+            </p>
+          </div>
+        </div>
+
+        <div class="field anim anim-2">
+          <label>Dán câu luyện tập vào đây</label>
+          <textarea class="paste" id="pasteBox" spellcheck="false" autocapitalize="off"
+            placeholder="# Mỗi dòng một câu&#10;She {has lived} in Da Nang for six years. (live)"></textarea>
+          <div class="row wrapping" style="margin-top:9px">
+            <button class="btn btn-sm" id="btnSample"><i data-ico="sparkle"></i> Chèn ví dụ mẫu</button>
+            <button class="btn btn-sm" id="btnClear"><i data-ico="trash"></i> Xóa hết</button>
+            <span class="spacer"></span>
+            <span class="muted-2 t-xs">Bảng duyệt bên dưới cập nhật ngay khi bạn gõ</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---- Nhập từ file ---- -->
+      <div id="src-file" hidden>
+        <div class="drop anim anim-1" id="drop" role="button" tabindex="0">
+          <i data-ico="upload"></i>
+          <b>Kéo file vào đây, hoặc bấm để chọn</b>
+          <span>Nhận .csv và .txt · cột <b>cau</b> bắt buộc, cột <b>giai_thich</b> tùy chọn</span>
+          <input type="file" id="fileIn" accept=".csv,.txt" hidden>
+        </div>
+        <div class="row wrapping anim anim-2" style="margin-top:12px">
+          <button class="btn btn-sm" id="btnTemplate"><i data-ico="download"></i> Tải file mẫu (.csv)</button>
+          <span class="muted-2 t-xs">Nội dung cột <b>cau</b> dùng đúng cú pháp ở tab “Dán hàng loạt”</span>
+        </div>
+        <p class="hint-line" id="fileMsg" style="margin-top:10px"></p>
+      </div>
+
+      <!-- ---- Bảng duyệt ---- -->
+      <div class="card anim anim-3" id="revCard" style="margin-top:16px">
+        <div class="rev-bar">
+          <span class="badge badge-ok" id="revOk"><i data-ico="check"></i> 0 câu hợp lệ</span>
+          <span class="badge badge-err" id="revBad" hidden><i data-ico="alert"></i> 0 dòng lỗi</span>
+          <span class="spacer"></span>
+          <span class="muted-2 t-xs" id="revMix">—</span>
+        </div>
+        <div id="revList"></div>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------ BƯỚC 4 · XEM TRƯỚC & LƯU -->
+    <div id="pane-4" hidden>
+      <div class="prev-grid anim">
+
+        <div class="stack">
+          <div class="card">
+            <div class="card-head"><h2><i data-ico="eye"></i> Thẻ trong thư viện</h2></div>
+            <div class="card-body">
+              <div class="deck" id="prevDeck" style="pointer-events:none"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h2><i data-ico="play"></i> Một câu luyện tập</h2></div>
+            <div class="card-body" id="prevItem"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2><i data-ico="check"></i> Kiểm tra trước khi lưu</h2>
+            <span class="hint">Cảnh báo không chặn lưu</span>
+          </div>
+          <div id="chkList"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ---------------------------------------------------- Chân wizard -->
+    <div class="wiz-foot">
+      <button class="btn" id="btnPrev" hidden><i data-ico="left"></i> Quay lại</button>
+      <span class="spacer"></span>
+      <span class="muted-2 t-xs" id="stepHint">Bước 1 / 4</span>
+      <button class="btn btn-primary btn-lg" id="btnNext">Tiếp tục <i data-ico="right"></i></button>
+    </div>
+
+  </section>
+
+  <!-- ============================================================== XONG -->
+  <section id="scr-done" hidden>
+    <div class="empty anim" style="padding:56px 24px">
+      <i data-ico="check"></i>
+      <b id="doneName">Đã thêm chủ điểm</b>
+      <p id="doneSub">Chủ điểm đã có trong thư viện và sẵn sàng để luyện.</p>
+      <div class="row wrapping" style="margin-top:16px;justify-content:center">
+        <a class="btn" href="index.html"><i data-ico="grammar"></i> Về thư viện</a>
+        <a class="btn" href="chi-tiet.html"><i data-ico="file"></i> Mở bài học</a>
+        <a class="btn btn-primary" href="luyen-tap.html"><i data-ico="play"></i> Luyện thử ngay</a>
+      </div>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:12px">
+      <button class="btn btn-ghost btn-sm" id="againBtn"><i data-ico="plus"></i> Thêm chủ điểm khác</button>
+    </div>
+  </section>
+
+</div>
+</div>
+
+<script src="../app.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* =====================================================================
+     1. CÚ PHÁP DÁN HÀNG LOẠT — một dòng một câu, tự nhận diện dạng bài
+     ===================================================================== */
+  var SAMPLE = [
+    '# Mỗi dòng một câu. Dòng bắt đầu bằng # là ghi chú, sẽ bị bỏ qua.',
+    'She {has lived} in Da Nang for six years. (live) // Khoảng thời gian chưa kết thúc → hiện tại hoàn thành.',
+    'They {have not finished} the report yet. (not finish)',
+    'Have you ever {been} to Hue? (be)',
+    'She has {written} three emails today. (write) // Sau have/has luôn là V3, không phải V2.',
+    'He has worked here {for | since | from | during} five years. // for đi với độ dài, since đi với mốc thời gian.',
+    'I {have seen | saw | see | had seen} that film three times.',
+    'My sister is [teacher > a teacher] at a primary school. // Danh từ đếm được số ít luôn cần mạo từ đứng trước.',
+    'I bought three [book > books] at the fair yesterday.',
+    'My brother [go > goes] to the gym every morning.',
+    'The company launched a new app last month. >> A new app was launched by the company last month.',
+    'People speak English all over the world. >> English is spoken all over the world.'
+  ].join('\n');
+
+  var TYPE_LABEL = { cloze: 'Điền chỗ trống', mcq: 'Trắc nghiệm', correct: 'Sửa lỗi', transform: 'Viết lại câu' };
+
+  function parseLine(raw, no) {
+    var line = String(raw).trim();
+    if (!line || line.charAt(0) === '#') return null;
+
+    /* tách phần giải thích  // … */
+    var why = '';
+    var wi = line.indexOf('//');
+    if (wi > 0) { why = line.slice(wi + 2).trim(); line = line.slice(0, wi).trim(); }
+
+    var bad = function (msg) { return { no: no, ok: false, raw: raw.trim(), msg: msg }; };
+
+    /* --- Sửa lỗi:  [sai > đúng] --- */
+    var mc = line.match(/\[([^\[\]]*?)>([^\[\]]*?)\]/);
+    if (line.indexOf('[') > -1 || line.indexOf(']') > -1) {
+      if (!mc) return bad('Dấu […] chưa đúng — cần dạng [từ sai > từ đúng]');
+      var w = mc[1].trim(), r = mc[2].trim();
+      if (!w || !r) return bad('Thiếu vế sai hoặc vế đúng trong […>…]');
+      return {
+        no: no, ok: true, type: 'correct', why: why,
+        display: esc(line.slice(0, mc.index)) + '<s>' + esc(w) + '</s> → <b>' + esc(r) + '</b>' +
+                 esc(line.slice(mc.index + mc[0].length)),
+        answer: r
+      };
+    }
+
+    /* --- Trắc nghiệm / điền:  {…} --- */
+    var open = (line.match(/\{/g) || []).length, close = (line.match(/\}/g) || []).length;
+    if (open || close) {
+      if (open !== close) return bad('Dấu ngoặc { } chưa khép');
+      if (open > 1) return bad('Mỗi dòng chỉ được có một cặp { }');
+      var mb = line.match(/\{([^{}]*)\}/);
+      var inner = mb[1];
+      var hint = '';
+      var rest = line.slice(mb.index + mb[0].length);
+      var mh = rest.match(/\(([^()]+)\)\s*$/);
+      if (mh) { hint = mh[1].trim(); rest = rest.slice(0, mh.index); }
+
+      var head = esc(line.slice(0, mb.index)), tail = esc(rest);
+
+      if (inner.indexOf('|') > -1) {
+        var opts = inner.split('|').map(function (s) { return s.trim(); }).filter(Boolean);
+        if (opts.length < 2) return bad('Trắc nghiệm cần ít nhất 2 phương án');
+        if (opts.length > 4) return bad('Tối đa 4 phương án cho một câu trắc nghiệm');
+        return {
+          no: no, ok: true, type: 'mcq', why: why, answer: opts[0], options: opts,
+          display: head + '<mark>' + esc(opts[0]) + '</mark>' + tail +
+                   ' <span class="muted-2">· phương án: ' + esc(opts.slice(1).join(', ')) + '</span>'
+        };
+      }
+      var ans = inner.trim();
+      if (!ans) return bad('Chỗ trống { } đang rỗng');
+      return {
+        no: no, ok: true, type: 'cloze', why: why, answer: ans, hint: hint,
+        display: head + '<mark>' + esc(ans) + '</mark>' + tail +
+                 (hint ? ' <span class="muted-2">(' + esc(hint) + ')</span>' : '')
+      };
+    }
+
+    /* --- Viết lại câu:  gốc >> đích --- */
+    if (line.indexOf('>>') > -1) {
+      var p = line.split('>>');
+      if (p.length !== 2) return bad('Chỉ được có một dấu >> trên mỗi dòng');
+      var src = p[0].trim(), dst = p[1].trim();
+      if (!src || !dst) return bad('Thiếu câu gốc hoặc câu đích quanh dấu >>');
+      return {
+        no: no, ok: true, type: 'transform', why: why, answer: dst,
+        display: esc(src) + ' → <b>' + esc(dst) + '</b>'
+      };
+    }
+
+    return bad('Không nhận ra dạng bài — thiếu { }, [ > ] hoặc >>');
+  }
+
+  function parseAll(text) {
+    var out = [];
+    String(text).split(/\r?\n/).forEach(function (l, i) {
+      var r = parseLine(l, i + 1);
+      if (r) out.push(r);
+    });
+    return out;
+  }
+  window.EMParseGrammar = parseAll;          /* dùng cho kiểm thử */
+
+  /* =====================================================================
+     2. TRẠNG THÁI
+     ===================================================================== */
+  var state = {
+    name: '', nameEn: '', level: 'B1', group: 'Thì động từ', desc: '',
+    icon: 'clock', tags: [], signals: [], items: []
+  };
+  var step = 1;
+
+  /* =====================================================================
+     3. CHUYỂN MÀN HÌNH
+     ===================================================================== */
+  var SCREENS = ['scr-start', 'scr-tpl', 'scr-wiz', 'scr-done'];
+  function show(id) {
+    SCREENS.forEach(function (s) { $(s).hidden = (s !== id); });
+    window.scrollTo(0, 0);
+  }
+
+  $('goBlank').onclick = function () { openWizard(null); };
+  $('goTpl').onclick = function () { show('scr-tpl'); };
+  $('tplBack').onclick = function () { show('scr-start'); };
+  $('wizCancel').onclick = function () { show('scr-start'); };
+  $('againBtn').onclick = function () { show('scr-start'); };
+
+  /* =====================================================================
+     4. THƯ VIỆN MẪU
+     ===================================================================== */
+  var TEMPLATES = [
+    { name: 'Thì quá khứ hoàn thành', en: 'Past perfect', lv: 'B1', ico: 'undo', rules: 6, items: 24,
+      desc: 'Diễn tả việc xảy ra trước một mốc quá khứ khác. Người Việt hay bỏ qua vì tiếng Việt chỉ dùng “đã”.',
+      tags: ['Nhầm thì'],
+      uses: [
+        ['Việc xảy ra trước một mốc quá khứ', 'When I arrived, the train {had} already {left}.', 'Tàu chạy TRƯỚC lúc tôi đến — hai việc đều trong quá khứ.'],
+        ['Nguyên nhân của một việc quá khứ', 'He could not open the door because he {had lost} his keys.', 'Mất chìa trước, không mở được cửa sau.'],
+        ['Trong câu tường thuật', 'She told me she {had finished} the report.', 'Lùi một bậc so với “has finished” của lời gốc.']
+      ],
+      cmp: { with: 'Quá khứ đơn', rows: [
+        ['Số mốc thời gian', 'Một mốc duy nhất', 'Hai mốc — việc này trước việc kia'],
+        ['Ví dụ', 'The train left at 6pm.', 'The train had left when I arrived.'],
+        ['Từ đi kèm', 'yesterday · last week · ago', 'before · after · by the time · when']
+      ]},
+      paste: 'When I arrived, the train {had already left}. (already leave) // Việc xảy ra TRƯỚC một mốc quá khứ khác.\nShe told me she [have finished > had finished] the report.\nHe lost the keys. Then he could not open the door. >> He could not open the door because he had lost the keys.' },
+    { name: 'Thì tương lai', en: 'Future forms', lv: 'A2', ico: 'trend', rules: 7, items: 26,
+      desc: 'will · be going to · hiện tại tiếp diễn chỉ tương lai. Ba cách nói cùng một chuyện, khác nhau ở ý định.',
+      tags: [],
+      uses: [
+        ['Dự đoán có căn cứ ở hiện tại', 'Look at those clouds — it {is going to} rain.', 'Thấy dấu hiệu ngay trước mắt → be going to.'],
+        ['Quyết định ngay lúc nói', 'The phone is ringing. I {will} get it.', 'Không hề định trước → will.'],
+        ['Lịch đã hẹn chắc chắn', 'I {am meeting} my dentist at 3pm tomorrow.', 'Đã đặt lịch → hiện tại tiếp diễn, không dùng will.']
+      ],
+      cmp: { with: 'will', rows: [
+        ['Thời điểm quyết định', 'Ngay lúc đang nói', 'Đã định từ trước'],
+        ['Căn cứ', 'Cảm nhận, ý kiến', 'Dấu hiệu nhìn thấy được'],
+        ['Ví dụ', 'I think it will rain.', 'Look at the sky — it is going to rain.']
+      ]},
+      paste: 'Look at those clouds — it {is going to} rain. // Có dấu hiệu ở hiện tại → be going to.\nI think she {will | is going to | goes | will be} pass the exam.\nI [will meet > am meeting] my dentist at 3pm tomorrow. // Lịch đã hẹn → hiện tại tiếp diễn.' },
+    { name: 'Mệnh đề trạng ngữ', en: 'Adverbial clauses', lv: 'B2', ico: 'stack', rules: 8, items: 28,
+      desc: 'when · while · although · because · so that. Nối hai mệnh đề và giữ đúng trật tự chủ ngữ – động từ.',
+      tags: ['Trật tự từ'],
+      uses: [
+        ['Chỉ thời gian', 'They arrived {while} we were having dinner.', 'when, while, as soon as, before, after.'],
+        ['Chỉ sự nhượng bộ', '{Although} he was exhausted, he kept working.', 'although, though, even though — không đi kèm but.'],
+        ['Chỉ mục đích', 'She left early {so that} she could catch the train.', 'so that, in order that — sau đó là một mệnh đề đầy đủ.']
+      ],
+      paste: 'She kept working {although} she was exhausted.\n{While | During | Since | For} I was cooking, the phone rang.\nAlthough he was tired, [but he finished > he finished] the report. // Tiếng Anh không dùng although và but cùng lúc.' },
+    { name: 'Câu ước — wish / if only', en: 'Wish clauses', lv: 'B2', ico: 'sparkle', rules: 5, items: 22,
+      desc: 'Ước điều trái với hiện tại, quá khứ hoặc mong người khác đổi thói quen.',
+      tags: ['Nhầm thì'],
+      uses: [
+        ['Ước trái với hiện tại', 'I wish I {knew} the answer.', 'Thực tế là không biết → lùi về quá khứ đơn.'],
+        ['Tiếc về quá khứ', 'She wishes she {had studied} harder.', 'Không thay đổi được nữa → quá khứ hoàn thành.'],
+        ['Mong người khác đổi thói quen', 'I wish he {would stop} interrupting.', 'Bực mình về một thói quen → would + V.']
+      ],
+      cmp: { with: 'Câu điều kiện loại 2', rows: [
+        ['Ý nghĩa', 'Giả định một tình huống', 'Tiếc vì thực tế không như vậy'],
+        ['Ví dụ', 'If I knew the answer, I would tell you.', 'I wish I knew the answer.']
+      ]},
+      paste: 'I wish I {knew} the answer. (know) // Ước trái hiện tại → lùi về quá khứ đơn.\nShe wishes she [has studied > had studied] harder last year.\nI am not tall enough to reach it. >> I wish I were tall enough to reach it.' },
+    { name: 'So sánh kép & bội số', en: 'Double comparatives', lv: 'B2', ico: 'trend', rules: 5, items: 20,
+      desc: 'the more… the more · twice as… as. Cấu trúc hay gặp trong viết học thuật.',
+      tags: [],
+      uses: [
+        ['Hai vế cùng tăng hoặc giảm', '{The more} you practise, {the better} you get.', 'the + so sánh hơn ở cả hai vế.'],
+        ['Bội số', 'This house is {twice as} expensive {as} that one.', 'twice / three times + as … as.'],
+        ['Nhấn mức tăng dần', 'It is getting {colder and colder}.', 'Lặp lại so sánh hơn nối bằng and.']
+      ],
+      paste: 'The more you practise, the {better} you get. (good)\nThis house is {twice as | two times | double as | twice more} expensive as that one.\nHe earns double what I earn. >> He earns twice as much as I do.' },
+    { name: 'Danh động từ sau giới từ', en: 'Gerund after prepositions', lv: 'B1', ico: 'pen', rules: 4, items: 18,
+      desc: 'Sau mọi giới từ luôn là V-ing. Người Việt hay để nguyên động từ vì tiếng Việt không chia.',
+      tags: ['Giới từ'],
+      uses: [
+        ['Sau giới từ đơn', 'She is good {at solving} problems.', 'at, in, on, for, of — sau tất cả đều là V-ing.'],
+        ['Sau cụm động từ có giới từ', 'Thank you {for helping} me yesterday.', 'thank sb for, apologise for, insist on…'],
+        ['Sau “to” là giới từ', 'I look forward {to hearing} from you.', 'Bẫy lớn: “to” ở đây là giới từ, không phải to-infinitive.']
+      ],
+      cmp: { with: 'to-infinitive', rows: [
+        ['Sau giới từ', 'Không dùng', 'Luôn dùng V-ing'],
+        ['Ví dụ', 'I want to go home.', 'I am thinking of going home.']
+      ]},
+      paste: 'She is good at {solving} problems. (solve) // Sau giới từ luôn là V-ing.\nThank you for [help > helping] me yesterday.\nHe apologised {for | of | to | about} arriving late.' },
+    { name: 'Lượng từ đếm được / không đếm được', en: 'Quantifiers', lv: 'A2', ico: 'layers', rules: 7, items: 24,
+      desc: 'much · many · a few · a little · some · any. Gắn chặt với lỗi số nhiều của người Việt.',
+      tags: ['Thiếu -s số nhiều'],
+      uses: [
+        ['Với danh từ không đếm được', 'There is not {much} water left.', 'much, a little, little — danh từ giữ nguyên, không thêm -s.'],
+        ['Với danh từ đếm được', 'How {many} students are there?', 'many, a few, few — danh từ phải ở số nhiều.'],
+        ['Dùng chung cho cả hai', 'We have {a lot of} time and {a lot of} friends.', 'a lot of, plenty of, some, any — không phân biệt.']
+      ],
+      cmp: { with: 'Danh từ đếm được', rows: [
+        ['Lượng từ', 'many · a few · few · a number of', 'much · a little · little · an amount of'],
+        ['Dạng danh từ', 'three books', 'three pieces of information'],
+        ['Câu hỏi số lượng', 'How many…?', 'How much…?']
+      ]},
+      paste: 'There is not {much} water left in the bottle.\nI have [a few informations > a little information] about the course. // information không đếm được.\nHow {many | much | a lot | plenty} students are there in your class?' },
+    { name: 'Đảo ngữ với trạng từ phủ định', en: 'Negative inversion', lv: 'C1', ico: 'shuffle', rules: 6, items: 20,
+      desc: 'Never · Rarely · Not only · No sooner đứng đầu câu thì đảo trợ động từ lên trước chủ ngữ.',
+      tags: ['Trật tự từ'],
+      uses: [
+        ['Trạng từ phủ định đầu câu', '{Never have I seen} such a sunset.', 'Never, Rarely, Seldom, Little → đảo trợ động từ.'],
+        ['Not only … but also', '{Not only does she sing}, but she also plays piano.', 'Vế đầu đảo, vế sau giữ nguyên.'],
+        ['No sooner … than', '{No sooner had I sat down} than the phone rang.', 'Thường đi cùng quá khứ hoàn thành.']
+      ],
+      paste: 'Never {have I seen} such a beautiful sunset. (see) // Trạng từ phủ định đầu câu → đảo trợ động từ.\nNot only [she sings > does she sing] well, but she also plays the piano.\nI had hardly sat down when the phone rang. >> Hardly had I sat down when the phone rang.' }
+  ];
+
+  function tplCard(t, i) {
+    return '<a class="deck" href="#" data-i="' + i + '" data-lv="' + t.lv + '">' +
+      '<span class="deck-top">' +
+        '<span class="topic-mark"><i data-ico="' + t.ico + '"></i></span>' +
+        '<span><span class="deck-name">' + esc(t.name) + '</span>' +
+          '<span class="deck-desc">' + esc(t.en) + '</span>' +
+          '<span class="topic-tags"><span class="lv">' + t.lv + '</span>' +
+            (t.tags.length ? '<span class="badge badge-err badge-dot">' + esc(t.tags[0]) + '</span>' : '') +
+          '</span></span>' +
+      '</span>' +
+      '<span class="deck-desc" style="margin-top:10px;line-height:1.55">' + esc(t.desc) + '</span>' +
+      '<span class="topic-foot"><span>' + t.rules + ' quy tắc · ' + t.items + ' câu</span>' +
+        '<span class="deck-go">Dùng mẫu này <i data-ico="right"></i></span></span>' +
+    '</a>';
+  }
+
+  (function buildTpl() {
+    $('tplGrid').innerHTML = TEMPLATES.map(tplCard).join('');
+    window.EMHydrate();
+    $('tplGrid').querySelectorAll('.deck').forEach(function (c) {
+      c.onclick = function (e) { e.preventDefault(); openWizard(TEMPLATES[+c.dataset.i]); };
+    });
+    var cards = [].slice.call($('tplGrid').querySelectorAll('.deck'));
+    $('tplFilter').querySelectorAll('.chip').forEach(function (c) {
+      c.onclick = function () {
+        $('tplFilter').querySelectorAll('.chip').forEach(function (x) { x.classList.remove('is-active'); });
+        c.classList.add('is-active');
+        var lv = c.dataset.lv, n = 0;
+        cards.forEach(function (k) {
+          var s = (lv === 'all' || k.dataset.lv === lv);
+          k.style.display = s ? '' : 'none'; if (s) n++;
+        });
+        $('tplCount').textContent = n + ' mẫu';
+        $('tplEmpty').hidden = n > 0;
+        $('tplGrid').hidden = n === 0;
+      };
+    });
+  })();
+
+  /* =====================================================================
+     5. BƯỚC 1 — THÔNG TIN
+     ===================================================================== */
+  function pickGroup(box, cb) {
+    box.querySelectorAll('button').forEach(function (b) {
+      b.onclick = function () {
+        box.querySelectorAll('button').forEach(function (x) { x.classList.remove('is-active'); });
+        b.classList.add('is-active');
+        cb(b.dataset.v);
+      };
+    });
+  }
+  pickGroup($('inLevel'), function (v) { state.level = v; });
+  pickGroup($('inIcon'), function (v) { state.icon = v; });
+
+  $('inTags').querySelectorAll('.chip').forEach(function (c) {
+    c.onclick = function () {
+      c.classList.toggle('is-active');
+      state.tags = [].slice.call($('inTags').querySelectorAll('.chip.is-active'))
+                     .map(function (x) { return x.dataset.v; });
+    };
+  });
+
+  /* =====================================================================
+     6. BƯỚC 2 — CÔNG THỨC · TỪ TÍN HIỆU · BẪY
+     ===================================================================== */
+  function formRow(a, b, c) {
+    var d = document.createElement('div');
+    d.className = 'rrow';
+    d.innerHTML =
+      '<input class="input" placeholder="Khẳng định" value="' + esc(a || '') + '">' +
+      '<input class="input" placeholder="S + have/has + V3" value="' + esc(b || '') + '">' +
+      '<input class="input" placeholder="She has lived here for six years." value="' + esc(c || '') + '">' +
+      '<button class="icon-btn danger" title="Xóa dòng"><i data-ico="trash"></i></button>';
+    d.querySelector('button').onclick = function () { d.remove(); };
+    $('formRows').appendChild(d);
+    window.EMHydrate();
+    return d;
+  }
+  $('addForm').onclick = function () { formRow().querySelector('.input').focus(); };
+
+  /* Trường hợp dùng — icon gán tự động theo thứ tự, giống lưới trong trang bài học */
+  var USE_ICONS = ['target', 'zap', 'clock', 'sparkle', 'bulb', 'stack'];
+  function renumberUses() {
+    [].slice.call($('useRows').children).forEach(function (el, i) {
+      el.querySelector('.use-no').innerHTML =
+        window.EMIcon(USE_ICONS[i % USE_ICONS.length], 'ico-sm') + '<span>' + (i + 1) + '</span>';
+    });
+  }
+  function useRow(t, e, n) {
+    var d = document.createElement('div');
+    d.className = 'tblock';
+    d.innerHTML =
+      '<span class="use-no full"></span>' +
+      '<input class="input" placeholder="Tên trường hợp — VD: Kinh nghiệm trong đời" value="' + esc(t || '') + '">' +
+      '<input class="input" placeholder="Câu ví dụ — I {have visited} Japan twice." value="' + esc(e || '') + '">' +
+      '<button class="icon-btn danger" title="Xóa trường hợp"><i data-ico="trash"></i></button>' +
+      '<input class="input full" placeholder="Giải thích tiếng Việt — Không quan tâm đi khi nào, chỉ nói là đã từng." value="' + esc(n || '') + '">';
+    d.querySelector('button').onclick = function () { d.remove(); renumberUses(); };
+    $('useRows').appendChild(d);
+    window.EMHydrate();
+    renumberUses();
+    return d;
+  }
+  $('addUse').onclick = function () { useRow().querySelector('.input').focus(); };
+
+  /* Đối chiếu với chủ điểm dễ nhầm */
+  function cmpRow(k, a, b) {
+    var d = document.createElement('div');
+    d.className = 'rrow';
+    d.innerHTML =
+      '<input class="input" placeholder="Thời điểm" value="' + esc(k || '') + '">' +
+      '<input class="input" placeholder="Xác định và đã khép lại" value="' + esc(a || '') + '">' +
+      '<input class="input" placeholder="Không nêu, hoặc khoảng chưa kết thúc" value="' + esc(b || '') + '">' +
+      '<button class="icon-btn danger" title="Xóa tiêu chí"><i data-ico="trash"></i></button>';
+    d.querySelector('button').onclick = function () { d.remove(); };
+    $('cmpRows').appendChild(d);
+    window.EMHydrate();
+    return d;
+  }
+  $('addCmp').onclick = function () { cmpRow().querySelector('.input').focus(); };
+
+  /* Tiêu đề 2 cột của bảng đối chiếu bám theo tên người dùng vừa gõ */
+  function syncCmpHead() {
+    $('cmpHeadA').textContent = $('inCmp').value.trim() || 'Chủ điểm kia';
+    $('cmpHeadB').textContent = $('inName').value.trim() || 'Chủ điểm này';
+  }
+  $('inCmp').addEventListener('input', syncCmpHead);
+  $('inName').addEventListener('input', syncCmpHead);
+
+  function trapRow(w, r, y) {
+    var d = document.createElement('div');
+    d.className = 'tblock';
+    d.innerHTML =
+      '<input class="input" placeholder="Câu sai — VD: I already sent you the file." value="' + esc(w || '') + '">' +
+      '<input class="input" placeholder="Câu đúng — VD: I have already sent you the file." value="' + esc(r || '') + '">' +
+      '<button class="icon-btn danger" title="Xóa bẫy"><i data-ico="trash"></i></button>' +
+      '<input class="input full" placeholder="Vì sao — nguyên nhân đến từ tiếng Việt" value="' + esc(y || '') + '">';
+    d.querySelector('button').onclick = function () { d.remove(); };
+    $('trapRows').appendChild(d);
+    window.EMHydrate();
+    return d;
+  }
+  $('addTrap').onclick = function () { trapRow().querySelector('.input').focus(); };
+
+  function drawSignals() {
+    $('sigList').innerHTML = state.signals.map(function (s, i) {
+      return '<span class="chip-x">' + esc(s) +
+             '<button data-i="' + i + '" aria-label="Bỏ ' + esc(s) + '"><i data-ico="x"></i></button></span>';
+    }).join('');
+    window.EMHydrate();
+    $('sigList').querySelectorAll('button').forEach(function (b) {
+      b.onclick = function () { state.signals.splice(+b.dataset.i, 1); drawSignals(); };
+    });
+  }
+  $('sigIn').addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    var v = this.value.trim().replace(/,$/, '');
+    if (!v) return;
+    v.split(',').forEach(function (x) {
+      x = x.trim();
+      if (x && state.signals.indexOf(x) === -1) state.signals.push(x);
+    });
+    this.value = '';
+    drawSignals();
+  });
+
+  /* =====================================================================
+     7. BƯỚC 3 — NHẬP CÂU LUYỆN TẬP
+     ===================================================================== */
+  document.querySelectorAll('#pane-3 .tabs button').forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll('#pane-3 .tabs button').forEach(function (x) { x.classList.remove('is-active'); });
+      b.classList.add('is-active');
+      $('src-paste').hidden = (b.dataset.src !== 'paste');
+      $('src-file').hidden = (b.dataset.src !== 'file');
+    };
+  });
+
+  $('btnSample').onclick = function () { $('pasteBox').value = SAMPLE; refresh(); };
+  $('btnClear').onclick = function () { $('pasteBox').value = ''; refresh(); };
+  $('pasteBox').addEventListener('input', refresh);
+
+  function refresh() {
+    state.items = parseAll($('pasteBox').value);
+    drawReview();
+  }
+
+  function drawReview() {
+    var rows = state.items;
+    var good = rows.filter(function (r) { return r.ok; });
+    var bad = rows.filter(function (r) { return !r.ok; });
+
+    $('revOk').innerHTML = window.EMIcon('check') + ' ' + good.length + ' câu hợp lệ';
+    $('revBad').hidden = bad.length === 0;
+    $('revBad').innerHTML = window.EMIcon('alert') + ' ' + bad.length + ' dòng lỗi';
+
+    var mix = {};
+    good.forEach(function (r) { mix[r.type] = (mix[r.type] || 0) + 1; });
+    var parts = Object.keys(mix).map(function (k) { return TYPE_LABEL[k] + ' ' + mix[k]; });
+    $('revMix').textContent = parts.length ? parts.join(' · ') : '—';
+
+    if (!rows.length) {
+      $('revList').innerHTML =
+        '<div class="empty" style="border:none;padding:38px 20px">' + window.EMIcon('inbox') +
+        '<b>Chưa có câu nào</b><p>Dán câu vào ô bên trên hoặc tải file lên — bảng duyệt sẽ hiện ngay tại đây.</p></div>';
+      window.EMHydrate();
+      return;
+    }
+
+    $('revList').innerHTML = rows.map(function (r, i) {
+      if (!r.ok) {
+        return '<div class="rev is-bad" data-i="' + i + '">' +
+          '<span class="badge badge-err"><i data-ico="alert"></i> Dòng ' + r.no + '</span>' +
+          '<span class="rev-q">' + esc(r.raw) +
+            '<span class="rev-why" style="color:var(--err)">' + esc(r.msg) + '</span></span>' +
+          '<button class="icon-btn danger" data-del="' + i + '" title="Bỏ dòng này"><i data-ico="trash"></i></button>' +
+        '</div>';
+      }
+      return '<div class="rev" data-i="' + i + '">' +
+        '<span class="badge">' + TYPE_LABEL[r.type] + '</span>' +
+        '<span class="rev-q">' + r.display +
+          (r.why ? '<span class="rev-why">Vì sao: ' + esc(r.why) + '</span>' : '') + '</span>' +
+        '<button class="icon-btn danger" data-del="' + i + '" title="Bỏ câu này"><i data-ico="trash"></i></button>' +
+      '</div>';
+    }).join('');
+    window.EMHydrate();
+
+    $('revList').querySelectorAll('[data-del]').forEach(function (b) {
+      b.onclick = function () { state.items.splice(+b.dataset.del, 1); drawReview(); };
+    });
+  }
+
+  /* ---- Nhập từ file (.csv / .txt) ---- */
+  function splitCsvLine(line) {
+    var out = [], cur = '', q = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (ch === '"') {
+        if (q && line[i + 1] === '"') { cur += '"'; i++; }
+        else q = !q;
+      } else if (ch === ',' && !q) { out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    out.push(cur);
+    return out.map(function (s) { return s.trim(); });
+  }
+
+  function importText(text, fname) {
+    var lines = String(text).replace(/^﻿/, '').split(/\r?\n/).filter(function (l) { return l.trim(); });
+    if (!lines.length) { $('fileMsg').textContent = 'File rỗng.'; return; }
+
+    var head = splitCsvLine(lines[0]).map(function (h) { return h.toLowerCase(); });
+    var iCau = head.indexOf('cau'), iWhy = head.indexOf('giai_thich');
+    var body = lines, built = [];
+
+    if (iCau > -1) {
+      body = lines.slice(1);
+      body.forEach(function (l) {
+        var c = splitCsvLine(l);
+        var cau = c[iCau] || '';
+        var why = (iWhy > -1 && c[iWhy]) ? c[iWhy] : '';
+        if (cau) built.push(why ? cau + ' // ' + why : cau);
+      });
+    } else {
+      /* Không có dòng tiêu đề — coi mỗi dòng là một câu */
+      body.forEach(function (l) { built.push(l); });
+    }
+
+    var cur = $('pasteBox').value.trim();
+    $('pasteBox').value = (cur ? cur + '\n' : '') + built.join('\n');
+    refresh();
+
+    var n = state.items.filter(function (r) { return r.ok; }).length;
+    $('fileMsg').innerHTML = window.EMIcon('check', 'ico-sm') +
+      ' Đã đọc <b>' + esc(fname) + '</b> — ' + built.length + ' dòng, ' + n +
+      ' câu hợp lệ. Xem và sửa ở bảng duyệt bên dưới.';
+    $('fileMsg').style.color = 'var(--ok)';
+  }
+
+  function readFile(f) {
+    if (!f) return;
+    var fr = new FileReader();
+    fr.onload = function () { importText(fr.result, f.name); };
+    fr.readAsText(f, 'utf-8');
+  }
+
+  $('drop').onclick = function () { $('fileIn').click(); };
+  $('drop').onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') $('fileIn').click(); };
+  $('fileIn').onchange = function () { readFile(this.files[0]); };
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    $('drop').addEventListener(ev, function (e) { e.preventDefault(); this.classList.add('is-over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    $('drop').addEventListener(ev, function (e) { e.preventDefault(); this.classList.remove('is-over'); });
+  });
+  $('drop').addEventListener('drop', function (e) {
+    if (e.dataTransfer && e.dataTransfer.files) readFile(e.dataTransfer.files[0]);
+  });
+
+  $('btnTemplate').onclick = function () {
+    var csv = '﻿cau,giai_thich\n' +
+      '"She {has lived} in Da Nang for six years. (live)","Khoảng thời gian chưa kết thúc → hiện tại hoàn thành."\n' +
+      '"He has worked here {for | since | from | during} five years.","for đi với độ dài, since đi với mốc thời gian."\n' +
+      '"My sister is [teacher > a teacher] at a primary school.","Danh từ đếm được số ít luôn cần mạo từ."\n' +
+      '"They built it in 1990. >> It was built in 1990.",""\n';
+    var url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    var a = document.createElement('a');
+    a.href = url; a.download = 'mau-cau-luyen-tap.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 800);
+  };
+
+  /* =====================================================================
+     8. BƯỚC 4 — XEM TRƯỚC & KIỂM TRA
+     ===================================================================== */
+  function collect() {
+    state.name = $('inName').value.trim();
+    state.nameEn = $('inNameEn').value.trim();
+    state.group = $('inGroup').value;
+    state.desc = $('inDesc').value.trim();
+    state.formulas = [].slice.call($('formRows').children).map(function (r) {
+      var v = [].slice.call(r.querySelectorAll('.input')).map(function (i) { return i.value.trim(); });
+      return { k: v[0], s: v[1], e: v[2] };
+    }).filter(function (f) { return f.k || f.s || f.e; });
+    state.uses = [].slice.call($('useRows').children).map(function (r) {
+      var v = [].slice.call(r.querySelectorAll('.input')).map(function (i) { return i.value.trim(); });
+      return { t: v[0], e: v[1], n: v[2] };
+    }).filter(function (u) { return u.t || u.e; });
+    state.cmpWith = $('inCmp').value.trim();
+    state.cmpRows = [].slice.call($('cmpRows').children).map(function (r) {
+      var v = [].slice.call(r.querySelectorAll('.input')).map(function (i) { return i.value.trim(); });
+      return { k: v[0], a: v[1], b: v[2] };
+    }).filter(function (c) { return c.k && (c.a || c.b); });
+    state.traps = [].slice.call($('trapRows').children).map(function (r) {
+      var v = [].slice.call(r.querySelectorAll('.input')).map(function (i) { return i.value.trim(); });
+      return { w: v[0], r: v[1], y: v[2] };
+    }).filter(function (t) { return t.w || t.r; });
+  }
+
+  function drawPreview() {
+    collect();
+    var good = state.items.filter(function (r) { return r.ok; });
+
+    $('prevDeck').innerHTML =
+      '<span class="deck-top">' +
+        '<span class="topic-mark">' + window.EMIcon(state.icon) + '</span>' +
+        '<span><span class="deck-name">' + esc(state.name || 'Chủ điểm chưa đặt tên') + '</span>' +
+          (state.nameEn ? '<span class="deck-desc">' + esc(state.nameEn) + '</span>' : '') +
+          '<span class="topic-tags"><span class="lv">' + state.level + '</span>' +
+            (state.tags.length ? '<span class="badge badge-err badge-dot">' + esc(state.tags[0]) + '</span>' : '') +
+          '</span></span>' +
+      '</span>' +
+      '<span class="bar bar-accent"><i style="width:0%"></i></span>' +
+      '<span class="topic-foot"><span>' + state.formulas.length + ' quy tắc · ' + good.length + ' câu</span>' +
+        '<span>Chưa bắt đầu</span></span>';
+
+    var first = good[0];
+    $('prevItem').innerHTML = first
+      ? '<span class="badge badge-accent" style="margin-bottom:9px">' + TYPE_LABEL[first.type] + '</span>' +
+        '<p style="font-size:15px;line-height:1.7">' + first.display + '</p>' +
+        (first.why ? '<p class="hint-line" style="margin-top:8px">Vì sao: ' + esc(first.why) + '</p>' : '')
+      : '<p class="t-sm muted-2">Chưa có câu luyện tập nào — quay lại bước 3 để thêm.</p>';
+
+    var types = {};
+    good.forEach(function (r) { types[r.type] = 1; });
+    var nType = Object.keys(types).length;
+    var bad = state.items.length - good.length;
+
+    var checks = [
+      [!!state.name, 'Đã có tên chủ điểm', state.name || 'Bắt buộc — quay lại bước 1'],
+      [state.formulas.length > 0, state.formulas.length + ' dòng công thức',
+        state.formulas.length ? 'Hiện ở đầu trang bài học' : 'Chưa có dòng nào — bài học sẽ trống phần công thức'],
+      [state.uses.length >= 2, state.uses.length + ' trường hợp dùng',
+        state.uses.length >= 2 ? 'Đủ để người học thấy chủ điểm dùng vào những việc khác nhau'
+                               : 'Nên có ít nhất 2 — biết công thức mà không biết dùng khi nào thì vẫn viết sai'],
+      [state.cmpRows.length > 0,
+        state.cmpWith ? 'Đối chiếu với “' + state.cmpWith + '” · ' + state.cmpRows.length + ' tiêu chí'
+                      : 'Chưa có bảng đối chiếu',
+        state.cmpRows.length ? 'Phần người học tra lại nhiều nhất'
+                             : 'Không bắt buộc — chỉ cần nếu chủ điểm có cặp dễ nhầm'],
+      [state.traps.length > 0, state.traps.length + ' bẫy với người Việt',
+        state.traps.length ? 'Phần người học đọc kỹ nhất' : 'Nên có ít nhất một bẫy — đây là giá trị riêng của app'],
+      [good.length >= 8, good.length + ' câu luyện tập',
+        good.length >= 8 ? 'Đủ cho một phiên khoảng 5 phút' : 'Nên có từ 8 câu trở lên để một phiên đủ dài'],
+      [nType >= 3, 'Dùng ' + nType + ' / 4 dạng bài',
+        nType >= 3 ? 'Đủ đa dạng để tránh học vẹt đáp án' : 'Chỉ một hai dạng thì người học dễ nhớ đáp án thay vì quy tắc'],
+      [bad === 0, bad === 0 ? 'Không còn dòng lỗi cú pháp' : 'Còn ' + bad + ' dòng lỗi cú pháp',
+        bad === 0 ? 'Mọi dòng đều đọc được' : 'Các dòng lỗi sẽ bị bỏ qua khi lưu'],
+      [state.signals.length > 0, state.signals.length + ' từ tín hiệu',
+        state.signals.length ? 'Giúp người học nhận diện nhanh' : 'Không bắt buộc']
+    ];
+
+    $('chkList').innerHTML = checks.map(function (c) {
+      return '<div class="chk-row ' + (c[0] ? 'chk-ok' : 'chk-warn') + '">' +
+        window.EMIcon(c[0] ? 'check' : 'alert') +
+        '<div><b style="font-weight:500">' + esc(c[1]) + '</b><span>' + esc(c[2]) + '</span></div>' +
+      '</div>';
+    }).join('');
+    window.EMHydrate();
+  }
+
+  /* =====================================================================
+     9. ĐIỀU HƯỚNG WIZARD
+     ===================================================================== */
+  function openWizard(tpl) {
+    step = 1;
+    state.signals = [];
+    state.tags = [];
+    $('formRows').innerHTML = '';
+    $('useRows').innerHTML = '';
+    $('cmpRows').innerHTML = '';
+    $('trapRows').innerHTML = '';
+    $('inCmp').value = '';
+    $('inTags').querySelectorAll('.chip').forEach(function (c) { c.classList.remove('is-active'); });
+
+    if (tpl) {
+      $('inName').value = tpl.name;
+      $('inNameEn').value = tpl.en;
+      $('inDesc').value = tpl.desc;
+      state.level = tpl.lv;
+      state.icon = tpl.ico;
+      $('inLevel').querySelectorAll('button').forEach(function (b) {
+        b.classList.toggle('is-active', b.dataset.v === tpl.lv);
+      });
+      $('inIcon').querySelectorAll('button').forEach(function (b) {
+        b.classList.toggle('is-active', b.dataset.v === tpl.ico);
+      });
+      state.tags = tpl.tags.slice();
+      $('inTags').querySelectorAll('.chip').forEach(function (c) {
+        c.classList.toggle('is-active', tpl.tags.indexOf(c.dataset.v) > -1);
+      });
+      formRow('Khẳng định', 'S + …', '');
+      (tpl.uses || []).forEach(function (u) { useRow(u[0], u[1], u[2]); });
+      if (tpl.cmp) {
+        $('inCmp').value = tpl.cmp.with;
+        tpl.cmp.rows.forEach(function (r) { cmpRow(r[0], r[1], r[2]); });
+      }
+      trapRow('', '', '');
+      $('pasteBox').value = tpl.paste;
+      $('wizTitle').textContent = 'Chép mẫu: ' + tpl.name;
+      $('wizSub').textContent = 'Mọi phần đã điền sẵn từ mẫu — sửa lại theo ý bạn rồi lưu.';
+    } else {
+      $('inName').value = ''; $('inNameEn').value = ''; $('inDesc').value = '';
+      state.level = 'B1'; state.icon = 'clock';
+      $('inLevel').querySelectorAll('button').forEach(function (b) {
+        b.classList.toggle('is-active', b.dataset.v === 'B1');
+      });
+      $('inIcon').querySelectorAll('button').forEach(function (b) {
+        b.classList.toggle('is-active', b.dataset.v === 'clock');
+      });
+      formRow('Khẳng định', '', '');
+      formRow('Phủ định', '', '');
+      formRow('Nghi vấn', '', '');
+      useRow('', '', '');
+      useRow('', '', '');
+      cmpRow('', '', '');
+      trapRow('', '', '');
+      $('pasteBox').value = '';
+      $('wizTitle').textContent = 'Chủ điểm mới';
+      $('wizSub').textContent = 'Bốn bước. Bạn có thể quay lại sửa bất cứ lúc nào trước khi lưu.';
+    }
+
+    drawSignals();
+    syncCmpHead();
+    refresh();
+    show('scr-wiz');
+    goStep(1);
+  }
+
+  function goStep(n) {
+    step = n;
+    [1, 2, 3, 4].forEach(function (i) { $('pane-' + i).hidden = (i !== n); });
+    $('steps').querySelectorAll('.stp').forEach(function (s) {
+      var i = +s.dataset.s;
+      s.classList.toggle('is-now', i === n);
+      s.classList.toggle('is-done', i < n);
+      var no = s.querySelector('.stp-no');
+      no.innerHTML = (i < n) ? window.EMIcon('check') : String(i);
+    });
+    $('btnPrev').hidden = (n === 1);
+    $('stepHint').textContent = 'Bước ' + n + ' / 4';
+    $('btnNext').innerHTML = (n === 4)
+      ? window.EMIcon('save') + ' Lưu chủ điểm'
+      : 'Tiếp tục' + window.EMIcon('right');
+    $('btnNext').classList.toggle('btn-primary', true);
+    if (n === 4) drawPreview();
+    window.scrollTo(0, 0);
+  }
+
+  $('steps').querySelectorAll('.stp').forEach(function (s) {
+    s.onclick = function () {
+      var i = +s.dataset.s;
+      if (i < step) goStep(i);                       /* chỉ cho nhảy lùi */
+    };
+  });
+
+  $('btnPrev').onclick = function () { if (step > 1) goStep(step - 1); };
+
+  $('btnNext').onclick = function () {
+    if (step === 1) {
+      var name = $('inName').value.trim();
+      $('fName').classList.toggle('is-bad', !name);
+      if (!name) { $('inName').focus(); return; }
+    }
+    if (step === 4) { save(); return; }
+    goStep(step + 1);
+  };
+
+  function save() {
+    collect();
+    var good = state.items.filter(function (r) { return r.ok; });
+    $('doneName').textContent = 'Đã thêm “' + (state.name || 'Chủ điểm mới') + '”';
+    $('doneSub').innerHTML = state.level + ' · ' + state.formulas.length + ' dòng công thức · ' +
+      state.traps.length + ' bẫy · <b>' + good.length + ' câu luyện tập</b>. ' +
+      'Chủ điểm đã nằm trong thư viện và có lịch ôn riêng.';
+    show('scr-done');
+  }
+
+  /* Khởi tạo bảng duyệt rỗng */
+  drawReview();
+})();
+</script>
+</body>
+</html>

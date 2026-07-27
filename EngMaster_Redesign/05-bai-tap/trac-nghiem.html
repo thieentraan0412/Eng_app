@@ -1,92 +1,104 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trắc nghiệm — ADV · EngMaster</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trắc nghiệm · Bài tập · EngMaster</title>
 <link rel="stylesheet" href="style.css">
-<style></style>
+<style>
+  .q-label{font-size:12px;color:var(--text-3);text-align:center;font-variant-numeric:tabular-nums}
+  .q-word{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:6px}
+  .q-word b{font-size:34px;font-weight:600;letter-spacing:-.036em;line-height:1.2}
+
+  .options{display:flex;flex-direction:column;gap:8px;width:100%}
+  .opt{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+    padding:13px 15px;background:var(--surface);
+    border:1px solid var(--border-2);border-radius:var(--r-md);box-shadow:var(--sh-xs);
+    transition:all var(--t-fast);font-size:14.5px;
+  }
+  .opt:hover{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-text)}
+  .opt-key{
+    width:22px;height:22px;flex:0 0 auto;border-radius:5px;display:grid;place-items:center;
+    font-size:11.5px;font-weight:600;color:var(--text-3);
+    background:var(--surface-2);border:1px solid var(--border);
+    transition:all var(--t-fast);
+  }
+  .opt:hover .opt-key{background:var(--surface);border-color:var(--accent-border);color:var(--accent-text)}
+  .opt .ico{margin-left:auto;opacity:0;width:16px;height:16px;transition:opacity var(--t-fast)}
+
+  .opt.is-right{border-color:var(--ok-border);background:var(--ok-soft);color:var(--ok)}
+  .opt.is-right .opt-key{background:var(--ok);border-color:var(--ok);color:#fff}
+  .opt.is-right .ico{opacity:1}
+  .opt.is-wrong{border-color:var(--err-border);background:var(--err-soft);color:var(--err)}
+  .opt.is-wrong .opt-key{background:var(--err);border-color:var(--err);color:#fff}
+  .opt.is-wrong .ico{opacity:1}
+
+  .nav-row{display:flex;align-items:center;justify-content:center;gap:12px;width:100%}
+  .nav-pos{font-size:12.5px;color:var(--text-3);font-variant-numeric:tabular-nums;min-width:62px;text-align:center}
+  @media (max-width:920px){ .q-word b{font-size:27px} .focus-foot{display:none} }
+</style>
 </head>
 <body>
-<header class="topbar">
-  <button class="burger" id="burger" aria-label="Mở menu">☰</button>
-  <div class="brand-mark">E</div>
-  <div class="topbar-title">Trắc nghiệm — ADV</div>
-</header>
-<div class="overlay" id="overlay"></div>
-<div class="app">
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-mark">E</div>
-      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
-      <button class="side-close" id="sideClose" aria-label="Đóng menu">✕</button>
-    </div>
-    <ul class="nav">
-      <li><a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a></li>
-      <li><a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a></li>
-      <li><a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a></li>
-      <li><a href="../05-bai-tap/index.html" class="active"><span class="ico">📝</span>Bài tập</a></li>
-      <li><a href="../06-doc/index.html"><span class="ico">📖</span>Đọc</a></li>
-      <li><a href="../07-viet/index.html"><span class="ico">✍️</span>Viết</a></li>
-      <li><a href="../08-chep-cau/index.html"><span class="ico">✏️</span>Chép câu</a></li>
-      <li><a href="../09-thong-ke/index.html"><span class="ico">📊</span>Thống kê</a></li>
-      <li><a href="../10-cai-dat/index.html"><span class="ico">⚙️</span>Cài đặt</a></li>
-    </ul>
-    <div class="side-user">
-      <div class="ava">T</div>
-      <div><b>thieentraan</b><span>Gói miễn phí</span></div>
-    </div>
-    <div class="side-foot"><span>v0.1.0</span><span>© EngMaster</span></div>
-  </aside>
-  <main class="content">
 
-    <div class="fc-stage" style="max-width:720px">
-      <div class="fc-head">
-        <a class="icon-btn" href="index.html" title="Thoát">✕</a>
-        <span class="chip">Câu 1/5 · ADV</span>
-        <span class="chip chip-teal">✓ 0 câu đúng</span>
-      </div>
-      <div class="quiz-q">
-        <div class="q-count">Câu 1/5 · Chọn nghĩa tiếng Việt đúng</div>
-        <div class="fc-word" style="justify-content:center">provide <span class="pos-badge">v</span><button class="speak">🔊</button></div>
-      </div>
-      <div class="options">
-        <button class="option"><span class="num">1</span>cơ hội, thời cơ</button>
-        <button class="option"><span class="num">2</span>dễ thấy</button>
-        <button class="option correct"><span class="num">3</span>cung cấp ✓</button>
-        <button class="option"><span class="num">4</span>tác động tiêu cực</button>
-      </div>
-      <div class="fc-nav">
-        <button class="btn btn-ghost btn-sm" disabled style="opacity:.5">← Trước</button>
-        <span>1 / 5</span>
-        <button class="btn btn-soft btn-sm">Bỏ qua →</button>
-      </div>
+<div class="focus">
+
+  <header class="focus-bar">
+    <a class="icon-btn" href="index.html" aria-label="Thoát"><i data-ico="x"></i></a>
+    <span class="bar bar-accent"><i style="width:86%"></i></span>
+    <span class="badge badge-ok"><i data-ico="check"></i> 60 đúng</span>
+    <button class="icon-btn" data-theme-toggle aria-label="Đổi giao diện"></button>
+  </header>
+
+  <div class="focus-stage">
+
+    <div class="segmented">
+      <button class="is-active"><i data-ico="repeat"></i> Anh → Việt</button>
+      <button><i data-ico="lang"></i> Việt → Anh</button>
     </div>
 
-  </main>
+    <div style="text-align:center">
+      <p class="q-label">Câu 63 / 73 · Chọn nghĩa tiếng Việt đúng</p>
+      <p class="q-word">
+        <b>paid</b>
+        <span class="pos">adj</span>
+        <button class="icon-btn" title="Phát âm"><i data-ico="speak"></i></button>
+      </p>
+    </div>
+
+    <div class="options">
+      <button class="opt" data-ok="1"><span class="opt-key">1</span> trả <i data-ico="check"></i></button>
+      <button class="opt"><span class="opt-key">2</span> Nuôi <i data-ico="x"></i></button>
+      <button class="opt"><span class="opt-key">3</span> duy nhất <i data-ico="x"></i></button>
+      <button class="opt"><span class="opt-key">4</span> duy trì <i data-ico="x"></i></button>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-sm"><i data-ico="left"></i> Trước</button>
+      <span class="nav-pos">63 / 73</span>
+      <button class="btn btn-sm">Bỏ qua <i data-ico="right"></i></button>
+    </div>
+
+    <p class="focus-foot">
+      <span>Bấm <span class="kbd">1</span>–<span class="kbd">4</span> để chọn nhanh</span>
+      <span><span class="kbd">Esc</span> thoát</span>
+    </p>
+  </div>
 </div>
-<nav class="tabbar">
-  <a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a>
-  <a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a>
-  <a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a>
-  <a href="../05-bai-tap/index.html" class="active"><span class="ico">📝</span>Bài tập</a>
-  <button id="tabMenu"><span class="ico">☰</span>Menu</button>
-</nav>
-<script>
-var sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
-function menu(o){sb.classList.toggle('open',o);ov.classList.toggle('show',o);}
-document.getElementById('burger').onclick=function(){menu(true)};
-document.getElementById('sideClose').onclick=function(){menu(false)};
-ov.onclick=function(){menu(false)};
-var tm=document.getElementById('tabMenu'); if(tm) tm.onclick=function(){menu(true)};
-document.querySelectorAll('[data-flip]').forEach(function(f){
-  f.addEventListener('click',function(){f.classList.toggle('flipped')});
-  f.querySelectorAll('input,textarea,button').forEach(function(i){i.addEventListener('click',function(e){e.stopPropagation()})});
-});
-document.querySelectorAll('.tabs:not([data-static])').forEach(function(g){g.querySelectorAll('.tab').forEach(function(t){if(t.tagName==='BUTTON')t.onclick=function(){g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-document.querySelectorAll('.pills').forEach(function(g){g.querySelectorAll('.pill').forEach(function(t){t.onclick=function(){g.querySelectorAll('.pill').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-</script>
 
+<script src="../app.js"></script>
+<script>
+  var opts = document.querySelectorAll('.opt');
+  function pick(i){
+    if (document.querySelector('.opt.is-right')) return;
+    opts.forEach(function(o){ if (o.dataset.ok) o.classList.add('is-right'); });
+    if (!opts[i].dataset.ok) opts[i].classList.add('is-wrong');
+  }
+  opts.forEach(function(o,i){ o.onclick = function(){ pick(i); }; });
+  document.addEventListener('keydown', function(e){
+    if (['1','2','3','4'].indexOf(e.key) > -1) pick(+e.key - 1);
+    if (e.key === 'Escape') location.href = 'index.html';
+  });
+</script>
 </body>
 </html>

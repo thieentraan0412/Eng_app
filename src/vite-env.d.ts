@@ -33,6 +33,11 @@ export interface EngMasterApi {
   getUpdateStatus: () => Promise<UpdateStatus | null>
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void
 
+  // Cửa sổ (luôn nổi trên cùng / thu gọn hình-trong-hình)
+  setAlwaysOnTop: (on: boolean) => Promise<boolean>
+  setMiniWindow: (on: boolean) => Promise<boolean>
+  getWindowState: () => Promise<{ alwaysOnTop: boolean; mini: boolean }>
+
   // Dịch nhanh toàn màn hình
   setDesktopTranslate: (enabled: boolean) => Promise<boolean>
   setTranslateHotkey: (accel: string) => Promise<boolean>

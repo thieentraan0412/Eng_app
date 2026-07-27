@@ -3,40 +3,41 @@ import { CloudApi, type Deck, type Card } from '../services/cloud/CloudApiClient
 import { previewInterval, type Rating } from '../services/srs'
 import { speak, stopSpeaking, ttsSupported } from '../services/tts'
 import { track } from '../services/studyTracker'
+import Icon from '../components/Icon'
 import '../styles/flashcard.css'
 
-// Nút 🔊 phát âm 1 lần (câu ví dụ) — dừng nổi bọt để không lật thẻ khi bấm
+// Nút loa phát âm 1 lần (câu ví dụ) — dừng nổi bọt để không lật thẻ khi bấm
 function SpeakButton({ text }: { text: string }) {
   if (!ttsSupported) return null
   return (
     <button
       type="button"
-      className="fc-speak"
+      className="rev-ibtn"
       title="Phát âm"
       onClick={(e) => {
         e.stopPropagation()
         speak(text)
       }}
     >
-      🔊
+      <Icon name="speak" />
     </button>
   )
 }
 
-// Nút loa cạnh TỪ: bật/tắt chế độ TỰ PHÁT ÂM (🔊 đang bật, 🔇 đã tắt)
+// Nút loa cạnh TỪ: bật/tắt chế độ TỰ PHÁT ÂM (mờ đi khi đã tắt)
 function SpeakToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   if (!ttsSupported) return null
   return (
     <button
       type="button"
-      className={on ? 'fc-speak' : 'fc-speak off'}
+      className={on ? 'rev-ibtn' : 'rev-ibtn is-off'}
       title={on ? 'Đang tự phát âm — bấm để tắt' : 'Tự phát âm đang tắt — bấm để bật'}
       onClick={(e) => {
         e.stopPropagation()
         onToggle()
       }}
     >
-      {on ? '🔊' : '🔇'}
+      <Icon name="speak" />
     </button>
   )
 }
@@ -49,12 +50,19 @@ function todayLocal(): string {
   ).padStart(2, '0')}`
 }
 
+// Bộ "Từ đã lưu khi đọc" — hiện icon bóng đèn thay chữ cái đầu (giống mockup)
+const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
+
 export default function FlashcardPage() {
   // Kèm danh sách thẻ từng bộ để hiện tiến độ: đã học bao nhiêu / đến hạn bao nhiêu
   const [decks, setDecks] = useState<{ deck: Deck; cards: Card[] }[] | null>(null)
   const [session, setSession] = useState<Deck | null>(null)
   // Tiến độ ôn trên cloud (chứa danh sách thẻ đã học qua của từng bộ)
   const [rvMap, setRvMap] = useState<Map<string, ReviewSaved>>(() => new Map())
+  // Số thẻ đã ôn hôm nay — cho vòng tròn tiến độ ở dải tổng quan
+  const [reviewedToday, setReviewedToday] = useState(0)
+  // Chiều học chọn trước khi vào phiên (dùng chung khóa với ReviewSession)
+  const [frontVi, setFrontVi] = useState(() => localStorage.getItem('fc_front_vi') === '1')
 
   useEffect(() => {
     ;(async () => {
@@ -69,7 +77,15 @@ export default function FlashcardPage() {
       .catch(() => {
         /* offline -> dùng bản local trong rvPick */
       })
+    CloudApi.studyStatsByDay(1)
+      .then((rows) => setReviewedToday(rows[rows.length - 1]?.cards_reviewed ?? 0))
+      .catch(() => setReviewedToday(0))
   }, [session]) // quay lại từ phiên ôn -> tải lại số liệu mới nhất
+
+  const pickDirection = (vi: boolean) => {
+    setFrontVi(vi)
+    localStorage.setItem('fc_front_vi', vi ? '1' : '0')
+  }
 
   if (session) {
     return <ReviewSession deck={session} onExit={() => setSession(null)} />
@@ -77,47 +93,143 @@ export default function FlashcardPage() {
 
   const today = todayLocal()
 
+  // Số liệu từng bộ + tổng thẻ đến hạn hôm nay
+  const rows = (decks ?? []).map(({ deck, cards }) => {
+    // "Đã học" = thẻ đã ĐI QUA trong phiên ôn (danh sách `s` lưu cloud/local)
+    // hoặc đã bấm đánh giá SRS ít nhất 1 lần (srs_reps > 0)
+    const saved = rvPick(deck.id, rvMap.get(deck.id) ?? null)
+    const seenSet = new Set(saved?.s ?? [])
+    const learned = cards.filter((c) => c.srs_reps > 0 || seenSet.has(c.id)).length
+    const due = cards.filter((c) => c.srs_due_date <= today).length
+    const pct = cards.length ? Math.round((learned / cards.length) * 100) : 0
+    return { deck, cards, learned, due, pct }
+  })
+  const totalDue = rows.reduce((s, r) => s + r.due, 0)
+  // Bộ sẽ mở khi bấm "Ôn ngay": nhiều thẻ đến hạn nhất
+  const topDue = rows.filter((r) => r.due > 0).sort((a, b) => b.due - a.due)[0]
+  // % tiến độ ôn của HÔM NAY: đã ôn / (đã ôn + còn đến hạn)
+  const dayTotal = reviewedToday + totalDue
+  const dayPct = dayTotal ? Math.round((reviewedToday / dayTotal) * 100) : 0
+
   return (
-    <div className="page">
-      <h1 className="page-title">Ôn tập (Flashcard)</h1>
-      <p className="muted">Chọn một bộ để bắt đầu ôn những thẻ đến hạn hôm nay.</p>
+    <div className="page fc-page">
+      <div className="fc-head">
+        <div>
+          <h1>Ôn tập</h1>
+          <p>Lịch lặp lại ngắt quãng (SRS) — chọn một bộ để ôn những thẻ đến hạn hôm nay.</p>
+        </div>
+        <div className="fc-seg">
+          <button
+            className={frontVi ? '' : 'is-active'}
+            onClick={() => pickDirection(false)}
+            title="Mặt trước hiện từ tiếng Anh"
+          >
+            <Icon name="repeat" /> Anh → Việt
+          </button>
+          <button
+            className={frontVi ? 'is-active' : ''}
+            onClick={() => pickDirection(true)}
+            title="Mặt trước hiện nghĩa tiếng Việt"
+          >
+            <Icon name="lang" /> Việt → Anh
+          </button>
+        </div>
+      </div>
+
+      {/* ----------------------------------------------------- Tổng quan */}
+      {decks && decks.length > 0 && (
+        <div className="fc-due-banner">
+          <span className="fc-ring" style={{ ['--p' as string]: dayPct }}>
+            <span>{dayPct}%</span>
+          </span>
+          <span className="fc-due-txt">
+            <b>
+              {totalDue > 0 ? `${totalDue} thẻ đến hạn hôm nay` : 'Không còn thẻ nào đến hạn'}
+            </b>
+            <span>
+              {reviewedToday > 0
+                ? `Đã ôn ${reviewedToday} thẻ hôm nay — tiếp tục giữ chuỗi ngày học.`
+                : totalDue > 0
+                  ? 'Chưa ôn thẻ nào — bắt đầu để giữ chuỗi ngày học.'
+                  : 'Bạn đã hoàn thành lịch ôn hôm nay. Có thể học lại cả bộ bất cứ lúc nào.'}
+            </span>
+          </span>
+          <span className="fc-spacer" />
+          {topDue && (
+            <button
+              className="fc-btn fc-btn-primary fc-btn-lg"
+              onClick={() => setSession(topDue.deck)}
+              title={`Mở bộ nhiều thẻ đến hạn nhất: ${topDue.deck.name}`}
+            >
+              <Icon name="play" /> Ôn ngay
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------- Chọn bộ */}
       {!decks ? (
         <p className="muted">Đang tải…</p>
       ) : decks.length === 0 ? (
-        <p className="muted">Chưa có bộ từ. Hãy tạo ở mục Từ vựng.</p>
-      ) : (
-        <div className="deck-grid">
-          {decks.map(({ deck, cards }) => {
-            // "Đã học" = thẻ đã ĐI QUA trong phiên ôn (danh sách `s` lưu cloud/local)
-            // hoặc đã bấm đánh giá SRS ít nhất 1 lần (srs_reps > 0)
-            const saved = rvPick(deck.id, rvMap.get(deck.id) ?? null)
-            const seenSet = new Set(saved?.s ?? [])
-            const learned = cards.filter((c) => c.srs_reps > 0 || seenSet.has(c.id)).length
-            const due = cards.filter((c) => c.srs_due_date <= today).length
-            const pct = cards.length ? Math.round((learned / cards.length) * 100) : 0
-            return (
-              <button key={deck.id} className="deck-card" onClick={() => setSession(deck)}>
-                <div className="deck-name">{deck.name}</div>
-                <span className="muted">
-                  Đã học {learned}/{cards.length} từ · {pct}%
-                </span>
-                <div className="ex-deck-bar" title={`${pct}% đã học`}>
-                  <div style={{ width: `${pct}%` }} />
-                </div>
-                <div className="fc-deck-meta">
-                  {cards.length === 0 ? (
-                    <span className="fc-due-badge idle">Chưa có thẻ</span>
-                  ) : due > 0 ? (
-                    <span className="fc-due-badge due">🔔 {due} thẻ đến hạn</span>
-                  ) : (
-                    <span className="fc-due-badge ok">✓ Xong hôm nay</span>
-                  )}
-                  <span className="deck-arrow">→</span>
-                </div>
-              </button>
-            )
-          })}
+        <div className="fc-empty">
+          <Icon name="layers" />
+          <b>Chưa có bộ từ nào</b>
+          <p>Tạo bộ từ và thêm thẻ ở mục Từ vựng để bắt đầu ôn theo lịch SRS.</p>
         </div>
+      ) : (
+        <>
+          <h2 className="fc-section-label">Chọn bộ để ôn</h2>
+          <section className="fc-grid">
+            {rows.map(({ deck, cards, learned, due, pct }) => (
+              <button key={deck.id} className="fc-deck" onClick={() => setSession(deck)}>
+                <span className="fc-deck-top">
+                  <span className="fc-deck-mark">
+                    {deck.name.trim() === SAVED_DECK_NAME ? (
+                      <Icon name="bulb" />
+                    ) : (
+                      deck.name.trim().charAt(0).toUpperCase()
+                    )}
+                  </span>
+                  <span className="fc-deck-txt">
+                    <span className="fc-deck-name">{deck.name}</span>
+                    <span className="fc-deck-desc">
+                      Đã học {learned} / {cards.length} từ · {pct}%
+                    </span>
+                  </span>
+                </span>
+
+                <span className="fc-bar">
+                  <i style={{ width: `${pct}%` }} />
+                </span>
+
+                <span className="fc-deck-meta">
+                  {cards.length === 0 ? (
+                    <span className="fc-badge">Chưa có thẻ</span>
+                  ) : due > 0 ? (
+                    <span className="fc-badge warn dot">{due} đến hạn</span>
+                  ) : (
+                    <span className="fc-badge ok">
+                      <Icon name="check" /> Xong hôm nay
+                    </span>
+                  )}
+                  <span className="fc-deck-go">
+                    Bắt đầu <Icon name="right" />
+                  </span>
+                </span>
+              </button>
+            ))}
+          </section>
+
+          <p className="fc-note">
+            <Icon name="bulb" />
+            <span>
+              Trong phiên ôn bạn có thể bật <b>Gõ từ</b> để tự kiểm tra chính tả, hoặc{' '}
+              <b>Ví dụ</b> để xem câu minh họa ở mặt sau. Lật thẻ bằng{' '}
+              <span className="fc-kbd">Tab</span>, đánh giá bằng{' '}
+              <span className="fc-kbd">1</span>–<span className="fc-kbd">4</span>.
+            </span>
+          </p>
+        </>
       )}
     </div>
   )
@@ -483,6 +595,9 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault()
         goBack()
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        onExit()
       } else if (flipped && ['1', '2', '3', '4'].includes(e.key)) {
         rate(RATINGS[Number(e.key) - 1].key)
       }
@@ -497,21 +612,24 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
 
   if (!current) {
     return (
-      <div className="page center">
-        <h1 className="page-title">🎉 Hoàn thành!</h1>
-        <p className="muted">
-          {practice ? 'Đã học lại' : 'Bạn đã ôn'} {done} thẻ trong bộ “{deck.name}”.
-        </p>
-        {done === 0 && !practice && (
-          <p className="muted">Không có thẻ nào đến hạn hôm nay. Bạn có thể học lại cả bộ.</p>
-        )}
-        <div className="review-actions">
-          <button className="btn primary" onClick={restudy}>
-            🔁 Học lại cả bộ
-          </button>
-          <button className="btn" onClick={onExit}>
-            Xong
-          </button>
+      <div className="page rev-session">
+        <div className="rev-done">
+          <Icon name="check" />
+          <h1>Hoàn thành!</h1>
+          <p>
+            {practice ? 'Đã học lại' : 'Bạn đã ôn'} {done} thẻ trong bộ “{deck.name}”.
+          </p>
+          {done === 0 && !practice && (
+            <p>Không có thẻ nào đến hạn hôm nay. Bạn có thể học lại cả bộ.</p>
+          )}
+          <div className="rev-done-actions">
+            <button className="fc-btn fc-btn-primary" onClick={restudy}>
+              <Icon name="undo" /> Học lại cả bộ
+            </button>
+            <button className="fc-btn" onClick={onExit}>
+              Xong
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -520,10 +638,10 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   const total = queue.length
   const pct = total ? Math.round((done / total) * 100) : 0
 
-  // Form tự viết câu ví dụ — dùng ở cả mặt trước lẫn mặt sau thẻ
+  // Form tự viết câu ví dụ — hiện ở mặt sau thẻ
   const exampleForm = (
     <form
-      className="fc-add-example"
+      className="rev-add-ex"
       onClick={(e) => e.stopPropagation()}
       onSubmit={(e) => {
         e.preventDefault()
@@ -531,12 +649,12 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
       }}
     >
       <input
-        placeholder="Viết câu ví dụ của bạn với từ này…"
+        placeholder="Thêm câu ví dụ của bạn…"
         value={myEx}
         onChange={(e) => setMyEx(e.target.value)}
       />
-      <button className="btn small" type="submit" disabled={savingEx || !myEx.trim()}>
-        {savingEx ? 'Đang lưu…' : '+ Lưu ví dụ'}
+      <button className="fc-btn fc-btn-sm" type="submit" disabled={savingEx || !myEx.trim()}>
+        <Icon name="plus" /> {savingEx ? 'Đang lưu…' : 'Lưu ví dụ'}
       </button>
     </form>
   )
@@ -544,42 +662,41 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   return (
     <div className="page rev-session">
       <div className="rev-top">
-        <button className="rev-exit" onClick={onExit} title="Thoát">
-          ✕
+        <button className="rev-ibtn danger" onClick={onExit} title="Thoát phiên ôn (Esc)">
+          <Icon name="x" />
         </button>
         <div className="rev-bar" title={`Còn lại ${total - idx} thẻ`}>
           <div className="rev-bar-fill" style={{ width: `${pct}%` }} />
         </div>
-        {practice && <span className="rev-mode">Học lại</span>}
-        <span className="rev-score" title="Đã ôn / tổng số thẻ">
-          ✓ {done}/{total}
+        {practice && <span className="fc-badge">Học lại</span>}
+        <span className="fc-badge" title="Đã ôn / tổng số thẻ">
+          <Icon name="check" /> {done} / {total}
         </span>
       </div>
 
       <div className="rev-stage" onTouchStart={onStageTouchStart} onTouchEnd={onStageTouchEnd}>
         <div className="rev-toggle-row">
-          <button className="rev-toggle" onClick={toggleFront} title="Đổi chiều học">
-            🔁 {frontVi ? 'Việt → Anh' : 'Anh → Việt'}
+          <button className="rev-toggle is-active" onClick={toggleFront} title="Đổi chiều học">
+            <Icon name={frontVi ? 'lang' : 'repeat'} /> {frontVi ? 'Việt → Anh' : 'Anh → Việt'}
           </button>
           <button
-            className={showTyping ? 'rev-toggle' : 'rev-toggle off'}
+            className={showTyping ? 'rev-toggle is-active' : 'rev-toggle'}
             onClick={toggleTyping}
             title={showTyping ? 'Đang hiện ô gõ từ — bấm để ẩn' : 'Ô gõ từ đang ẩn — bấm để hiện'}
           >
-            ⌨️ Gõ từ {showTyping ? '' : '(tắt)'}
+            <Icon name="keyboard" /> Gõ từ
           </button>
           <button
-            className={showExamples ? 'rev-toggle' : 'rev-toggle off'}
+            className={showExamples ? 'rev-toggle is-active' : 'rev-toggle'}
             onClick={toggleExamples}
             title={showExamples ? 'Đang hiện câu ví dụ — bấm để ẩn' : 'Câu ví dụ đang ẩn — bấm để hiện'}
           >
-            📝 Ví dụ {showExamples ? '' : '(tắt)'}
+            <Icon name="file" /> Ví dụ
           </button>
         </div>
 
-        <div className="rev-flip">
-        <div
-          className={flipped ? 'rev-card flipped' : 'rev-card'}
+        <article
+          className="rev-card"
           onClick={() => {
             // Vừa vuốt xong -> bỏ qua cú click (không lật thẻ)
             if (swiped.current) {
@@ -592,80 +709,91 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
             setFlipped((f) => !f)
           }}
         >
-          <div className="rev-word-row">
-            {frontVi ? (
-              <span className="rev-word">{current.meaning || '(chưa có nghĩa)'}</span>
-            ) : (
+          <div className="rev-front">
+            <div className="rev-word-row">
+              {frontVi ? (
+                <span className="rev-word">{current.meaning || '(chưa có nghĩa)'}</span>
+              ) : (
+                <>
+                  <span className="rev-word">{current.word}</span>
+                  {current.pos && <span className="rev-pos">{current.pos}</span>}
+                  <SpeakToggle on={autoSpeak} onToggle={toggleAutoSpeak} />
+                </>
+              )}
+            </div>
+
+            {!flipped && (
               <>
-                <span className="rev-word">{current.word}</span>
-                {current.pos && <span className="rev-pos">{current.pos}</span>}
-                <SpeakToggle on={autoSpeak} onToggle={toggleAutoSpeak} />
+                {/* Ô gõ từ tiếng Anh — cả 2 chiều học (ẩn/hiện bằng nút "Gõ từ"):
+                    · Việt→Anh: nhớ lại từ theo nghĩa (có gợi ý lộ dần chữ cái)
+                    · Anh→Việt: gõ lại từ đang thấy để nhớ mặt chữ/chính tả
+                    Gõ đúng (hoặc Enter khi đúng) -> tự sang từ khác */}
+                {showTyping && (
+                  <form
+                    className={`rev-typing ${answerState}`}
+                    onClick={(e) => e.stopPropagation()}
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      checkAnswer()
+                    }}
+                  >
+                    <input
+                      ref={answerRef}
+                      autoFocus
+                      placeholder={frontVi ? 'Gõ từ tiếng Anh…' : 'Gõ lại từ để nhớ chính tả…'}
+                      value={typed}
+                      // Giữ cùng một input và không bật readOnly khi trả lời đúng:
+                      // mobile sẽ duy trì focus + bàn phím khi tự chuyển sang thẻ mới.
+                      onChange={(e) => {
+                        if (answerState !== 'correct') onTypeAnswer(e.target.value)
+                      }}
+                      onKeyDown={(e) => {
+                        // Đang gõ trong ô nhập: Tab = lật thẻ xem nghĩa (lật lại bằng Tab lần
+                        // nữa — khi đó focus đã rời input nên phím tắt toàn trang xử lý)
+                        if (e.key === 'Tab') {
+                          e.preventDefault()
+                          setFlipped((f) => !f)
+                        }
+                      }}
+                    />
+                    {answerState === 'correct' && (
+                      <span className="rev-feedback ok">
+                        <Icon name="check" /> Chính xác!
+                      </span>
+                    )}
+                    {answerState === 'wrong' && (
+                      <span className="rev-feedback no">
+                        <Icon name="x" /> Chưa đúng, thử lại
+                      </span>
+                    )}
+
+                    {/* Gợi ý chỉ có nghĩa ở chiều Việt→Anh (chiều Anh→Việt từ đã hiện sẵn) */}
+                    {frontVi && answerState !== 'correct' && (
+                      <div className="rev-hint-row">
+                        <button
+                          type="button"
+                          className="fc-btn fc-btn-sm"
+                          onClick={revealHint}
+                          disabled={hintLevel >= current.word.length}
+                        >
+                          <Icon name="bulb" /> Gợi ý
+                        </button>
+                        {hintLevel > 0 && (
+                          <span className="rev-hint-word">
+                            {maskedWord} · {current.word.replace(/\s/g, '').length} chữ cái
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </form>
+                )}
+                <p className="rev-hint">
+                  <Icon name="eye" /> Bấm thẻ hoặc <span className="fc-kbd">Tab</span> để xem{' '}
+                  {frontVi ? 'từ tiếng Anh' : 'nghĩa'}
+                </p>
               </>
             )}
           </div>
-
-          {!flipped && (
-            <>
-              {/* Ô gõ từ tiếng Anh — cả 2 chiều học (ẩn/hiện bằng nút "⌨️ Gõ từ"):
-                  · Việt→Anh: nhớ lại từ theo nghĩa (có gợi ý lộ dần chữ cái)
-                  · Anh→Việt: gõ lại từ đang thấy để nhớ mặt chữ/chính tả
-                  Gõ đúng (hoặc Enter khi đúng) -> tự sang từ khác */}
-              {showTyping && (
-              <form
-                className={`fc-answer-form ${answerState}`}
-                onClick={(e) => e.stopPropagation()}
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  checkAnswer()
-                }}
-              >
-                <input
-                  ref={answerRef}
-                  autoFocus
-                  placeholder={frontVi ? 'Gõ từ tiếng Anh…' : 'Gõ lại từ để nhớ chính tả…'}
-                  value={typed}
-                  // Giữ cùng một input và không bật readOnly khi trả lời đúng:
-                  // mobile sẽ duy trì focus + bàn phím khi tự chuyển sang thẻ mới.
-                  onChange={(e) => {
-                    if (answerState !== 'correct') onTypeAnswer(e.target.value)
-                  }}
-                  onKeyDown={(e) => {
-                    // Đang gõ trong ô nhập: Tab = lật thẻ xem nghĩa (lật lại bằng Tab lần nữa —
-                    // khi đó focus đã rời input nên phím tắt toàn trang xử lý)
-                    if (e.key === 'Tab') {
-                      e.preventDefault()
-                      setFlipped((f) => !f)
-                    }
-                  }}
-                />
-                {answerState === 'correct' && <span className="fc-answer-feedback ok">✓ Chính xác!</span>}
-                {answerState === 'wrong' && <span className="fc-answer-feedback no">✗ Chưa đúng, thử lại</span>}
-
-                {/* Gợi ý chỉ có nghĩa ở chiều Việt→Anh (chiều Anh→Việt từ đã hiện sẵn) */}
-                {frontVi && answerState !== 'correct' && (
-                  <div className="fc-hint-row">
-                    <button
-                      type="button"
-                      className="btn tiny"
-                      onClick={revealHint}
-                      disabled={hintLevel >= current.word.length}
-                    >
-                      💡 Gợi ý
-                    </button>
-                    {hintLevel > 0 && (
-                      <span className="fc-hint-word">
-                        {maskedWord} · {current.word.replace(/\s/g, '').length} chữ cái
-                      </span>
-                    )}
-                  </div>
-                )}
-              </form>
-              )}
-              <div className="rev-hint">
-                Bấm thẻ hoặc phím Tab để xem {frontVi ? 'từ tiếng Anh' : 'nghĩa'}
-              </div>
-            </>
-          )}
 
           {flipped && (
             <div className="rev-back">
@@ -679,17 +807,21 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
                 <div className="rev-meaning">{current.meaning || '(chưa có nghĩa)'}</div>
               )}
               <ExtraBlock label="Collocation" value={current.collocation} />
-              <ExtraBlock label="Pattern" value={current.pattern} />
+              <ExtraBlock label="Pattern" value={current.pattern} pattern />
               {showExamples && current.example && (
-                <div className="fc-examples">
-                  {current.example
-                    .split('\n')
-                    .filter(Boolean)
-                    .map((ex, i) => (
-                      <div className="fc-example" key={i}>
-                        “{ex}” <SpeakButton text={ex} />
-                      </div>
-                    ))}
+                <div className="rev-meta-row">
+                  <span className="rev-meta-key">Ví dụ</span>
+                  <span className="rev-meta-vals rev-ex-list">
+                    {current.example
+                      .split('\n')
+                      .filter(Boolean)
+                      .map((ex, i) => (
+                        <span className="rev-ex" key={i}>
+                          <span className="rev-ex-txt">{ex}</span>
+                          <SpeakButton text={ex} />
+                        </span>
+                      ))}
+                  </span>
                 </div>
               )}
 
@@ -697,14 +829,13 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
               {showExamples && exampleForm}
             </div>
           )}
-        </div>
-        </div>
+        </article>
 
         {flipped && (
           <div className="rev-grade-row">
             {RATINGS.map((r, i) => (
               <button key={r.key} className={`rev-grade rev-g${i + 1}`} onClick={() => rate(r.key)}>
-                <span>{r.label}</span>
+                <b>{r.label}</b>
                 <small>{previewInterval(current, r.key)}</small>
               </button>
             ))}
@@ -712,32 +843,59 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
         )}
 
         <div className="rev-nav">
-          <button className="btn small" onClick={goBack} disabled={idx === 0}>
-            ← Trước
+          <button className="fc-btn fc-btn-sm" onClick={goBack} disabled={idx === 0}>
+            <Icon name="left" /> Trước
           </button>
           <span className="rev-nav-pos">
             {idx + 1} / {total}
           </span>
-          <button className="btn small" onClick={goNext}>
-            Tiếp →
+          <button className="fc-btn fc-btn-sm" onClick={goNext}>
+            Tiếp <Icon name="right" />
           </button>
         </div>
+
+        <p className="rev-foot">
+          <span>
+            <span className="fc-kbd">Tab</span> lật thẻ
+          </span>
+          <span>
+            <span className="fc-kbd">1</span>
+            <span className="fc-kbd">2</span>
+            <span className="fc-kbd">3</span>
+            <span className="fc-kbd">4</span> đánh giá
+          </span>
+          <span>
+            <span className="fc-kbd">←</span>
+            <span className="fc-kbd">→</span> chuyển thẻ
+          </span>
+          <span>
+            <span className="fc-kbd">Esc</span> thoát
+          </span>
+        </p>
       </div>
     </div>
   )
 }
 
 // Khối phụ (Collocation / Pattern) ở mặt sau thẻ — nhiều giá trị nối bằng xuống dòng
-function ExtraBlock({ label, value }: { label: string; value: string | null }) {
+function ExtraBlock({
+  label,
+  value,
+  pattern,
+}: {
+  label: string
+  value: string | null
+  pattern?: boolean
+}) {
   if (!value || value === ',') return null
   const items = value.split('\n').filter(Boolean)
   if (!items.length) return null
   return (
-    <div className="fc-extra">
-      <span className="fc-tag">{label}</span>
-      <span className="fc-vals">
+    <div className="rev-meta-row">
+      <span className="rev-meta-key">{label}</span>
+      <span className="rev-meta-vals">
         {items.map((v, i) => (
-          <span className="fc-chip" key={i}>
+          <span className={pattern ? 'rev-tok is-pattern' : 'rev-tok'} key={i}>
             {v}
           </span>
         ))}

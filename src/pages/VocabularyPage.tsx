@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import '../styles/vocabulary.css'
-import { CloudApi, type Deck, type Card } from '../services/cloud/CloudApiClient'
+import { CloudApi, type Deck, type Card, type DeckStat } from '../services/cloud/CloudApiClient'
+import Icon from '../components/Icon'
+import { speak } from '../services/tts'
 import { track } from '../services/studyTracker'
+import type { PageKey } from './pages'
 import { autocomplete, fuzzyCorrect, nextWords } from '../services/suggestion'
 import { isMisspelled, suggestFix } from '../services/spellcheck'
 import {
@@ -18,6 +21,9 @@ import {
   shortPos,
   type Enrichment,
 } from '../services/enrich'
+
+// Bộ "Từ đã lưu khi đọc" do AppLayout tạo — hiện icon bóng đèn thay chữ cái đầu
+const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
 
 // Tách nghĩa tiếng Việt (dạng "a, b; c") thành từng lựa chọn riêng
 function splitVi(vi: string): string[] {
@@ -40,7 +46,10 @@ function collocationSuggestions(word: string): string[] {
   return nextWords(w, 8).map((n) => `${w} ${n}`)
 }
 
-export default function VocabularyPage() {
+type SortKey = 'new' | 'name' | 'cards' | 'progress'
+type ViewKey = 'grid' | 'list'
+
+export default function VocabularyPage({ onNavigate }: { onNavigate?: (p: PageKey) => void } = {}) {
   const [decks, setDecks] = useState<Deck[]>([])
   const [selected, setSelected] = useState<Deck | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -48,6 +57,13 @@ export default function VocabularyPage() {
   // Đổi tên (tiêu đề) bộ từ ngay trên thẻ
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  // Thanh công cụ: tìm / sắp xếp / dạng hiển thị · form tạo bộ mở khi cần
+  const [query, setQuery] = useState('')
+  const [sort, setSort] = useState<SortKey>('new')
+  const [view, setView] = useState<ViewKey>('grid')
+  const [creating, setCreating] = useState(false)
+  // Số thẻ / đã học từng bộ — cho thanh tiến độ trên thẻ bộ
+  const [deckStats, setDeckStats] = useState<Record<string, DeckStat>>({})
 
   const startRename = (deck: Deck) => {
     setEditingId(deck.id)
@@ -77,9 +93,26 @@ export default function VocabularyPage() {
     }
   }
 
+  // Thống kê từng bộ (tổng thẻ / đã học) — chỉ để hiển thị, lỗi thì bỏ qua
+  const loadStats = async () => {
+    try {
+      const rows = await CloudApi.statsByDeck()
+      setDeckStats(Object.fromEntries(rows.map((r) => [r.deck_id, r])))
+    } catch {
+      /* giữ nguyên số liệu cũ */
+    }
+  }
+
   useEffect(() => {
     loadDecks()
+    loadStats()
   }, [])
+
+  // Quay lại danh sách sau khi sửa thẻ -> làm mới số liệu tiến độ
+  useEffect(() => {
+    if (!selected) loadStats()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected])
 
   const createDeck = async (e: FormEvent) => {
     e.preventDefault()
@@ -87,6 +120,7 @@ export default function VocabularyPage() {
     try {
       const deck = await CloudApi.createDeck(newDeckName.trim())
       setNewDeckName('')
+      setCreating(false)
       setDecks((d) => [deck, ...d])
     } catch (e) {
       setError((e as Error).message)
@@ -101,92 +135,233 @@ export default function VocabularyPage() {
   }
 
   if (selected) {
-    return <DeckDetail deck={selected} onBack={() => setSelected(null)} />
+    return (
+      <DeckDetail
+        deck={selected}
+        onBack={() => setSelected(null)}
+        onNavigate={onNavigate}
+      />
+    )
+  }
+
+  // Lọc theo ô tìm + sắp xếp theo lựa chọn trên thanh công cụ
+  const shownDecks = (() => {
+    const q = query.trim().toLowerCase()
+    const list = q
+      ? decks.filter(
+          (d) =>
+            d.name.toLowerCase().includes(q) ||
+            (d.description ?? '').toLowerCase().includes(q),
+        )
+      : [...decks]
+    const pct = (d: Deck) => {
+      const s = deckStats[d.id]
+      return s && s.total ? s.learned / s.total : 0
+    }
+    if (sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name, 'vi'))
+    else if (sort === 'cards')
+      list.sort((a, b) => (deckStats[b.id]?.total ?? 0) - (deckStats[a.id]?.total ?? 0))
+    else if (sort === 'progress') list.sort((a, b) => pct(a) - pct(b))
+    return list
+  })()
+
+  const openCreate = () => {
+    setCreating(true)
+    window.setTimeout(() => document.getElementById('vocabNewDeck')?.focus(), 0)
   }
 
   return (
-    <div className="page">
-      <h1 className="page-title">Từ vựng</h1>
-      <p className="page-sub">Tạo và quản lý các bộ từ của bạn</p>
+    <div className="page vocab-page">
+      <div className="vocab-head">
+        <div>
+          <h1>Từ vựng</h1>
+          <p>
+            Tạo và quản lý các bộ từ của bạn. Mỗi thẻ có thể kèm collocation, pattern và câu
+            ví dụ.
+          </p>
+        </div>
+        <div className="vocab-head-actions">
+          <button className="vocab-btn vocab-btn-primary" onClick={openCreate}>
+            <Icon name="plus" /> Tạo bộ từ
+          </button>
+        </div>
+      </div>
+
       {error && <div className="alert error">{error}</div>}
 
-      <div className="vocab-create">
-        <form className="vocab-create-row" onSubmit={createDeck}>
+      {/* ------------------------------------------------ Thanh công cụ */}
+      <div className="vocab-toolbar">
+        <label className="vocab-search">
+          <Icon name="search" />
           <input
-            className="vocab-create-input"
+            className="vocab-input"
+            type="search"
+            placeholder="Tìm bộ từ…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+        <div className="vocab-spacer" />
+        <select
+          className="vocab-select"
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortKey)}
+        >
+          <option value="new">Sắp xếp: Mới nhất</option>
+          <option value="name">Tên A → Z</option>
+          <option value="cards">Số thẻ nhiều nhất</option>
+          <option value="progress">Tiến độ thấp nhất</option>
+        </select>
+        <div className="vocab-seg">
+          <button
+            className={view === 'grid' ? 'is-active' : ''}
+            title="Dạng lưới"
+            onClick={() => setView('grid')}
+          >
+            <Icon name="grid" />
+          </button>
+          <button
+            className={view === 'list' ? 'is-active' : ''}
+            title="Dạng danh sách"
+            onClick={() => setView('list')}
+          >
+            <Icon name="stack" />
+          </button>
+        </div>
+      </div>
+
+      {/* --------------------------------------------- Form tạo bộ mới */}
+      {creating && (
+        <form className="vocab-create" onSubmit={createDeck}>
+          <input
+            id="vocabNewDeck"
+            className="vocab-input"
             placeholder="Tên bộ từ mới (VD: IELTS Vocab 1)"
             value={newDeckName}
             onChange={(e) => setNewDeckName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Escape' && setCreating(false)}
           />
-          <button className="btn primary" type="submit">
-            + Tạo bộ
+          <button className="vocab-btn vocab-btn-primary" type="submit">
+            <Icon name="plus" /> Tạo bộ
+          </button>
+          <button
+            className="vocab-btn vocab-btn-ghost"
+            type="button"
+            onClick={() => setCreating(false)}
+          >
+            Hủy
           </button>
         </form>
-      </div>
+      )}
 
+      {/* ------------------------------------------------- Lưới bộ từ */}
       {decks.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">📚</div>
-          <h3>Chưa có bộ từ nào</h3>
-          <p className="muted">Tạo bộ từ đầu tiên ở ô phía trên để bắt đầu học.</p>
+        <div className="vocab-empty">
+          <Icon name="layers" />
+          <b>Chưa có bộ từ nào</b>
+          <p>Tạo bộ từ đầu tiên để bắt đầu gom thẻ theo chủ đề hoặc bài học.</p>
+        </div>
+      ) : shownDecks.length === 0 ? (
+        <div className="vocab-empty">
+          <Icon name="search" />
+          <b>Không tìm thấy bộ từ</b>
+          <p>Không có bộ nào khớp “{query.trim()}”. Thử từ khóa khác nhé.</p>
         </div>
       ) : (
-        <div className="vocab-grid">
-          {decks.map((deck) => (
-            <div
-              key={deck.id}
-              className="vocab-card"
-              onClick={() => (editingId === deck.id ? undefined : setSelected(deck))}
-            >
-              <div className="vocab-actions">
-                <button
-                  className="vocab-iconbtn"
-                  title="Đổi tên bộ từ"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    startRename(deck)
-                  }}
-                >
-                  ✎
-                </button>
-                <button
-                  className="vocab-iconbtn vocab-del"
-                  title="Xóa bộ từ"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    removeDeck(deck)
-                  }}
-                >
-                  ✕
-                </button>
+        <div className={view === 'list' ? 'vocab-grid is-list' : 'vocab-grid'}>
+          {shownDecks.map((deck) => {
+            const s = deckStats[deck.id]
+            const total = s?.total ?? 0
+            const learned = s?.learned ?? 0
+            const isSaved = deck.name.trim() === SAVED_DECK_NAME
+            return (
+              <div
+                key={deck.id}
+                className="vocab-deck"
+                role="button"
+                tabIndex={0}
+                onClick={() => (editingId === deck.id ? undefined : setSelected(deck))}
+                onKeyDown={(e) => {
+                  if (editingId !== deck.id && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault()
+                    setSelected(deck)
+                  }
+                }}
+              >
+                <span className="vocab-deck-tools">
+                  <button
+                    className="vocab-ibtn"
+                    title="Đổi tên bộ từ"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      startRename(deck)
+                    }}
+                  >
+                    <Icon name="pencil" />
+                  </button>
+                  <button
+                    className="vocab-ibtn danger"
+                    title="Xóa bộ từ"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removeDeck(deck)
+                    }}
+                  >
+                    <Icon name="trash" />
+                  </button>
+                </span>
+
+                <span className="vocab-deck-top">
+                  <span className="vocab-deck-mark">
+                    {isSaved ? <Icon name="bulb" /> : deck.name.trim().charAt(0).toUpperCase()}
+                  </span>
+                  <span className="vocab-deck-txt">
+                    {editingId === deck.id ? (
+                      <input
+                        className="vocab-rename"
+                        autoFocus
+                        value={editName}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onBlur={saveRename}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            saveRename()
+                          } else if (e.key === 'Escape') {
+                            setEditingId(null)
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span className="vocab-deck-name">{deck.name}</span>
+                    )}
+                    <span className="vocab-deck-desc">{deck.description || 'Bộ từ vựng'}</span>
+                  </span>
+                </span>
+
+                <span className="vocab-bar">
+                  <i style={{ width: `${total ? (learned / total) * 100 : 0}%` }} />
+                </span>
+
+                <span className="vocab-deck-meta">
+                  <span className="vocab-deck-stats">
+                    {total} thẻ <i className="vocab-dot" />{' '}
+                    {learned ? `đã học ${learned}` : 'chưa học'}
+                  </span>
+                  <span className="vocab-deck-go">
+                    Mở bộ <Icon name="right" />
+                  </span>
+                </span>
               </div>
-              <div className="vocab-ava">{deck.name.trim().charAt(0).toUpperCase() || '📚'}</div>
-              {editingId === deck.id ? (
-                <input
-                  className="vocab-rename"
-                  autoFocus
-                  value={editName}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={(e) => setEditName(e.target.value)}
-                  onBlur={saveRename}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      saveRename()
-                    } else if (e.key === 'Escape') {
-                      setEditingId(null)
-                    }
-                  }}
-                />
-              ) : (
-                <div className="vocab-name">{deck.name}</div>
-              )}
-              <div className="vocab-desc">{deck.description || 'Bộ từ vựng'}</div>
-              <div className="vocab-open">
-                Mở bộ <span>→</span>
-              </div>
-            </div>
-          ))}
+            )
+          })}
+
+          <button className="vocab-new-deck" onClick={openCreate}>
+            <Icon name="plus" />
+            <b>Tạo bộ từ mới</b>
+            <span>Nhóm các thẻ theo chủ đề hoặc bài học</span>
+          </button>
         </div>
       )}
     </div>
@@ -452,7 +627,15 @@ function CardEditor({
 // ---------- Chi tiết một bộ: danh sách thẻ + thêm thẻ ----------
 type DropKey = 'word' | 'meaning' | 'collocation' | 'pattern' | 'example' | null
 
-function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
+function DeckDetail({
+  deck,
+  onBack,
+  onNavigate,
+}: {
+  deck: Deck
+  onBack: () => void
+  onNavigate?: (p: PageKey) => void
+}) {
   const [cards, setCards] = useState<Card[]>([])
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({ word: '', pos: '' })
@@ -705,15 +888,40 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
   // Thẻ đang được sửa (mở form inline thay chỗ nội dung)
   const [editingCard, setEditingCard] = useState<string | null>(null)
 
-  // Ô "Từ tiếng Anh" kiêm ô tìm kiếm: gõ vào lọc luôn thẻ đã có (theo từ/nghĩa)
+  // Form thêm thẻ: mở khi bấm "Thêm thẻ" (mockup) — gõ tìm không còn phải mở form
+  const [adding, setAdding] = useState(false)
+  // Ô tìm riêng + lọc theo từ loại (chipset trong mockup)
+  const [search, setSearch] = useState('')
+  const [posFilter, setPosFilter] = useState<string>('')
+
+  // Nhóm từ loại cho chipset — dựa trên card.pos ('n' / 'v' / 'adj'…)
+  const POS_GROUPS: { key: string; label: string; match: (c: Card) => boolean }[] = [
+    { key: 'n', label: 'Danh từ', match: (c) => (c.pos ?? '').startsWith('n') },
+    { key: 'v', label: 'Động từ', match: (c) => (c.pos ?? '').startsWith('v') },
+    { key: 'adj', label: 'Tính từ', match: (c) => (c.pos ?? '').startsWith('adj') },
+    { key: 'phrase', label: 'Cụm từ', match: (c) => c.word.trim().includes(' ') },
+  ]
+
   const filteredCards = useMemo(() => {
-    const q = form.word.trim().toLowerCase()
-    if (!q) return cards
-    return cards.filter(
-      (c) =>
-        c.word.toLowerCase().includes(q) || (c.meaning ?? '').toLowerCase().includes(q),
-    )
-  }, [cards, form.word])
+    const q = search.trim().toLowerCase()
+    let list = cards
+    if (q) {
+      list = list.filter(
+        (c) =>
+          c.word.toLowerCase().includes(q) || (c.meaning ?? '').toLowerCase().includes(q),
+      )
+    }
+    if (posFilter) {
+      const g = POS_GROUPS.find((x) => x.key === posFilter)
+      if (g) list = list.filter(g.match)
+    }
+    return list
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards, search, posFilter])
+
+  // Số thẻ đã ôn ≥ 1 lần — cho dòng tóm tắt dưới tiêu đề
+  const learned = cards.filter((c) => c.srs_reps > 0).length
+  const pct = cards.length ? Math.round((learned / cards.length) * 100) : 0
 
   // ----- Phân trang khi bộ từ lớn: chỉ render PAGE_SIZE thẻ đầu,
   // cuộn tới cuối tự nạp thêm (IntersectionObserver) hoặc bấm "Hiện thêm" -----
@@ -724,7 +932,7 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
   // Đổi bộ / đổi từ khóa lọc -> quay về trang đầu
   useEffect(() => {
     setVisibleCount(PAGE_SIZE)
-  }, [deck.id, form.word])
+  }, [deck.id, search, posFilter])
 
   const visibleCards = filteredCards.slice(0, visibleCount)
   const hasMore = filteredCards.length > visibleCount
@@ -743,17 +951,61 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
 
   return (
     <div className="page deck-detail">
-      <button className="vocab-back" onClick={onBack}>
-        ← Quay lại danh sách
+      <button className="vocab-crumb" onClick={onBack}>
+        <Icon name="left" /> Tất cả bộ từ
       </button>
-      <div className="vocab-detail-head">
-        <h1 className="page-title">{deck.name}</h1>
-        <span className="vocab-count">{cards.length} thẻ</span>
+
+      <div className="vocab-head">
+        <div>
+          <h1>{deck.name}</h1>
+          <p>
+            {cards.length} thẻ · đã học {learned} · tỷ lệ hoàn thành {pct}%
+          </p>
+        </div>
+        <div className="vocab-head-actions">
+          {onNavigate && (
+            <button className="vocab-btn" onClick={() => onNavigate('flashcard')}>
+              <Icon name="repeat" /> Ôn bộ này
+            </button>
+          )}
+          <button
+            className="vocab-btn vocab-btn-primary"
+            onClick={() => {
+              setAdding(true)
+              window.setTimeout(
+                () => document.querySelector<HTMLInputElement>('.vocab-addcard .word-input')?.focus(),
+                0,
+              )
+            }}
+          >
+            <Icon name="plus" /> Thêm thẻ
+          </button>
+        </div>
       </div>
+
       {error && <div className="alert error">{error}</div>}
 
-      <form className="card-form vocab-addcard" onSubmit={addCard}>
-        <div className="vocab-addcard-title">➕ Thêm thẻ mới</div>
+      {/* --------------------------------------------- Form thêm thẻ */}
+      <form
+        className="vocab-card-box vocab-addcard"
+        onSubmit={addCard}
+        style={adding ? undefined : { display: 'none' }}
+      >
+        <div className="vocab-card-head">
+          <h2>
+            <Icon name="plus" /> Thêm thẻ mới
+          </h2>
+          <button
+            className="vocab-ibtn"
+            type="button"
+            title="Đóng"
+            onClick={() => setAdding(false)}
+          >
+            <Icon name="x" />
+          </button>
+        </div>
+        <div className="vocab-card-body">
+          <div className="vocab-add-grid">
         {/* Từ tiếng Anh + autocomplete */}
         <div className="field-wrap">
           <input
@@ -882,91 +1134,155 @@ function DeckDetail({ deck, onBack }: { deck: Deck; onBack: () => void }) {
           wide
           multiline
         />
-
-        <button className="btn primary vocab-add-btn" type="submit" disabled={saving}>
-          {saving ? 'Đang lưu…' : '+ Thêm thẻ'}
-        </button>
+          </div>
+          <div className="vocab-add-foot">
+            <button className="vocab-btn vocab-btn-primary" type="submit" disabled={saving}>
+              <Icon name="plus" /> {saving ? 'Đang lưu…' : 'Thêm thẻ'}
+            </button>
+            <span className="vocab-add-hint">
+              Ô để trống sẽ được tự điền từ gợi ý khi lưu
+            </span>
+          </div>
+        </div>
       </form>
 
-      <p className="muted">
-        {form.word.trim() ? `${filteredCards.length} / ${cards.length} thẻ` : `${cards.length} thẻ`}
-      </p>
-      {form.word.trim() && filteredCards.length === 0 && cards.length > 0 && (
-        <p className="muted">
-          Không có thẻ khớp “{form.word.trim()}”. Bấm “+ Thêm thẻ” để tạo mới.
-        </p>
-      )}
-      <div className="card-list">
-        {visibleCards.map((card) => (
-          <div key={card.id} className="vocab-wcard">
-            <div className="vocab-wc-head">
-              <div className="vocab-wc-word">
-                {card.word}
-                {card.pos && <span className="vocab-pos-badge">{card.pos}</span>}
-              </div>
-              <div className="vocab-wc-actions">
-                <button
-                  className="btn tiny"
-                  title="Sửa thẻ"
-                  onClick={() => setEditingCard(card.id)}
-                >
-                  Sửa
-                </button>
-                <button className="btn tiny danger" onClick={() => removeCard(card.id)}>
-                  Xóa
-                </button>
-              </div>
-            </div>
-            {card.meaning && <div className="vocab-wc-meaning">{card.meaning}</div>}
-            {card.collocation && card.collocation !== ',' && (
-              <>
-                <div className="vocab-wc-note">Collocation</div>
-                <div className="vocab-chip-row">
-                  {card.collocation
-                    .split('\n')
-                    .filter(Boolean)
-                    .map((v, i) => (
-                      <span className="vocab-chip vocab-chip-teal" key={i}>
-                        {v}
-                      </span>
-                    ))}
-                </div>
-              </>
-            )}
-            {card.pattern && card.pattern !== ',' && (
-              <>
-                <div className="vocab-wc-note">Pattern</div>
-                <div className="vocab-chip-row">
-                  {card.pattern
-                    .split('\n')
-                    .filter(Boolean)
-                    .map((v, i) => (
-                      <span className="vocab-chip vocab-chip-primary" key={i}>
-                        {v}
-                      </span>
-                    ))}
-                </div>
-              </>
-            )}
-            {card.example &&
-              card.example
-                .split('\n')
-                .filter(Boolean)
-                .map((ex, i) => (
-                  <div className="vocab-wc-example" key={i}>
-                    “{ex}”
-                  </div>
-                ))}
-          </div>
-        ))}
-        {hasMore && (
-          <div ref={sentinelRef} className="load-more">
-            <button className="btn vocab-more" onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}>
-              Hiện thêm ({filteredCards.length - visibleCount} thẻ còn lại)
-            </button>
-          </div>
-        )}
+      {/* ---------------------------------------- Tìm + lọc theo từ loại */}
+      <div className="vocab-filter">
+        <label className="vocab-search">
+          <Icon name="search" />
+          <input
+            className="vocab-input"
+            type="search"
+            placeholder={`Tìm trong ${cards.length} thẻ…`}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
+        <div className="vocab-spacer" />
+        <div className="vocab-chipset">
+          <button
+            className={posFilter ? 'vocab-chip' : 'vocab-chip is-active'}
+            onClick={() => setPosFilter('')}
+          >
+            Tất cả {cards.length}
+          </button>
+          {POS_GROUPS.map((g) => {
+            const n = cards.filter(g.match).length
+            if (!n) return null
+            return (
+              <button
+                key={g.key}
+                className={posFilter === g.key ? 'vocab-chip is-active' : 'vocab-chip'}
+                onClick={() => setPosFilter(posFilter === g.key ? '' : g.key)}
+              >
+                {g.label} {n}
+              </button>
+            )
+          })}
+        </div>
       </div>
+
+      {/* -------------------------------------------------- Lưới thẻ từ */}
+      {filteredCards.length === 0 ? (
+        <div className="vocab-empty">
+          <Icon name={cards.length ? 'search' : 'layers'} />
+          <b>{cards.length ? 'Không có thẻ nào khớp' : 'Bộ từ còn trống'}</b>
+          <p>
+            {cards.length
+              ? 'Thử từ khóa khác hoặc bỏ bộ lọc từ loại.'
+              : 'Bấm “Thêm thẻ” để tạo thẻ đầu tiên cho bộ này.'}
+          </p>
+        </div>
+      ) : (
+        <section className="vocab-word-grid">
+          {visibleCards.map((card) => {
+            const cols = (card.collocation ?? '') !== ',' ? (card.collocation ?? '').split('\n').filter(Boolean) : []
+            const pats = (card.pattern ?? '') !== ',' ? (card.pattern ?? '').split('\n').filter(Boolean) : []
+            const exs = (card.example ?? '').split('\n').filter(Boolean)
+            const simple = !cols.length && !pats.length && !exs.length
+            return (
+              <article
+                key={card.id}
+                className={simple ? 'vocab-word is-simple' : 'vocab-word'}
+              >
+                <div className="vocab-word-head">
+                  <span className="vocab-word-en">{card.word}</span>
+                  {card.pos && <span className="vocab-pos">{card.pos}</span>}
+                  <span className="vocab-word-tools">
+                    <button
+                      className="vocab-ibtn"
+                      title="Nghe phát âm"
+                      onClick={() => speak(card.word)}
+                    >
+                      <Icon name="speak" />
+                    </button>
+                    <button
+                      className="vocab-ibtn"
+                      title="Sửa thẻ"
+                      onClick={() => setEditingCard(card.id)}
+                    >
+                      <Icon name="pencil" />
+                    </button>
+                    <button
+                      className="vocab-ibtn danger"
+                      title="Xóa thẻ"
+                      onClick={() => removeCard(card.id)}
+                    >
+                      <Icon name="trash" />
+                    </button>
+                  </span>
+                </div>
+
+                {card.meaning && <p className="vocab-word-vi">{card.meaning}</p>}
+
+                {cols.length > 0 && (
+                  <div className="vocab-meta-row">
+                    <span className="vocab-meta-key">Collocation</span>
+                    <span className="vocab-meta-vals">
+                      {cols.map((v, i) => (
+                        <span className="vocab-tok" key={i} title={v}>
+                          {v}
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                )}
+
+                {pats.length > 0 && (
+                  <div className="vocab-meta-row">
+                    <span className="vocab-meta-key">Pattern</span>
+                    <span className="vocab-meta-vals">
+                      {pats.map((v, i) => (
+                        <span className="vocab-tok is-pattern" key={i} title={v}>
+                          {v}
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                )}
+
+                {exs.length > 0 && (
+                  <div className="vocab-examples">
+                    {exs.map((ex, i) => (
+                      <p className="vocab-ex" key={i}>
+                        {ex}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </article>
+            )
+          })}
+        </section>
+      )}
+
+      {hasMore && (
+        <div ref={sentinelRef} className="vocab-more-row">
+          <button className="vocab-btn" onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}>
+            <Icon name="down" /> Hiện thêm ({filteredCards.length - visibleCount} thẻ còn lại)
+          </button>
+        </div>
+      )}
 
       {/* Modal sửa thẻ — nổi giữa màn hình, nền mờ phía sau */}
       {(() => {

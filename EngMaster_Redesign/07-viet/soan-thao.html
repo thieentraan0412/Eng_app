@@ -1,109 +1,142 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Soạn thảo — Viết · EngMaster</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Soạn thảo · Bài viết · EngMaster</title>
 <link rel="stylesheet" href="style.css">
-<style>.editor-grid{display:grid;grid-template-columns:1fr 320px;gap:18px}.write-area{min-height:220px;border:1.5px solid var(--border-strong);border-radius:14px;padding:18px;font-size:1rem;line-height:1.9;background:var(--surface)}.spell{background:transparent;color:inherit;text-decoration:underline wavy var(--rose) 2px;text-underline-offset:4px}</style>
+<style>
+  .ed-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .ed-title{
+    flex:1 1 240px;min-width:0;height:38px;padding:0 2px;font-size:19px;font-weight:600;
+    letter-spacing:-.024em;background:transparent;border:none;border-bottom:1px solid transparent;
+    transition:border-color var(--t-fast);
+  }
+  .ed-title:focus{outline:none;border-bottom-color:var(--accent)}
+  .ed-title::placeholder{color:var(--text-4)}
+  .ed-count{font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  .ed-meta{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+  .ed-meta .input{flex:1 1 240px;height:32px;font-size:13px}
+
+  /* Vùng soạn thảo: textarea trong suốt chồng lên lớp nền tô lỗi */
+  .ed-wrap{position:relative;border:1px solid var(--border-2);border-radius:var(--r-lg);
+    background:var(--surface);overflow:hidden;transition:border-color var(--t-fast)}
+  .ed-wrap:focus-within{border-color:var(--accent);box-shadow:var(--sh-focus)}
+  .ed-backdrop,.ed-area{
+    padding:18px 20px;font-size:15.5px;line-height:1.75;font-family:inherit;
+    letter-spacing:-.004em;white-space:pre-wrap;word-wrap:break-word;
+  }
+  .ed-backdrop{position:absolute;inset:0;color:transparent;pointer-events:none;overflow:hidden}
+  .ed-backdrop mark{
+    background:transparent;color:transparent;
+    border-bottom:2px wavy var(--err);text-decoration:underline;
+    text-decoration-color:var(--err);text-decoration-style:wavy;text-underline-offset:3px;
+  }
+  .ed-area{position:relative;display:block;width:100%;min-height:280px;
+    background:transparent;border:none;resize:vertical}
+  .ed-area:focus{outline:none}
+
+  /* Thanh trợ lý dưới */
+  .assist{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .assist-row{
+    display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+    padding:10px 13px;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--r-md);font-size:13px;
+  }
+  .assist-label{
+    display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+    letter-spacing:.05em;text-transform:uppercase;color:var(--text-4);
+  }
+  .assist-label .ico{width:13px;height:13px}
+  .bad{font-weight:600;color:var(--err)}
+  .fix{
+    height:24px;padding:0 9px;border-radius:var(--r-xs);font-size:12.5px;font-weight:500;
+    background:var(--surface-2);border:1px solid var(--border-2);transition:all var(--t-fast);
+  }
+  .fix:hover{background:var(--ok-soft);border-color:var(--ok-border);color:var(--ok)}
+  .ghost-hint{color:var(--text-4);font-size:12.5px}
+  @media (max-width:920px){
+    .ed-head .btn{flex:0 0 auto}
+    .ed-count{width:100%;order:9}
+  }
+</style>
 </head>
-<body>
-<header class="topbar">
-  <button class="burger" id="burger" aria-label="Mở menu">☰</button>
-  <div class="brand-mark">E</div>
-  <div class="topbar-title">Soạn thảo — Viết</div>
-</header>
-<div class="overlay" id="overlay"></div>
-<div class="app">
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-mark">E</div>
-      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
-      <button class="side-close" id="sideClose" aria-label="Đóng menu">✕</button>
-    </div>
-    <ul class="nav">
-      <li><a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a></li>
-      <li><a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a></li>
-      <li><a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a></li>
-      <li><a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a></li>
-      <li><a href="../06-doc/index.html"><span class="ico">📖</span>Đọc</a></li>
-      <li><a href="../07-viet/index.html" class="active"><span class="ico">✍️</span>Viết</a></li>
-      <li><a href="../08-chep-cau/index.html"><span class="ico">✏️</span>Chép câu</a></li>
-      <li><a href="../09-thong-ke/index.html"><span class="ico">📊</span>Thống kê</a></li>
-      <li><a href="../10-cai-dat/index.html"><span class="ico">⚙️</span>Cài đặt</a></li>
-    </ul>
-    <div class="side-user">
-      <div class="ava">T</div>
-      <div><b>thieentraan</b><span>Gói miễn phí</span></div>
-    </div>
-    <div class="side-foot"><span>v0.1.0</span><span>© EngMaster</span></div>
-  </aside>
-  <main class="content">
+<body class="app" data-page="viet" data-depth="1" data-title="Soạn thảo">
 
-    <a class="back-link" href="index.html">← Danh sách bài viết</a>
-    <div class="card">
-      <div class="head-row" style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:220px">
-          <input class="input" value="sentense example" style="max-width:280px;font-weight:600">
-          <span class="card-note">4 từ · 17 ký tự</span>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-primary btn-sm">💾 Lưu</button>
-          <button class="btn btn-danger btn-sm">Xóa</button>
-        </div>
-      </div>
-      <div class="form-row" style="margin-bottom:16px">
-        <input class="input" placeholder="Chủ đề (VD: Travel, Daily life…)">
-        <button class="btn btn-ghost">🎲 Gợi ý đề bài</button>
-      </div>
-      <div class="editor-grid">
-        <div>
-          <div class="write-area">My name is <mark class="spell">thien</mark></div>
-          <p class="card-note" style="margin-top:10px">Gõ để nhận gợi ý · nhấn <b>Tab</b> để chèn gợi ý đầu tiên</p>
-        </div>
-        <div>
-          <div class="card" style="padding:16px">
-            <div class="card-title" style="font-size:.88rem">🔤 Chính tả</div>
-            <div style="margin-top:10px;font-size:.86rem"><b style="color:var(--rose)">thien</b> →</div>
-            <div class="chip-row" style="margin-top:8px">
-              <button class="word-chip" style="padding:6px 13px;font-size:.8rem">then</button>
-              <button class="word-chip" style="padding:6px 13px;font-size:.8rem">thief</button>
-              <button class="word-chip" style="padding:6px 13px;font-size:.8rem">thin</button>
-              <button class="btn btn-ghost btn-sm">Bỏ qua</button>
-            </div>
-          </div>
-          <div class="card" style="padding:16px;margin-top:12px">
-            <div class="card-title" style="font-size:.88rem">✨ Gợi ý</div>
-            <p class="card-note" style="margin-top:8px">Gõ tiếng Anh để nhận gợi ý từ tiếp theo…</p>
-          </div>
-        </div>
-      </div>
+<div class="main">
+<div class="wrap wrap-narrow">
+
+  <a class="crumb" href="index.html"><i data-ico="left"></i> Danh sách bài viết</a>
+
+  <div class="ed-head anim">
+    <input class="ed-title" value="sentense example" placeholder="Tiêu đề bài viết…">
+    <span class="ed-count" id="count">4 từ · 17 ký tự</span>
+    <button class="btn btn-primary"><i data-ico="save"></i> Lưu</button>
+    <button class="btn btn-icon btn-danger" title="Xóa bài"><i data-ico="trash"></i></button>
+  </div>
+
+  <div class="ed-meta anim">
+    <input class="input" list="topics" placeholder="Chủ đề (tùy chọn)…">
+    <datalist id="topics">
+      <option>Giới thiệu bản thân</option><option>Thói quen hằng ngày</option>
+      <option>Du lịch</option><option>Công việc</option><option>Môi trường</option>
+      <option>Công nghệ</option><option>Giáo dục</option><option>Sức khỏe</option>
+    </datalist>
+    <button class="btn btn-sm"><i data-ico="dice"></i> Gợi ý đề bài</button>
+  </div>
+
+  <div class="ed-wrap anim anim-1">
+    <div class="ed-backdrop" id="backdrop">My name is <mark>thien</mark></div>
+    <textarea class="ed-area" id="area" spellcheck="false">My name is thien</textarea>
+  </div>
+
+  <div class="assist anim anim-2">
+    <div class="assist-row">
+      <span class="assist-label"><i data-ico="type"></i> Chính tả</span>
+      <span class="bad">thien</span>
+      <i data-ico="right" class="ico-sm"></i>
+      <button class="fix">then</button>
+      <button class="fix">thief</button>
+      <button class="fix">thin</button>
+      <div class="spacer"></div>
+      <button class="btn btn-sm btn-ghost">Bỏ qua</button>
     </div>
 
-  </main>
+    <div class="assist-row">
+      <span class="assist-label"><i data-ico="sparkle"></i> Gợi ý</span>
+      <span class="ghost-hint">Gõ tiếng Anh để nhận gợi ý từ tiếp theo…</span>
+    </div>
+
+    <div class="assist-row">
+      <span class="assist-label"><i data-ico="target"></i> Kiểm tra câu</span>
+      <span class="ghost-hint">Ngữ pháp, văn phong, dùng từ, collocation</span>
+      <div class="spacer"></div>
+      <button class="btn btn-sm"><i data-ico="check"></i> Kiểm tra ngay</button>
+    </div>
+  </div>
+
 </div>
-<nav class="tabbar">
-  <a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a>
-  <a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a>
-  <a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a>
-  <a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a>
-  <button id="tabMenu"><span class="ico">☰</span>Menu</button>
-</nav>
-<script>
-var sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
-function menu(o){sb.classList.toggle('open',o);ov.classList.toggle('show',o);}
-document.getElementById('burger').onclick=function(){menu(true)};
-document.getElementById('sideClose').onclick=function(){menu(false)};
-ov.onclick=function(){menu(false)};
-var tm=document.getElementById('tabMenu'); if(tm) tm.onclick=function(){menu(true)};
-document.querySelectorAll('[data-flip]').forEach(function(f){
-  f.addEventListener('click',function(){f.classList.toggle('flipped')});
-  f.querySelectorAll('input,textarea,button').forEach(function(i){i.addEventListener('click',function(e){e.stopPropagation()})});
-});
-document.querySelectorAll('.tabs:not([data-static])').forEach(function(g){g.querySelectorAll('.tab').forEach(function(t){if(t.tagName==='BUTTON')t.onclick=function(){g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-document.querySelectorAll('.pills').forEach(function(g){g.querySelectorAll('.pill').forEach(function(t){t.onclick=function(){g.querySelectorAll('.pill').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-</script>
+</div>
 
+<script src="../app.js"></script>
+<script>
+  var area = document.getElementById('area'),
+      back = document.getElementById('backdrop'),
+      cnt  = document.getElementById('count');
+
+  function esc(s){ return s.replace(/[&<>]/g, function(c){
+    return { '&':'&amp;','<':'&lt;','>':'&gt;' }[c]; }); }
+
+  function sync(){
+    var t = area.value;
+    back.innerHTML = esc(t).replace(/\bthien\b/gi, '<mark>$&</mark>');
+    var w = t.trim() ? t.trim().split(/\s+/).length : 0;
+    cnt.textContent = w + ' từ · ' + t.length + ' ký tự';
+  }
+  area.addEventListener('input', sync);
+  area.addEventListener('scroll', function(){ back.scrollTop = area.scrollTop; });
+  sync();
+</script>
 </body>
 </html>

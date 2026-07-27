@@ -1,404 +1,985 @@
 /* ============================================================
-   Trang Từ vựng (Vocabulary) — port từ mockup 03-tu-vung
-   Chỉ style phần "landing" (tạo bộ + lưới bộ từ) đúng mockup.
+   Trang Từ vựng — port từ mockup 03-tu-vung (index + chi-tiet)
+   Phong cách "Quiet Premium": viền mảnh, bóng tiết chế, một màu
+   nhấn duy nhất, chip/token vuông thay vì bo tròn.
    Dùng token dùng chung (var(--...)) để giữ dark mode.
-   Tiền tố: vocab-
+   Tiền tố: vocab-  ·  Chi tiết bộ bọc trong .deck-detail
    ============================================================ */
 
-/* ---------- Khối tạo bộ từ (mockup .card + .form-row) ---------- */
-.vocab-create {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  padding: 1.4rem;
-  box-shadow: var(--shadow-sm);
-  margin-bottom: 1.6rem;
+.page.vocab-page,
+.page.deck-detail {
+  max-width: 1120px;
 }
-.vocab-create-row {
+
+.vocab-page .ico,
+.deck-detail .ico {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- Đầu trang (mockup .page-head) ---------- */
+.vocab-head {
   display: flex;
-  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
   flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.vocab-head h1 {
   margin: 0;
-}
-.vocab-create-input {
-  flex: 1;
-  min-width: 200px;
-  background: var(--surface);
-  border: 1.5px solid var(--border-strong);
-  border-radius: 12px;
-  padding: 0.7rem 0.9rem;
-  color: var(--text);
-  font: inherit;
-  outline: none;
-  transition: border-color 0.18s, box-shadow 0.18s;
-}
-.vocab-create-input:focus {
-  border-color: var(--primary);
-  box-shadow: var(--ring);
-}
-
-/* ---------- Lưới bộ từ (mockup .deck-grid) ---------- */
-.vocab-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1rem;
-  margin-top: 1.6rem;
-}
-
-/* ---------- Thẻ bộ từ (mockup .deck-card) ---------- */
-.vocab-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  padding: 1.25rem;
-  box-shadow: var(--shadow-sm);
-  position: relative;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-  color: var(--text);
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-}
-.vocab-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-strong);
-}
-
-/* Avatar chữ cái đầu — xoay màu theo vị trí như mockup */
-.vocab-ava {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  font-size: 1.15rem;
-  color: #fff;
-  margin-bottom: 0.9rem;
-  background: var(--grad-brand);
-  box-shadow: var(--shadow-primary);
-}
-.vocab-grid > *:nth-child(4n + 2) .vocab-ava {
-  background: linear-gradient(135deg, var(--accent-2), color-mix(in srgb, var(--accent-2) 55%, #fff));
-}
-.vocab-grid > *:nth-child(4n + 3) .vocab-ava {
-  background: linear-gradient(135deg, var(--warn), color-mix(in srgb, var(--warn) 55%, #fff));
-}
-.vocab-grid > *:nth-child(4n + 4) .vocab-ava {
-  background: linear-gradient(135deg, var(--danger), color-mix(in srgb, var(--danger) 55%, #fff));
-}
-
-.vocab-name {
-  font-weight: 700;
-  font-size: 1rem;
-  letter-spacing: -0.015em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.vocab-desc {
-  font-size: 0.8rem;
-  color: var(--muted);
-  margin-top: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.vocab-open {
-  margin-top: 0.9rem;
-  font-size: 0.82rem;
+  font-size: 23px;
+  line-height: 1.26;
   font-weight: 600;
-  color: var(--primary);
+  letter-spacing: -0.026em;
+  color: var(--text);
+}
+.vocab-head p {
+  margin: 4px 0 0;
+  max-width: 62ch;
+  font-size: 13.5px;
+  color: var(--text-soft);
+}
+.vocab-head-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-.vocab-card:hover .vocab-open {
-  gap: 10px;
-}
-.vocab-open span {
-  transition: transform 0.18s;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
-/* ---------- Nút sửa / xóa (mockup .deck-actions + .icon-btn) ---------- */
-.vocab-actions {
-  position: absolute;
-  top: 0.9rem;
-  right: 0.9rem;
-  display: flex;
+/* ---------- Nút (mockup .btn) ---------- */
+.vocab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
-  opacity: 0;
-  transition: opacity 0.18s;
-}
-.vocab-card:hover .vocab-actions {
-  opacity: 1;
-}
-.vocab-iconbtn {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  font-size: 0.82rem;
-  color: var(--text-soft);
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-}
-.vocab-iconbtn:hover {
-  color: var(--primary);
-  border-color: var(--primary);
-}
-.vocab-iconbtn.vocab-del:hover {
-  color: var(--danger);
-  border-color: var(--danger);
-  background: rgba(240, 68, 56, 0.1);
-}
-
-/* Ô nhập đổi tên inline trên thẻ */
-.vocab-rename {
-  font-weight: 700;
-  font-size: 1rem;
-  padding: 0.2rem 0.5rem;
+  height: 34px;
+  padding: 0 13px;
   border: 1px solid var(--border-strong);
   border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--text);
-  width: 100%;
-  outline: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.008em;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: background 0.14s, border-color 0.14s, color 0.14s, transform 0.14s;
 }
-.vocab-rename:focus {
+.vocab-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--muted);
+}
+.vocab-btn:active {
+  transform: translateY(0.5px);
+}
+.vocab-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.vocab-btn .ico {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.75;
+  color: var(--text-soft);
+}
+.vocab-btn-primary {
+  background: var(--primary);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: var(--shadow-primary);
+}
+.vocab-btn-primary:hover {
+  background: var(--primary-hover);
+  border-color: transparent;
+}
+.vocab-btn-primary .ico {
+  color: currentColor;
+}
+.vocab-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--text-soft);
+}
+.vocab-btn-ghost:hover {
+  background: var(--surface-2);
+  border-color: transparent;
+  color: var(--text);
+}
+
+/* ---------- Nút icon nhỏ (mockup .icon-btn) ---------- */
+.vocab-page .vocab-ibtn,
+.deck-detail .vocab-ibtn {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+.vocab-page .vocab-ibtn:hover,
+.deck-detail .vocab-ibtn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.vocab-page .vocab-ibtn.danger:hover,
+.deck-detail .vocab-ibtn.danger:hover {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  color: var(--danger);
+}
+.vocab-ibtn .ico {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---------- Thanh công cụ (mockup .toolbar) ---------- */
+.vocab-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.vocab-search {
+  position: relative;
+  flex: 1 1 auto;
+  max-width: 320px;
+}
+.vocab-search > .ico {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+  pointer-events: none;
+  z-index: 1;
+}
+.vocab-input,
+.vocab-select {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+.vocab-search .vocab-input {
+  padding-left: 33px;
+}
+.vocab-input::placeholder {
+  color: var(--muted);
+}
+.vocab-input:hover,
+.vocab-select:hover {
+  border-color: var(--muted);
+}
+.vocab-input:focus,
+.vocab-select:focus {
   border-color: var(--primary);
   box-shadow: var(--ring);
 }
-
-/* Thiết bị cảm ứng (không có hover): luôn hiện nút sửa/xóa */
-@media (hover: none) {
-  .vocab-actions {
-    opacity: 1;
-  }
+.vocab-select {
+  width: auto;
+  min-width: 158px;
+  cursor: pointer;
+}
+.vocab-spacer {
+  flex: 1 1 auto;
 }
 
-/* ---------- Responsive (mockup mobile) ---------- */
-@media (max-width: 860px) {
-  .vocab-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .vocab-actions {
-    opacity: 1;
-  }
+/* Chuyển dạng lưới / danh sách (mockup .segmented) */
+.vocab-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
 }
-@media (max-width: 520px) {
-  .vocab-grid {
-    grid-template-columns: 1fr;
-  }
+.vocab-seg button {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s, box-shadow 0.14s;
+}
+.vocab-seg button:hover {
+  color: var(--text);
+}
+.vocab-seg button.is-active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-xs);
+}
+.vocab-seg .ico {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---------- Thẻ chung (mockup .card) ---------- */
+.vocab-card-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.vocab-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.vocab-card-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  color: var(--text);
+}
+.vocab-card-head h2 .ico {
+  width: 16px;
+  height: 16px;
+  color: var(--text-soft);
+}
+.vocab-card-body {
+  padding: 18px 20px;
+}
+
+/* ---------- Form tạo bộ mới (mockup .input-group) ---------- */
+.vocab-create {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.vocab-create .vocab-input {
+  flex: 1 1 220px;
+  width: auto;
+}
+
+/* ---------- Lưới bộ từ (mockup .grid.g-auto) ---------- */
+.vocab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 12px;
+}
+.vocab-grid.is-list {
+  grid-template-columns: 1fr;
+}
+
+/* ---------- Thẻ bộ từ (mockup .deck) ---------- */
+.vocab-deck {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 16px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.14s, box-shadow 0.14s, transform 0.14s;
+}
+.vocab-deck:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+.vocab-deck:active {
+  transform: translateY(0.5px);
+}
+.vocab-deck-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 13px;
+}
+.vocab-deck-mark {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.vocab-deck-mark .ico {
+  width: 16px;
+  height: 16px;
+}
+.vocab-deck-txt {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.vocab-deck-name {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.016em;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vocab-deck-desc {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vocab-bar {
+  height: 4px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.vocab-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--primary);
+  transition: width 0.42s cubic-bezier(0.2, 0, 0.2, 1);
+}
+.vocab-deck-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 11px;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.vocab-deck-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.vocab-dot {
+  width: 2.5px;
+  height: 2.5px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.vocab-deck-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.vocab-deck:hover .vocab-deck-go {
+  color: var(--primary);
+}
+.vocab-deck-go .ico {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.14s;
+}
+.vocab-deck:hover .vocab-deck-go .ico {
+  transform: translateX(2px);
+}
+
+/* Nút sửa / xóa nổi góc thẻ (mockup .deck-tools) */
+.vocab-deck-tools {
+  position: absolute;
+  top: 11px;
+  right: 11px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.14s;
+}
+.vocab-deck:hover .vocab-deck-tools,
+.vocab-deck:focus-within .vocab-deck-tools {
+  opacity: 1;
+}
+
+/* Ô đổi tên inline */
+.vocab-rename {
+  width: 100%;
+  padding: 2px 6px;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.016em;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* Dạng danh sách: thu gọn thành 1 hàng */
+.vocab-grid.is-list .vocab-deck {
+  flex-direction: row;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 16px;
+}
+.vocab-grid.is-list .vocab-deck-top {
+  margin-bottom: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.vocab-grid.is-list .vocab-bar {
+  width: 120px;
+  flex: 0 0 auto;
+}
+.vocab-grid.is-list .vocab-deck-meta {
+  margin-top: 0;
+  flex: 0 0 auto;
+  gap: 16px;
+}
+.vocab-grid.is-list .vocab-deck-tools {
+  position: static;
+  opacity: 1;
+}
+
+/* ---------- Thẻ "Tạo bộ từ mới" (mockup .new-deck) ---------- */
+.vocab-new-deck {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 120px;
+  padding: 16px;
+  text-align: center;
+  font-family: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+  color: var(--text-soft);
+  transition: border-color 0.14s, color 0.14s, background 0.14s;
+}
+.vocab-new-deck:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-tint);
+}
+.vocab-new-deck .ico {
+  width: 19px;
+  height: 19px;
+}
+.vocab-new-deck b {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.vocab-new-deck span {
+  font-size: 12px;
+}
+
+/* ---------- Trạng thái rỗng (mockup .empty) ---------- */
+.vocab-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 5px;
+  padding: 52px 24px;
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+}
+.vocab-empty .ico {
+  width: 26px;
+  height: 26px;
+  margin-bottom: 6px;
+  color: var(--muted);
+}
+.vocab-empty b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.vocab-empty p {
+  margin: 0;
+  max-width: 38ch;
+  font-size: 13px;
+  color: var(--text-soft);
 }
 
 /* ============================================================
-   Chi tiết bộ từ (deck-detail) — port từ mockup 03-tu-vung/chi-tiet.html
-   Style lại danh sách thẻ + ô thêm thẻ đúng mockup, giữ nguyên hành vi.
-   Mọi rule bọc trong .deck-detail để thắng specificity của styles.css.
+   CHI TIẾT BỘ TỪ — mockup 03-tu-vung/chi-tiet.html
    ============================================================ */
 
-/* ---------- Link quay lại (mockup .back-link) ---------- */
-.deck-detail .vocab-back {
+/* ---------- Đường dẫn quay lại (mockup .crumb) ---------- */
+.deck-detail .vocab-crumb {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 0.9rem;
+  gap: 5px;
+  margin-bottom: 12px;
   padding: 0;
-  border: none;
+  border: 0;
   background: none;
-  font-size: 0.86rem;
-  font-weight: 600;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
   color: var(--text-soft);
   cursor: pointer;
-  transition: color 0.15s;
+  transition: color 0.14s;
 }
-.deck-detail .vocab-back:hover {
-  color: var(--primary);
-}
-
-/* ---------- Tiêu đề + chip đếm thẻ (mockup .head-row + .chip-primary) ---------- */
-.deck-detail .vocab-detail-head {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.4rem;
-}
-.deck-detail .vocab-detail-head .page-title {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.deck-detail .vocab-count {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.2rem 0.7rem;
-  border-radius: 999px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  background: var(--primary-soft);
-  color: var(--primary);
-}
-
-/* ---------- Ô thêm thẻ dạng card (mockup .card + .form-grid) ---------- */
-.deck-detail .vocab-addcard {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.8rem;
-  align-items: start;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  padding: 1.4rem;
-  box-shadow: var(--shadow-sm);
-  margin: 1rem 0 1.6rem;
-}
-.deck-detail .vocab-addcard-title {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.02rem;
-  font-weight: 700;
+.deck-detail .vocab-crumb:hover {
   color: var(--text);
 }
-/* Các ô nhập là grid-item: bỏ flex-basis cũ, cho co giãn trong ô lưới */
-.deck-detail .vocab-addcard .field-wrap {
+.deck-detail .vocab-crumb .ico {
+  width: 13px;
+  height: 13px;
+}
+
+/* ---------- Bộ lọc từ loại (mockup .chipset) ---------- */
+.vocab-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.vocab-chipset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.vocab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 27px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-soft);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s, color 0.14s;
+}
+.vocab-chip:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+.vocab-chip.is-active {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--surface);
+  font-weight: 600;
+}
+
+/* ---------- Form thêm thẻ (mockup .add-grid) ---------- */
+.deck-detail .vocab-addcard {
+  margin-bottom: 16px;
+}
+.deck-detail .vocab-add-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: start;
+}
+.deck-detail .vocab-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.deck-detail .vocab-field.full {
+  grid-column: 1 / -1;
+}
+.deck-detail .vocab-field > label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-soft);
+}
+.deck-detail .vocab-add-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.deck-detail .vocab-add-hint {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* Ô nhập nhiều giá trị (MultiField) — dựng lại theo nét mockup */
+.deck-detail .field-wrap {
+  position: relative;
+  display: flex;
   flex: none;
   min-width: 0;
 }
-.deck-detail .vocab-addcard .field-wrap.wide {
+.deck-detail .field-wrap.wide {
   grid-column: 1 / -1;
 }
-.deck-detail .vocab-add-btn {
-  grid-column: 1 / -1;
-  justify-self: start;
+.deck-detail .multi-input {
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  box-shadow: none;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+.deck-detail .multi-input:focus-within {
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+.deck-detail .multi-input input {
+  flex: 1;
+  min-width: 90px !important;
+  padding: 2px 4px;
+  border: none !important;
+  background: transparent;
+  box-shadow: none !important;
+  font-size: 13.5px;
+}
+.deck-detail .multi-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 4px 2px 7px;
+  border-radius: 5px;
+  font-size: 11.8px;
+  font-weight: 500;
+  color: var(--text-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.deck-detail .multi-chip .multi-x {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.62rem;
+  line-height: 1;
+  padding: 2px 3px;
+}
+.deck-detail .multi-chip .multi-x:hover {
+  color: var(--danger);
 }
 
-/* ---------- Thẻ từ (mockup .card có head-row + chip-row) ---------- */
-.deck-detail .vocab-wcard {
+/* Ô "Từ tiếng Anh" trong form thêm thẻ */
+.deck-detail .word-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+.deck-detail .word-input:focus {
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+.deck-detail .word-pos-inline {
+  right: 8px;
+  font-size: 11px;
+  color: var(--text-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* Dropdown gợi ý */
+.deck-detail .suggest-dropdown {
+  border-radius: var(--r-md);
+  border-color: var(--border);
+  box-shadow: var(--shadow-md);
+}
+.deck-detail .suggest-option {
+  font-size: 13px;
+}
+.deck-detail .so-tag {
+  font-size: 10.5px;
+}
+
+/* ---------- Lưới thẻ từ (mockup .word-grid) ---------- */
+.vocab-word-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(324px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.deck-detail .vocab-word {
+  padding: 15px 16px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  padding: 1.25rem 1.35rem;
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.16s, border-color 0.16s;
+  transition: border-color 0.14s, box-shadow 0.14s;
 }
-.deck-detail .vocab-wcard:hover {
-  box-shadow: var(--shadow-md);
+.deck-detail .vocab-word:hover {
   border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
 }
-.deck-detail .vocab-wc-head {
+.deck-detail .vocab-word-head {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-.deck-detail .vocab-wc-word {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-size: 1.18rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-.deck-detail .vocab-pos-badge {
-  display: inline-grid;
-  place-items: center;
-  padding: 0.1rem 0.5rem;
-  border-radius: 8px;
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-size: 0.72rem;
-  font-weight: 700;
-  font-style: italic;
-}
-.deck-detail .vocab-wc-actions {
-  display: flex;
   gap: 8px;
-  flex-shrink: 0;
+  margin-bottom: 2px;
 }
-
-/* Nghĩa tiếng Việt — nổi bật (mockup <p> màu primary-deep) */
-.deck-detail .vocab-wc-meaning {
-  margin: 0.4rem 0 0.75rem;
+.deck-detail .vocab-word-en {
+  font-size: 16.5px;
   font-weight: 600;
-  color: var(--primary-hover);
+  letter-spacing: -0.022em;
+  line-height: 1.3;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
-
-/* Nhãn phụ Collocation / Pattern (mockup .card-note) */
-.deck-detail .vocab-wc-note {
-  font-size: 0.78rem;
-  color: var(--muted);
-  margin: 0.55rem 0 0.4rem;
+.deck-detail .vocab-word.is-simple .vocab-word-en {
+  font-size: 15px;
 }
-
-/* Hàng chip (mockup .chip-row) */
-.deck-detail .vocab-chip-row {
-  display: flex;
-  gap: 7px;
-  flex-wrap: wrap;
-}
-.deck-detail .vocab-chip {
+.deck-detail .vocab-pos {
+  height: 18px;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  padding: 0.24rem 0.7rem;
-  border-radius: 999px;
-  font-size: 0.76rem;
+  margin-top: 3px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 11px;
   font-weight: 600;
-  border: 1px solid transparent;
-}
-.deck-detail .vocab-chip-teal {
-  background: color-mix(in srgb, var(--accent-2) 15%, var(--surface));
-  color: var(--accent-2);
-}
-.deck-detail .vocab-chip-primary {
-  background: var(--primary-soft);
-  color: var(--primary);
-}
-
-/* Câu ví dụ (mockup <p> in nghiêng, muted) */
-.deck-detail .vocab-wc-example {
-  margin-top: 0.5rem;
   font-style: italic;
-  font-size: 0.87rem;
+  color: var(--text-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.deck-detail .vocab-word-tools {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.14s;
+}
+.deck-detail .vocab-word:hover .vocab-word-tools,
+.deck-detail .vocab-word:focus-within .vocab-word-tools {
+  opacity: 1;
+}
+.deck-detail .vocab-word-vi {
+  margin: 0 0 11px;
+  font-size: 13.5px;
   color: var(--text-soft);
 }
-.deck-detail .vocab-wc-example + .vocab-wc-example {
-  margin-top: 0.25rem;
+.deck-detail .vocab-word.is-simple .vocab-word-vi {
+  margin-bottom: 0;
 }
 
-/* Nút "Hiện thêm" (mockup .btn-soft, canh giữa) */
-.deck-detail .load-more {
-  margin-top: 0.4rem;
+/* Hàng Collocation / Pattern (mockup .meta-row + .tok) */
+.deck-detail .vocab-meta-row {
+  display: flex;
+  gap: 9px;
+  margin-top: 9px;
 }
-.deck-detail .vocab-more {
-  background: var(--primary-soft);
-  border-color: transparent;
-  color: var(--primary);
+.deck-detail .vocab-meta-key {
+  flex: 0 0 74px;
+  padding-top: 4px;
+  font-size: 10.5px;
   font-weight: 600;
-  box-shadow: none;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
-.deck-detail .vocab-more:hover {
-  background: color-mix(in srgb, var(--primary) 18%, var(--surface));
-  border-color: transparent;
+.deck-detail .vocab-meta-vals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.deck-detail .vocab-tok {
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 11.8px;
+  font-weight: 500;
+  color: var(--text-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.deck-detail .vocab-tok.is-pattern {
+  background: transparent;
+  border-style: dashed;
+  color: var(--muted);
+  font-style: italic;
 }
 
-/* ---------- Responsive (mockup mobile ≤ 860px) ---------- */
+/* Câu ví dụ (mockup .examples + .ex) */
+.deck-detail .vocab-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 11px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border);
+}
+.deck-detail .vocab-ex {
+  display: flex;
+  align-items: stretch;
+  gap: 7px;
+  margin: 0;
+  font-size: 12.8px;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+.deck-detail .vocab-ex::before {
+  content: '';
+  width: 2px;
+  flex: 0 0 auto;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+
+/* Nút "Hiện thêm" — canh giữa (mockup .row justify-center) */
+.deck-detail .vocab-more-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+/* ============================================================
+   MOBILE  <= 860px
+   ============================================================ */
 @media (max-width: 860px) {
-  .deck-detail .vocab-addcard {
+  .vocab-head {
+    margin-bottom: 16px;
+    gap: 12px;
+  }
+  .vocab-head h1 {
+    font-size: 20px;
+  }
+  .vocab-head p {
+    font-size: 13px;
+  }
+  .vocab-head-actions {
+    width: 100%;
+  }
+  .vocab-head-actions .vocab-btn {
+    flex: 1 1 auto;
+    height: 38px;
+  }
+
+  .vocab-search {
+    max-width: none;
+  }
+  .vocab-select {
+    flex: 1 1 auto;
+  }
+
+  .vocab-grid {
     grid-template-columns: 1fr;
   }
-  .deck-detail .vocab-detail-head .page-title {
-    font-size: 1.3rem;
+  .vocab-deck-tools {
+    opacity: 1;
   }
-  .deck-detail .vocab-wc-head {
-    flex-wrap: nowrap;
+  /* Dạng danh sách trên mobile: bỏ cột thanh tiến độ cho đỡ chật */
+  .vocab-grid.is-list .vocab-bar {
+    display: none;
+  }
+
+  .vocab-card-head {
+    padding: 12px 16px;
+  }
+  .vocab-card-body {
+    padding: 15px 16px;
+  }
+  .vocab-create {
+    padding: 15px 16px;
+  }
+
+  .deck-detail .vocab-add-grid {
+    grid-template-columns: 1fr;
+  }
+  .vocab-word-grid {
+    grid-template-columns: 1fr;
+  }
+  .deck-detail .vocab-word-tools {
+    opacity: 1;
+  }
+  .deck-detail .vocab-meta-key {
+    flex-basis: 60px;
+  }
+
+  .vocab-btn {
+    height: 36px;
+  }
+  .vocab-page .vocab-ibtn,
+  .deck-detail .vocab-ibtn {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+/* Thiết bị cảm ứng: luôn hiện nút sửa/xóa */
+@media (hover: none) {
+  .vocab-deck-tools,
+  .deck-detail .vocab-word-tools {
+    opacity: 1;
   }
 }

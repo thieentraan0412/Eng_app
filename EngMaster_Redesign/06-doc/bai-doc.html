@@ -1,84 +1,893 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The story of silk — Đọc · EngMaster</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The story of silk · Đọc · EngMaster</title>
 <link rel="stylesheet" href="style.css">
-<style></style>
+<style>
+  /* ============================================================ BỐ CỤC ĐỌC */
+  .reader-wrap{max-width:1080px}
+  .reader-grid{display:grid;grid-template-columns:minmax(0,1fr) 292px;gap:30px;align-items:start}
+  .reader-col{min-width:0}
+
+  /* ------------------------------------------------------------- Thanh công cụ */
+  .toolbar{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:9px 12px;margin-bottom:22px;position:sticky;top:0;z-index:20;
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);
+  }
+  @supports (backdrop-filter:blur(1px)){
+    .toolbar{background:color-mix(in srgb,var(--surface) 86%,transparent);
+             backdrop-filter:saturate(180%) blur(12px)}
+  }
+  .toolbar .hint{font-size:12px;color:var(--text-3);display:flex;align-items:center;gap:6px}
+  .toolbar .hint .ico{width:14px;height:14px;color:var(--text-4)}
+  /* Thanh tiến độ đọc — nằm sát mép dưới thanh công cụ */
+  .prog{position:absolute;left:0;right:0;bottom:-1px;height:2px;overflow:hidden;
+        border-radius:0 0 var(--r-md) var(--r-md)}
+  .prog > i{display:block;height:100%;width:0;background:var(--accent);transition:width 90ms linear}
+
+  /* -------------------------------------------------- Vùng đọc: chữ là chính */
+  /* Chữ trải hết chiều rộng cột đọc, thẳng mép với thanh công cụ */
+  .reading{
+    --read-size:17px;
+    font-size:var(--read-size);line-height:1.78;color:var(--text);letter-spacing:-.003em;
+    max-width:100%;margin:0;
+  }
+  .reading .lead{
+    font-size:1.11em;line-height:1.6;color:var(--text-2);font-weight:500;letter-spacing:-.012em;
+    padding-bottom:20px;margin-bottom:24px;border-bottom:1px solid var(--border);
+  }
+  .reading p{margin-bottom:22px;position:relative}
+  .reading p:last-child{margin-bottom:0}
+  .reading p.is-speaking{
+    background:var(--accent-soft);box-shadow:0 0 0 7px var(--accent-soft);border-radius:3px;
+    transition:background var(--t)
+  }
+
+  /* -------------------------------------------------------- Chữ đã bôi & ghi chú */
+  .reading mark{
+    background:var(--accent-soft);color:var(--accent-text);
+    border-bottom:1.5px solid var(--accent-border);
+    padding:1px 2px;border-radius:3px;cursor:pointer;transition:background var(--t-fast);
+  }
+  .reading mark:hover{background:var(--accent-border)}
+  .reading mark.note{background:var(--warn-soft);color:var(--warn);border-bottom-color:var(--warn-border)}
+  .reading mark.note:hover{background:var(--warn-border)}
+  .reading mark.is-active{box-shadow:var(--sh-focus)}
+  @keyframes flash-mark{0%,100%{box-shadow:none}30%,70%{box-shadow:var(--sh-focus)}}
+  .reading mark.flash{animation:flash-mark 900ms ease}
+
+  /* -------------------------------------------------- Popover khi bôi chữ */
+  .sel-pop{
+    position:fixed;z-index:70;display:flex;gap:2px;padding:4px;
+    background:var(--bg-elevated);border:1px solid var(--border-2);
+    border-radius:var(--r-sm);box-shadow:var(--sh-md);
+  }
+  .sel-pop[hidden]{display:none}
+  .sel-pop button{
+    display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 9px;
+    font-size:12.5px;font-weight:500;color:var(--text-2);border-radius:var(--r-xs);
+    transition:background var(--t-fast),color var(--t-fast);white-space:nowrap;
+  }
+  .sel-pop button:hover{background:var(--surface-2);color:var(--text)}
+  .sel-pop button .ico{width:13.5px;height:13.5px;color:var(--text-3)}
+  .sel-pop button.danger:hover{background:var(--err-soft);color:var(--err)}
+  .sel-pop button.danger:hover .ico{color:var(--err)}
+
+  /* ------------------------------------------------------------ Cột bên phải */
+  .aside{position:sticky;top:14px;display:flex;flex-direction:column;gap:12px}
+  .lookup-word{font-size:17px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;gap:6px}
+  .lookup-mean{font-size:14px;color:var(--accent-text);font-weight:500;margin-top:3px}
+  .lookup-ex{font-size:12.5px;color:var(--text-2);line-height:1.55;
+             padding-left:9px;border-left:2px solid var(--border-2);margin-top:10px}
+  .lookup-empty{font-size:12.8px;color:var(--text-3);line-height:1.6}
+  .note-box{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+  .note-box .textarea{min-height:64px;font-size:12.8px}
+  .sheet-close{display:none}
+
+  .saved-row{
+    display:flex;align-items:center;gap:9px;padding:7px 16px;font-size:12.8px;
+    border-bottom:1px solid var(--border);width:100%;text-align:left;
+    transition:background var(--t-fast);
+  }
+  .saved-row:last-child{border-bottom:none}
+  .saved-row:hover{background:var(--surface-2)}
+  .saved-row b{font-weight:500;flex:0 0 auto;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .saved-row span{color:var(--text-3);margin-left:auto;font-size:12px;overflow:hidden;
+                  text-overflow:ellipsis;white-space:nowrap}
+  .saved-row .icon-btn{width:24px;height:24px;flex:0 0 auto;opacity:0}
+  .saved-row:hover .icon-btn,.saved-row:focus-within .icon-btn{opacity:1}
+  .saved-row .icon-btn .ico{width:13px;height:13px}
+  .saved-note{display:block;font-size:11.5px;color:var(--warn);padding:0 16px 8px;line-height:1.45}
+  .saved-empty{padding:16px;font-size:12.5px;color:var(--text-3);line-height:1.6}
+
+  /* --------------------------------------------------------- Câu hỏi hiểu bài */
+  .quiz{margin-top:34px;
+        background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
+  .quiz > summary{
+    display:flex;align-items:center;gap:8px;padding:14px 18px;cursor:pointer;list-style:none;
+    font-size:14.5px;font-weight:600;letter-spacing:-.014em;
+  }
+  .quiz > summary::-webkit-details-marker{display:none}
+  .quiz > summary .ico{width:16px;height:16px;color:var(--text-3)}
+  .quiz > summary .chev{margin-left:auto;transition:transform var(--t-fast)}
+  .quiz[open] > summary{border-bottom:1px solid var(--border)}
+  .quiz[open] > summary .chev{transform:rotate(180deg)}
+  .quiz-body{padding:16px 18px 18px}
+  .q{padding:13px 0;border-bottom:1px solid var(--border)}
+  .q:first-child{padding-top:0}
+  .q-text{font-size:13.5px;line-height:1.6;margin-bottom:9px}
+  .q-text b{font-weight:600;color:var(--text-3);margin-right:6px;font-variant-numeric:tabular-nums}
+  .q-opts{display:flex;flex-wrap:wrap;gap:6px}
+  .q-opts label{
+    display:inline-flex;align-items:center;height:30px;padding:0 11px;cursor:pointer;
+    font-size:12.5px;font-weight:500;color:var(--text-2);
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--r-full);
+    transition:all var(--t-fast);
+  }
+  .q-opts label:hover{border-color:var(--text-4);color:var(--text)}
+  .q-opts input{position:absolute;opacity:0;width:0;height:0}
+  .q-opts input:checked + span{color:var(--text)}
+  .q-opts label:has(input:checked){background:var(--text);border-color:var(--text);color:var(--bg-elevated)}
+  .q-opts label:has(input:focus-visible){box-shadow:var(--sh-focus)}
+  .q .input{max-width:240px;height:32px}
+  .q.is-ok{border-left:2px solid var(--ok);padding-left:11px}
+  .q.is-bad{border-left:2px solid var(--err);padding-left:11px}
+  .q-fb{font-size:12.3px;margin-top:8px;display:none;align-items:center;gap:5px}
+  .q.is-ok .q-fb,.q.is-bad .q-fb{display:flex}
+  .q.is-ok .q-fb{color:var(--ok)} .q.is-bad .q-fb{color:var(--err)}
+  .quiz-foot{display:flex;align-items:center;gap:10px;padding-top:15px}
+  .quiz-score{font-size:13px;font-weight:600;letter-spacing:-.01em}
+
+  /* ------------------------------------------------------ Chế độ tập trung */
+  body.is-focus .side,
+  body.is-focus .tabbar,
+  body.is-focus .aside,
+  body.is-focus .crumb{display:none}
+  body.is-focus .main{margin-left:0}
+  body.is-focus .reader-grid{grid-template-columns:minmax(0,1fr)}
+  body.is-focus .reading,
+  body.is-focus .quiz{max-width:74ch;margin-inline:auto}
+  body.is-focus{padding-bottom:0}
+
+  /* ================================================================ ≤1080px */
+  @media (max-width:1080px){
+    /* Một cột — thu hẹp khung để chữ không kéo dài quá tầm mắt */
+    .reader-wrap{max-width:800px}
+    .reader-grid{grid-template-columns:minmax(0,1fr);gap:20px}
+    /* Thẻ tra từ thành bảng trượt từ dưới lên */
+    .aside{position:static;gap:12px}
+    .lookup-card{
+      position:fixed;left:0;right:0;bottom:0;z-index:65;margin:0;
+      border-radius:var(--r-lg) var(--r-lg) 0 0;border-bottom:none;
+      box-shadow:var(--sh-lg);transform:translateY(112%);
+      transition:transform 240ms cubic-bezier(.3,0,.2,1);
+      max-height:70vh;overflow-y:auto;
+    }
+    .lookup-card.is-open{transform:none}
+    .sheet-scrim{
+      display:block;position:fixed;inset:0;z-index:64;background:rgba(12,12,16,.36);
+      opacity:0;pointer-events:none;transition:opacity var(--t);
+    }
+    .sheet-scrim.is-open{opacity:1;pointer-events:auto}
+    .sheet-close{display:grid}
+    .saved-row .icon-btn{opacity:1}
+  }
+  .sheet-scrim{display:none}
+
+  /* ================================================================= ≤920px */
+  @media (max-width:920px){
+    .toolbar{top:var(--topbar-h);padding:8px 10px;margin-bottom:18px}
+    .toolbar .btn{height:32px}
+    .toolbar .hint{flex-basis:100%;font-size:11.5px}
+    .reading{--read-size:16.5px;line-height:1.76}
+    .lookup-card{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom,0px))}
+    body.is-focus .lookup-card{bottom:0}
+    .quiz-body{padding:14px 14px 16px}
+    .quiz > summary{padding:13px 14px}
+  }
+  @media (max-width:420px){
+    .toolbar .btn-label{display:none}
+  }
+</style>
 </head>
-<body>
-<header class="topbar">
-  <button class="burger" id="burger" aria-label="Mở menu">☰</button>
-  <div class="brand-mark">E</div>
-  <div class="topbar-title">The story of silk — Đọc</div>
-</header>
-<div class="overlay" id="overlay"></div>
-<div class="app">
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-mark">E</div>
-      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
-      <button class="side-close" id="sideClose" aria-label="Đóng menu">✕</button>
-    </div>
-    <ul class="nav">
-      <li><a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a></li>
-      <li><a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a></li>
-      <li><a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a></li>
-      <li><a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a></li>
-      <li><a href="../06-doc/index.html" class="active"><span class="ico">📖</span>Đọc</a></li>
-      <li><a href="../07-viet/index.html"><span class="ico">✍️</span>Viết</a></li>
-      <li><a href="../08-chep-cau/index.html"><span class="ico">✏️</span>Chép câu</a></li>
-      <li><a href="../09-thong-ke/index.html"><span class="ico">📊</span>Thống kê</a></li>
-      <li><a href="../10-cai-dat/index.html"><span class="ico">⚙️</span>Cài đặt</a></li>
-    </ul>
-    <div class="side-user">
-      <div class="ava">T</div>
-      <div><b>thieentraan</b><span>Gói miễn phí</span></div>
-    </div>
-    <div class="side-foot"><span>v0.1.0</span><span>© EngMaster</span></div>
-  </aside>
-  <main class="content">
+<body class="app" data-page="doc" data-depth="1" data-title="The story of silk">
 
-    <a class="back-link" href="index.html">← Danh sách bài đọc</a>
-    <h1 class="page-title" style="font-size:1.35rem;margin-bottom:12px">The story of silk</h1>
-    <div class="read-toolbar">
-      <button class="btn btn-soft btn-sm">🔊 Nghe đọc bài</button>
-      <span class="chip">💡 Bôi chữ để dịch/bôi màu · bấm vùng đã bôi để thêm ghi chú</span>
+<div class="main">
+<div class="wrap reader-wrap">
+
+  <a class="crumb" href="index.html"><i data-ico="left"></i> Thư viện bài đọc</a>
+
+  <div class="page-head anim" style="margin-bottom:14px">
+    <div>
+      <h1>The story of silk</h1>
+      <p><span class="badge">IELTS Reading</span>
+         <span id="metaTime">—</span> · <span id="metaSaved">0 từ đã bôi trong bài</span></p>
     </div>
-    <div class="card">
-      <div class="read-body">
-        <p><em>The history of the world’s most luxurious fabric, from ancient China to the present day.</em></p>
-        <p>Silk is a fine, smooth material produced from the <span class="hl">cocoons<span class="hl-tip">kén tằm · đã lưu vào bộ từ</span></span> — soft protective shells — that are made by mulberry silkworms (insect larvae). Legend has it that it was Lei Tzu, wife of the Yellow Emperor, ruler of China in about 3000 BC, who discovered silkworms.</p>
-        <p>One account of the story goes that as she was taking a walk in her husband’s gardens, she discovered that silkworms were responsible for the destruction of several mulberry trees. She collected a number of cocoons and sat down to have a rest. It just so happened that while she was sipping some tea, one of the cocoons that she had collected landed in the hot tea and started to unravel into a fine thread.</p>
-        <p>Demand for this exotic fabric eventually created the lucrative trade route now known as the Silk Road, taking silk westward and bringing gold, silver and wool to the East. It was named the Silk Road after its most precious commodity, which was considered to be worth more than gold…</p>
+  </div>
+
+  <div class="reader-grid">
+
+    <!-- ================================================== Cột đọc -->
+    <div class="reader-col">
+
+      <div class="toolbar anim">
+        <button class="btn btn-sm" id="speakBtn"><i data-ico="speak"></i> <span class="btn-label">Nghe đọc bài</span></button>
+        <div class="segmented" role="group" aria-label="Cỡ chữ">
+          <button title="Cỡ chữ nhỏ"  data-size="15"   style="font-size:11px">A</button>
+          <button title="Cỡ chữ vừa"  data-size="17"   style="font-size:13px">A</button>
+          <button title="Cỡ chữ lớn"  data-size="19.5" style="font-size:15px">A</button>
+        </div>
+        <button class="btn btn-sm" id="focusBtn"><i data-ico="target"></i> <span class="btn-label">Tập trung</span></button>
+        <div class="spacer"></div>
+        <span class="hint"><i data-ico="bulb"></i> Bôi chữ để tra nghĩa · bấm vùng đã bôi để ghi chú</span>
+        <div class="prog"><i id="progBar"></i></div>
       </div>
+
+      <article class="reading anim anim-1" id="reading">
+        <p class="lead">The history of the world’s most luxurious fabric, from ancient China to the present day.</p>
+
+        <p data-p="A">Silk is a fine, smooth material produced from the cocoons — soft protective shells — that are
+        made by mulberry silkworms (insect larvae). Legend has it that it was Lei Tzu, wife of the Yellow
+        <mark>Emperor</mark>, ruler of China in about 3000 BC, who discovered silkworms.
+        One account of the story goes that as she was taking a walk in her husband’s gardens, she discovered
+        that silkworms were responsible for the destruction of several mulberry trees.</p>
+
+        <p data-p="B">She collected a number of cocoons and sat down to have a rest. It just so happened that while she
+        was sipping some tea, one of the cocoons that she had collected landed in the hot tea and started to
+        unravel into a fine thread. Lei Tzu found that she could wind this thread around her fingers.
+        Subsequently, she persuaded her husband to allow her to <mark>rear</mark> silkworms on a
+        grove of mulberry trees. She also devised a special reel to draw the
+        <mark class="note" data-note="fibre (Anh) = fiber (Mỹ)">fibres</mark> from the cocoon into a single thread so that they would be strong
+        enough to be woven into fabric.</p>
+
+        <p data-p="C">While it is unknown just how much of this is true, it is certainly known that silk cultivation has
+        existed in China for several millennia. Originally, silkworm farming was solely restricted to women,
+        and it was they who were responsible for the growing, harvesting and weaving. Silk quickly grew into
+        a symbol of status, and originally, only royalty were entitled to have clothes made of silk.</p>
+
+        <p data-p="D">The rules were gradually relaxed over the years until finally during the Qing Dynasty
+        (1644–1911 AD), even peasants, the lowest caste, were also entitled to wear silk. Sometime during the
+        Han Dynasty (206 BC–220 AD), silk was so prized that it was also used as a unit of currency.
+        Government officials were paid their salary in silk.</p>
+
+        <p data-p="E">For a long time the method of making silk — a process now known as sericulture — was one of the
+        most closely guarded secrets in the world. Chinese law forbade anyone to carry silkworm eggs, cocoons
+        or mulberry seeds beyond the borders of the empire, and those caught attempting to do so faced the
+        death penalty. Finished cloth, however, could be traded freely. It was the fabric, rather than the
+        knowledge behind it, that travelled west.</p>
+
+        <p data-p="F">By the second century BC, under the Han Dynasty, that trade had grown into a network of caravan
+        routes running some 6,400 kilometres from the Chinese capital to the shores of the Mediterranean. The
+        network was given its familiar name — the Silk Road — only in 1877, by the German geographer Ferdinand
+        von Richthofen, long after the routes themselves had fallen out of use. Silk was never the only cargo:
+        paper, spices, glassware, horses, religions and, less welcome, epidemic disease all moved along the
+        same roads.</p>
+
+        <p data-p="G">The secret could not be kept forever. Sericulture reached Korea around 200 BC with Chinese
+        settlers and spread from there to Japan, while India developed an industry of its own in the early
+        centuries AD. The best-known account of its arrival in Europe comes from the Byzantine historian
+        Procopius, who wrote that in about AD 550 two monks appeared before the Emperor Justinian carrying
+        silkworm eggs hidden inside hollow bamboo canes, smuggled out of China. Whether or not the tale is
+        accurate, Byzantium was weaving its own silk within a generation.</p>
+
+        <p data-p="H">The process itself has changed remarkably little. A silkworm spins its cocoon from a single
+        continuous filament that may run to between 600 and 900 metres. To keep that filament unbroken the
+        cocoons are heated before the moth can emerge and cut its way out; they are then softened in hot water
+        and several filaments are reeled together into one thread strong enough to weave. It takes roughly
+        2,500 silkworms, and the leaves of a small grove of mulberry trees, to produce a single pound of raw
+        silk.</p>
+
+        <p data-p="I">Today China and India account for the overwhelming majority of world production, yet silk
+        remains a tiny fraction of the global textile market — well under one per cent of all fibre by weight.
+        Its value has always lain elsewhere. Silk has been used for parachutes, bicycle tyres and surgical
+        sutures, and laboratories now grow it into scaffolds for repairing human tissue. Five thousand years
+        after Lei Tzu is said to have dropped a cocoon into her tea, the thread has not run out.</p>
+      </article>
+
+      <!-- ============================================ Câu hỏi hiểu bài -->
+      <details class="quiz anim anim-2" id="quiz">
+        <summary>
+          <i data-ico="tasks"></i> Kiểm tra hiểu bài
+          <span class="badge">6 câu</span>
+          <i data-ico="down" class="chev"></i>
+        </summary>
+        <div class="quiz-body">
+
+          <p class="t-xs muted-2" style="margin-bottom:12px">
+            Câu 1–4: chọn <b>TRUE</b> nếu đúng với bài, <b>FALSE</b> nếu trái với bài,
+            <b>NOT GIVEN</b> nếu bài không nhắc tới. Câu 5–6: điền <b>một từ</b> lấy từ bài.
+          </p>
+
+          <div class="q" data-a="TRUE">
+            <p class="q-text"><b>1</b> When silk production began, only women worked with the silkworms.</p>
+            <div class="q-opts">
+              <label><input type="radio" name="q1" value="TRUE"><span>TRUE</span></label>
+              <label><input type="radio" name="q1" value="FALSE"><span>FALSE</span></label>
+              <label><input type="radio" name="q1" value="NOT GIVEN"><span>NOT GIVEN</span></label>
+            </div>
+            <p class="q-fb"></p>
+          </div>
+
+          <div class="q" data-a="FALSE">
+            <p class="q-text"><b>2</b> Peasants were allowed to wear silk during the Han Dynasty.</p>
+            <div class="q-opts">
+              <label><input type="radio" name="q2" value="TRUE"><span>TRUE</span></label>
+              <label><input type="radio" name="q2" value="FALSE"><span>FALSE</span></label>
+              <label><input type="radio" name="q2" value="NOT GIVEN"><span>NOT GIVEN</span></label>
+            </div>
+            <p class="q-fb"></p>
+          </div>
+
+          <div class="q" data-a="TRUE">
+            <p class="q-text"><b>3</b> Anyone caught taking silkworm eggs out of China could be put to death.</p>
+            <div class="q-opts">
+              <label><input type="radio" name="q3" value="TRUE"><span>TRUE</span></label>
+              <label><input type="radio" name="q3" value="FALSE"><span>FALSE</span></label>
+              <label><input type="radio" name="q3" value="NOT GIVEN"><span>NOT GIVEN</span></label>
+            </div>
+            <p class="q-fb"></p>
+          </div>
+
+          <div class="q" data-a="NOT GIVEN">
+            <p class="q-text"><b>4</b> The Silk Road brought China more profit than it brought the countries along the route.</p>
+            <div class="q-opts">
+              <label><input type="radio" name="q4" value="TRUE"><span>TRUE</span></label>
+              <label><input type="radio" name="q4" value="FALSE"><span>FALSE</span></label>
+              <label><input type="radio" name="q4" value="NOT GIVEN"><span>NOT GIVEN</span></label>
+            </div>
+            <p class="q-fb"></p>
+          </div>
+
+          <div class="q" data-a="currency">
+            <p class="q-text"><b>5</b> Under the Han Dynasty silk was valuable enough to serve as a unit of
+              ______________ , and officials received it instead of money.</p>
+            <input class="input" type="text" placeholder="Điền một từ…" autocomplete="off">
+            <p class="q-fb"></p>
+          </div>
+
+          <div class="q" data-a="bamboo">
+            <p class="q-text"><b>6</b> According to Procopius, the eggs were carried to Byzantium inside hollow
+              ______________ canes.</p>
+            <input class="input" type="text" placeholder="Điền một từ…" autocomplete="off">
+            <p class="q-fb"></p>
+          </div>
+
+          <div class="quiz-foot">
+            <button class="btn btn-primary btn-sm" id="quizCheck"><i data-ico="check"></i> Chấm điểm</button>
+            <button class="btn btn-sm" id="quizReset"><i data-ico="refresh"></i> Làm lại</button>
+            <span class="spacer"></span>
+            <span class="quiz-score" id="quizScore"></span>
+          </div>
+
+        </div>
+      </details>
+
     </div>
 
-  </main>
-</div>
-<nav class="tabbar">
-  <a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a>
-  <a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a>
-  <a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a>
-  <a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a>
-  <button id="tabMenu"><span class="ico">☰</span>Menu</button>
-</nav>
-<script>
-var sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
-function menu(o){sb.classList.toggle('open',o);ov.classList.toggle('show',o);}
-document.getElementById('burger').onclick=function(){menu(true)};
-document.getElementById('sideClose').onclick=function(){menu(false)};
-ov.onclick=function(){menu(false)};
-var tm=document.getElementById('tabMenu'); if(tm) tm.onclick=function(){menu(true)};
-document.querySelectorAll('[data-flip]').forEach(function(f){
-  f.addEventListener('click',function(){f.classList.toggle('flipped')});
-  f.querySelectorAll('input,textarea,button').forEach(function(i){i.addEventListener('click',function(e){e.stopPropagation()})});
-});
-document.querySelectorAll('.tabs:not([data-static])').forEach(function(g){g.querySelectorAll('.tab').forEach(function(t){if(t.tagName==='BUTTON')t.onclick=function(){g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-document.querySelectorAll('.pills').forEach(function(g){g.querySelectorAll('.pill').forEach(function(t){t.onclick=function(){g.querySelectorAll('.pill').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-</script>
+    <!-- ================================================ Cột tra từ -->
+    <aside class="aside anim anim-2">
 
+      <div class="card lookup-card" id="lookupCard">
+        <div class="card-head">
+          <h2><i data-ico="search"></i> Tra từ</h2>
+          <span class="spacer"></span>
+          <button class="icon-btn sheet-close" id="sheetClose" aria-label="Đóng"><i data-ico="x"></i></button>
+        </div>
+        <div class="card-body" id="lookupBody">
+          <p class="lookup-empty">Bôi một từ bất kỳ trong bài để xem nghĩa, ví dụ và lưu vào bộ từ của bạn.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2><i data-ico="bulb"></i> Đã lưu trong bài</h2>
+          <span class="spacer"></span>
+          <span class="hint" id="savedCount">0</span>
+        </div>
+        <div id="savedList"></div>
+      </div>
+
+    </aside>
+  </div>
+
+</div>
+</div>
+
+<!-- Popover hiện khi bôi chữ -->
+<div class="sel-pop" id="selPop" hidden></div>
+<div class="sheet-scrim" id="sheetScrim"></div>
+
+<script src="../app.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var reading   = document.getElementById('reading');
+  var pop       = document.getElementById('selPop');
+  var lookupBody= document.getElementById('lookupBody');
+  var lookupCard= document.getElementById('lookupCard');
+  var savedList = document.getElementById('savedList');
+  var savedCount= document.getElementById('savedCount');
+  var metaSaved = document.getElementById('metaSaved');
+  var scrim     = document.getElementById('sheetScrim');
+  var ico = function (n) { return window.EMIcon ? window.EMIcon(n, 'ico') : ''; };
+
+  /* -------------------------------------------------- 1. TỪ ĐIỂN DEMO */
+  var DICT = {
+    emperor:{m:'hoàng đế',e:'The Emperor was in conflict with the Pope.'},
+    silk:{m:'lụa, tơ tằm',e:'She wore a dress made of pure silk.'},
+    silkworm:{m:'con tằm',e:'Silkworms feed only on mulberry leaves.'},
+    silkworms:{m:'những con tằm',e:'Silkworms feed only on mulberry leaves.'},
+    cocoon:{m:'cái kén',e:'The moth emerges from its cocoon in spring.'},
+    cocoons:{m:'những cái kén',e:'The cocoons are softened in hot water.'},
+    mulberry:{m:'cây dâu tằm',e:'A grove of mulberry trees stood behind the house.'},
+    larvae:{m:'ấu trùng',e:'The larvae hatch after about ten days.'},
+    luxurious:{m:'xa xỉ, sang trọng',e:'They stayed in a luxurious hotel.'},
+    fabric:{m:'vải, chất liệu vải',e:'This fabric is soft and light.'},
+    thread:{m:'sợi chỉ',e:'She pulled a loose thread from her sleeve.'},
+    unravel:{m:'tở ra, bung ra',e:'The sweater began to unravel at the cuff.'},
+    reel:{m:'guồng quay tơ',e:'The silk is wound onto a wooden reel.'},
+    reeled:{m:'quay (tơ) lại với nhau',e:'Several filaments are reeled together.'},
+    rear:{m:'nuôi (động vật)',e:'They rear cattle on the hillside.'},
+    fibres:{m:'sợi (Anh–Anh)',e:'Natural fibres such as cotton and silk.'},
+    fibre:{m:'sợi',e:'Silk is a natural protein fibre.'},
+    filament:{m:'sợi tơ liền mạch',e:'A single filament can be 900 metres long.'},
+    cultivation:{m:'sự nuôi trồng',e:'Silk cultivation is thousands of years old.'},
+    sericulture:{m:'nghề nuôi tằm ươm tơ',e:'Sericulture spread slowly westwards.'},
+    millennia:{m:'nhiều thiên niên kỷ',e:'The custom has survived for millennia.'},
+    harvesting:{m:'việc thu hoạch',e:'Harvesting the cocoons takes great care.'},
+    weaving:{m:'việc dệt',e:'Weaving by hand is slow work.'},
+    woven:{m:'được dệt',e:'The cloth is woven from fine thread.'},
+    royalty:{m:'hoàng tộc',e:'Only royalty could wear such colours.'},
+    entitled:{m:'có quyền được',e:'Employees are entitled to paid leave.'},
+    peasants:{m:'nông dân (thời phong kiến)',e:'The peasants worked the land.'},
+    caste:{m:'đẳng cấp',e:'He was born into the lowest caste.'},
+    dynasty:{m:'triều đại',e:'The dynasty ruled for three centuries.'},
+    prized:{m:'được quý trọng',e:'These stamps are prized by collectors.'},
+    currency:{m:'tiền tệ',e:'Salt was once used as a currency.'},
+    salary:{m:'lương',e:'Officials were paid their salary in silk.'},
+    forbade:{m:'đã cấm',e:'The law forbade the export of the eggs.'},
+    borders:{m:'biên giới',e:'They slipped across the borders at night.'},
+    empire:{m:'đế chế',e:'The empire stretched to the sea.'},
+    penalty:{m:'hình phạt',e:'The penalty for smuggling was death.'},
+    caravan:{m:'đoàn lữ hành',e:'A caravan of camels crossed the desert.'},
+    cargo:{m:'hàng hóa chuyên chở',e:'Silk was only one cargo among many.'},
+    spices:{m:'gia vị',e:'Spices were worth more than gold.'},
+    epidemic:{m:'dịch bệnh',e:'An epidemic spread along the trade routes.'},
+    settlers:{m:'người đến định cư',e:'Chinese settlers brought the craft with them.'},
+    smuggled:{m:'buôn lậu, tuồn lén',e:'The eggs were smuggled out of China.'},
+    hollow:{m:'rỗng ruột',e:'The canes were hollow inside.'},
+    canes:{m:'thân cây (tre, mía)',e:'They hid the eggs in bamboo canes.'},
+    monks:{m:'các nhà sư',e:'Two monks came before the emperor.'},
+    grove:{m:'khu rừng nhỏ, vườn cây',e:'A grove of mulberry trees.'},
+    textile:{m:'ngành dệt may',e:'Silk is a small part of the textile market.'},
+    sutures:{m:'chỉ khâu y tế',e:'Silk sutures are still used in surgery.'},
+    scaffolds:{m:'khung nâng đỡ (mô)',e:'Scaffolds help new tissue to grow.'},
+    tissue:{m:'mô (cơ thể)',e:'The material repairs damaged tissue.'},
+    devised:{m:'đã nghĩ ra',e:'She devised a special reel.'},
+    persuaded:{m:'đã thuyết phục',e:'She persuaded her husband to agree.'},
+    restricted:{m:'bị giới hạn',e:'The work was restricted to women.'},
+    relaxed:{m:'được nới lỏng',e:'The rules were gradually relaxed.'}
+  };
+  function clean(s) { return String(s).toLowerCase().replace(/[^a-zà-ỹ' -]/gi, '').trim(); }
+  function look(word) {
+    var k = clean(word);
+    if (DICT[k]) return DICT[k];
+    if (k.slice(-1) === 's' && DICT[k.slice(0, -1)]) return DICT[k.slice(0, -1)];
+    return null;
+  }
+
+  /* -------------------------------------------------- 2. TRẠNG THÁI */
+  var saved = [];          /* {w, m, note, el} */
+  var activeMark = null;   /* thẻ <mark> đang chọn */
+  var savedRange = null;   /* vùng bôi đang giữ */
+
+  function isMobileSheet() { return window.matchMedia('(max-width:1080px)').matches; }
+  function openSheet(v) {
+    if (!isMobileSheet()) return;
+    lookupCard.classList.toggle('is-open', v);
+    scrim.classList.toggle('is-open', v);
+  }
+  scrim.addEventListener('click', function () { openSheet(false); });
+  document.getElementById('sheetClose').addEventListener('click', function () { openSheet(false); });
+
+  /* -------------------------------------------------- 3. THẺ TRA TỪ */
+  function renderLookup(word, mark) {
+    var d = look(word);
+    var entry = saved.filter(function (s) { return s.el === mark; })[0];
+    var h = '';
+
+    h += '<p class="lookup-word">' + esc(word) +
+         '<button class="icon-btn" id="sayWord" title="Phát âm">' + ico('speak') + '</button></p>';
+
+    if (d) {
+      h += '<p class="lookup-mean">' + esc(d.m) + '</p>';
+      h += '<p class="lookup-ex">' + esc(d.e) + '</p>';
+    } else {
+      h += '<p class="lookup-mean" style="color:var(--text-3)">Chưa có trong từ điển mẫu</p>';
+      h += '<p class="lookup-ex">Bản demo chỉ kèm sẵn nghĩa của các từ trong bài đọc này.</p>';
+    }
+
+    if (entry) {
+      h += '<button class="btn btn-sm btn-block btn-danger" id="unsaveBtn" style="margin-top:14px">' +
+           ico('trash') + ' Bỏ lưu từ này</button>';
+    } else {
+      h += '<button class="btn btn-primary btn-sm btn-block" id="saveBtn" style="margin-top:14px">' +
+           ico('plus') + ' Lưu vào bộ từ</button>';
+    }
+
+    h += '<div class="note-box"' + (mark ? '' : ' hidden') + '>' +
+         '<textarea class="textarea" id="noteInput" placeholder="Ghi chú của bạn về từ này…">' +
+         esc(mark && mark.dataset.note ? mark.dataset.note : '') + '</textarea>' +
+         '<button class="btn btn-sm btn-block" id="noteSave" style="margin-top:8px">' +
+         ico('save') + ' Lưu ghi chú</button></div>';
+
+    lookupBody.innerHTML = h;
+
+    var say = document.getElementById('sayWord');
+    if (say) say.onclick = function () { speakOnce(word); };
+
+    var sb = document.getElementById('saveBtn');
+    if (sb) sb.onclick = function () { doSave(word); };
+
+    var ub = document.getElementById('unsaveBtn');
+    if (ub) ub.onclick = function () { removeEntry(entry); };
+
+    var ns = document.getElementById('noteSave');
+    if (ns) ns.onclick = function () {
+      var m = activeMark; if (!m) return;
+      var v = document.getElementById('noteInput').value.trim();
+      m.dataset.note = v;
+      m.classList.toggle('note', !!v);
+      var en = saved.filter(function (s) { return s.el === m; })[0];
+      if (en) { en.note = v; renderSaved(); }
+      hidePop();
+    };
+
+    openSheet(true);
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* -------------------------------------------------- 4. DANH SÁCH ĐÃ LƯU */
+  function renderSaved() {
+    if (!saved.length) {
+      savedList.innerHTML = '<p class="saved-empty">Chưa lưu từ nào. Bôi một từ trong bài rồi bấm ' +
+                            '<b>Lưu vào bộ từ</b>.</p>';
+    } else {
+      savedList.innerHTML = saved.map(function (s, i) {
+        return '<div class="saved-row" data-i="' + i + '" role="button" tabindex="0">' +
+                 '<b>' + esc(s.w) + '</b>' +
+                 '<span>' + esc(s.m || '—') + '</span>' +
+                 '<button class="icon-btn danger" data-del="' + i + '" aria-label="Bỏ lưu">' +
+                   ico('trash') + '</button>' +
+               '</div>' +
+               (s.note ? '<span class="saved-note">' + ico('pencil') + ' ' + esc(s.note) + '</span>' : '');
+      }).join('');
+    }
+    savedCount.textContent = saved.length;
+    metaSaved.textContent = saved.length + ' từ đã bôi trong bài';
+  }
+
+  savedList.addEventListener('click', function (e) {
+    var del = e.target.closest('[data-del]');
+    if (del) { e.stopPropagation(); removeEntry(saved[+del.dataset.del]); return; }
+    var row = e.target.closest('.saved-row');
+    if (!row) return;
+    var s = saved[+row.dataset.i];
+    if (s && s.el) {
+      s.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      s.el.classList.remove('flash');
+      void s.el.offsetWidth;
+      s.el.classList.add('flash');
+      selectMark(s.el);
+    }
+  });
+  savedList.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      var row = e.target.closest('.saved-row');
+      if (row) { e.preventDefault(); row.click(); }
+    }
+  });
+
+  function doSave(word) {
+    var m = activeMark;
+    if (!m && savedRange) m = wrapRange(savedRange);
+    if (!m) return;
+    activeMark = m;
+    if (saved.some(function (s) { return s.el === m; })) return;
+    var d = look(word);
+    saved.push({ w: word, m: d ? d.m : '', note: m.dataset.note || '', el: m });
+    renderSaved();
+    renderLookup(word, m);
+    hidePop();
+  }
+
+  function removeEntry(entry) {
+    if (!entry) return;
+    var i = saved.indexOf(entry);
+    if (i > -1) saved.splice(i, 1);
+    unwrap(entry.el);
+    if (activeMark === entry.el) { activeMark = null; resetLookup(); }
+    renderSaved();
+    hidePop();
+  }
+
+  function resetLookup() {
+    lookupBody.innerHTML = '<p class="lookup-empty">Bôi một từ bất kỳ trong bài để xem nghĩa, ' +
+                           'ví dụ và lưu vào bộ từ của bạn.</p>';
+  }
+
+  /* -------------------------------------------------- 5. BÔI CHỮ */
+  function decorate(m) {
+    m.tabIndex = 0;
+    m.setAttribute('role', 'button');
+    if (!m.dataset.w) m.dataset.w = m.textContent.trim();
+    if (m.dataset.note) m.title = m.dataset.note;
+  }
+
+  function wrapRange(range) {
+    var m = document.createElement('mark');
+    try { range.surroundContents(m); }
+    catch (e) { m.appendChild(range.extractContents()); range.insertNode(m); }
+    decorate(m);
+    window.getSelection().removeAllRanges();
+    return m;
+  }
+
+  function unwrap(m) {
+    if (!m || !m.parentNode) return;
+    var p = m.parentNode;
+    while (m.firstChild) p.insertBefore(m.firstChild, m);
+    p.removeChild(m);
+    p.normalize();
+  }
+
+  function selectMark(m) {
+    if (activeMark) activeMark.classList.remove('is-active');
+    activeMark = m;
+    savedRange = null;
+    if (m) { m.classList.add('is-active'); renderLookup(m.dataset.w || m.textContent.trim(), m); }
+  }
+
+  /* ---- Popover ---- */
+  function rectOf(o) {
+    try {
+      var r = o.getBoundingClientRect();
+      if (r && (r.width || r.height || r.top)) return r;
+    } catch (e) {}
+    return { left: window.innerWidth / 2, top: 120, width: 0, height: 0, bottom: 140 };
+  }
+
+  function showPop(rect, mode) {
+    var btns = [];
+    if (mode === 'sel') {
+      btns.push('<button data-act="look">' + ico('search') + ' Tra nghĩa</button>');
+      btns.push('<button data-act="save">' + ico('plus') + ' Lưu từ</button>');
+      btns.push('<button data-act="note">' + ico('pencil') + ' Ghi chú</button>');
+    } else {
+      btns.push('<button data-act="look">' + ico('search') + ' Tra nghĩa</button>');
+      btns.push('<button data-act="note">' + ico('pencil') + ' Ghi chú</button>');
+      btns.push('<button data-act="del" class="danger">' + ico('trash') + ' Bỏ bôi</button>');
+    }
+    pop.innerHTML = btns.join('');
+    pop.hidden = false;
+    var w = pop.offsetWidth, h = pop.offsetHeight;
+    var x = Math.min(Math.max(8, rect.left + rect.width / 2 - w / 2), window.innerWidth - w - 8);
+    var y = rect.top - h - 8;
+    if (y < 8) y = rect.bottom + 8;
+    pop.style.left = x + 'px';
+    pop.style.top  = y + 'px';
+  }
+  function hidePop() { pop.hidden = true; }
+
+  pop.addEventListener('mousedown', function (e) { e.preventDefault(); });
+  pop.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]'); if (!b) return;
+    var act = b.dataset.act;
+    var word = activeMark ? (activeMark.dataset.w || activeMark.textContent.trim())
+                          : (savedRange ? savedRange.toString().trim() : '');
+    if (act === 'look') { if (!activeMark) renderLookup(word, null); else renderLookup(word, activeMark); hidePop(); }
+    if (act === 'save') { doSave(word); }
+    if (act === 'del')  { var en = saved.filter(function (s) { return s.el === activeMark; })[0];
+                          if (en) removeEntry(en); else { unwrap(activeMark); activeMark = null; hidePop(); } }
+    if (act === 'note') {
+      var m = activeMark || (savedRange ? wrapRange(savedRange) : null);
+      if (!m) return;
+      selectMark(m);
+      hidePop();
+      var ta = document.getElementById('noteInput');
+      if (ta) { ta.focus(); }
+    }
+  });
+
+  /* ---- Bắt sự kiện bôi chữ ---- */
+  reading.addEventListener('mouseup', function () {
+    setTimeout(function () {
+      var sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+      var r = sel.getRangeAt(0);
+      if (!reading.contains(r.commonAncestorContainer)) return;
+      var txt = sel.toString().trim();
+      if (!txt || txt.length > 80) return;
+      var inside = (r.commonAncestorContainer.nodeType === 1 ? r.commonAncestorContainer
+                    : r.commonAncestorContainer.parentNode).closest('mark');
+      if (inside) { selectMark(inside); showPop(rectOf(inside), 'mark'); return; }
+      if (activeMark) { activeMark.classList.remove('is-active'); activeMark = null; }
+      savedRange = r.cloneRange();
+      renderLookup(txt, null);
+      showPop(rectOf(r), 'sel');
+    }, 10);
+  });
+
+  reading.addEventListener('click', function (e) {
+    var m = e.target.closest('mark');
+    if (!m) return;
+    e.preventDefault();
+    selectMark(m);
+    showPop(rectOf(m), 'mark');
+  });
+  reading.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var m = e.target.closest('mark'); if (!m) return;
+    e.preventDefault();
+    selectMark(m);
+    showPop(rectOf(m), 'mark');
+  });
+
+  document.addEventListener('mousedown', function (e) {
+    if (pop.contains(e.target) || reading.contains(e.target) || lookupCard.contains(e.target)) return;
+    hidePop();
+  });
+  window.addEventListener('scroll', hidePop, { passive: true });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (!pop.hidden) { hidePop(); return; }
+    if (lookupCard.classList.contains('is-open')) { openSheet(false); return; }
+    if (document.body.classList.contains('is-focus')) setFocus(false);
+  });
+
+  /* -------------------------------------------------- 6. CỠ CHỮ (nhớ lựa chọn) */
+  var SIZE_KEY = 'em_read_size';
+  var sizeBtns = Array.prototype.slice.call(document.querySelectorAll('.segmented [data-size]'));
+  function applySize(v) {
+    reading.style.setProperty('--read-size', v + 'px');
+    sizeBtns.forEach(function (b) { b.classList.toggle('is-active', b.dataset.size === String(v)); });
+    try { localStorage.setItem(SIZE_KEY, v); } catch (e) {}
+  }
+  sizeBtns.forEach(function (b) { b.onclick = function () { applySize(b.dataset.size); }; });
+  var savedSize = null;
+  try { savedSize = localStorage.getItem(SIZE_KEY); } catch (e) {}
+  applySize(savedSize && sizeBtns.some(function (b) { return b.dataset.size === savedSize; }) ? savedSize : '17');
+
+  /* -------------------------------------------------- 7. TIẾN ĐỘ ĐỌC */
+  var progBar = document.getElementById('progBar');
+  function updateProg() {
+    var r = reading.getBoundingClientRect();
+    var total = r.height - window.innerHeight * 0.75;
+    var done  = -r.top + window.innerHeight * 0.25;
+    var p = total <= 0 ? 1 : done / total;
+    progBar.style.width = Math.max(0, Math.min(1, p)) * 100 + '%';
+  }
+  window.addEventListener('scroll', updateProg, { passive: true });
+  window.addEventListener('resize', updateProg);
+  updateProg();
+
+  /* -------------------------------------------------- 8. NGHE ĐỌC BÀI */
+  var synth = window.speechSynthesis;
+  var speakBtn = document.getElementById('speakBtn');
+  var paras = Array.prototype.slice.call(reading.querySelectorAll('p'));
+  var speaking = false, idx = 0;
+
+  function setSpeakBtn(on) {
+    speakBtn.innerHTML = (on ? ico('x') + ' <span class="btn-label">Dừng đọc</span>'
+                             : ico('speak') + ' <span class="btn-label">Nghe đọc bài</span>');
+    speakBtn.classList.toggle('btn-primary', on);
+  }
+  function clearSpeak() {
+    paras.forEach(function (p) { p.classList.remove('is-speaking'); });
+  }
+  function speakFrom(i) {
+    if (!synth || i >= paras.length) { stopSpeak(); return; }
+    idx = i;
+    clearSpeak();
+    paras[i].classList.add('is-speaking');
+    paras[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    var u = new SpeechSynthesisUtterance(paras[i].textContent.replace(/\s+/g, ' ').trim());
+    u.lang = 'en-US'; u.rate = 0.95;
+    u.onend = function () { if (speaking) speakFrom(i + 1); };
+    synth.speak(u);
+  }
+  function stopSpeak() {
+    speaking = false;
+    if (synth) synth.cancel();
+    clearSpeak();
+    setSpeakBtn(false);
+  }
+  function speakOnce(word) {
+    if (!synth) return;
+    synth.cancel();
+    var u = new SpeechSynthesisUtterance(word);
+    u.lang = 'en-US'; u.rate = 0.9;
+    synth.speak(u);
+  }
+  if (!synth) {
+    speakBtn.disabled = true;
+    speakBtn.title = 'Trình duyệt này không hỗ trợ đọc thành tiếng';
+  } else {
+    speakBtn.onclick = function () {
+      if (speaking) { stopSpeak(); return; }
+      speaking = true; setSpeakBtn(true); speakFrom(0);
+    };
+    window.addEventListener('beforeunload', function () { synth.cancel(); });
+  }
+
+  /* -------------------------------------------------- 9. CHẾ ĐỘ TẬP TRUNG */
+  var focusBtn = document.getElementById('focusBtn');
+  function setFocus(on) {
+    document.body.classList.toggle('is-focus', on);
+    focusBtn.innerHTML = (on ? ico('x') + ' <span class="btn-label">Thoát tập trung</span>'
+                             : ico('target') + ' <span class="btn-label">Tập trung</span>');
+    focusBtn.classList.toggle('btn-primary', on);
+    updateProg();
+  }
+  focusBtn.onclick = function () { setFocus(!document.body.classList.contains('is-focus')); };
+
+  /* -------------------------------------------------- 10. CÂU HỎI */
+  var quiz = document.getElementById('quiz');
+  var qs = Array.prototype.slice.call(quiz.querySelectorAll('.q'));
+  document.getElementById('quizCheck').onclick = function () {
+    var ok = 0;
+    qs.forEach(function (q) {
+      var want = q.dataset.a.toLowerCase();
+      var input = q.querySelector('input[type=text]');
+      var got = input ? input.value.trim().toLowerCase()
+                      : (q.querySelector('input:checked') || {}).value || '';
+      got = String(got).toLowerCase();
+      var good = got === want;
+      q.classList.toggle('is-ok', good);
+      q.classList.toggle('is-bad', !good);
+      q.querySelector('.q-fb').innerHTML = good
+        ? ico('check') + ' Chính xác'
+        : ico('alert') + ' Đáp án đúng: <b style="margin-left:4px">' + q.dataset.a + '</b>';
+      if (good) ok++;
+    });
+    document.getElementById('quizScore').textContent = 'Đúng ' + ok + '/' + qs.length;
+  };
+  document.getElementById('quizReset').onclick = function () {
+    qs.forEach(function (q) {
+      q.classList.remove('is-ok', 'is-bad');
+      q.querySelector('.q-fb').textContent = '';
+      var t = q.querySelector('input[type=text]'); if (t) t.value = '';
+      Array.prototype.forEach.call(q.querySelectorAll('input[type=radio]'), function (r) { r.checked = false; });
+    });
+    document.getElementById('quizScore').textContent = '';
+  };
+
+  /* -------------------------------------------------- 11. KHỞI TẠO */
+  /* Thời gian đọc tính từ số từ thật */
+  var words = reading.textContent.trim().split(/\s+/).length;
+  document.getElementById('metaTime').textContent =
+    words.toLocaleString('vi-VN') + ' từ · khoảng ' + Math.max(1, Math.round(words / 150)) + ' phút đọc';
+
+  /* Nạp các từ đã bôi sẵn trong HTML vào danh sách */
+  Array.prototype.forEach.call(reading.querySelectorAll('mark'), function (m) {
+    decorate(m);
+    var d = look(m.dataset.w);
+    saved.push({ w: m.dataset.w, m: d ? d.m : '', note: m.dataset.note || '', el: m });
+  });
+  renderSaved();
+  resetLookup();
+  setSpeakBtn(false);
+  setFocus(false);
+  if (window.EMHydrate) window.EMHydrate();
+})();
+</script>
 </body>
 </html>

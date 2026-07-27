@@ -1,158 +1,1022 @@
 /* ============================================================
-   Trang Bài tập — lớp vỏ (deck list + header) khớp mockup
-   d:/EngMaster_Redesign/05-bai-tap/index.html
-   Prefix riêng `exq-` để không đụng các class `.ex-*` sẵn có
-   (màn làm bài đã có `.ex-*` khớp mockup nên KHÔNG chỉnh lại ở đây).
-   Dùng token var(--...) để chạy được cả dark mode.
+   Bài tập — port từ mockup 05-bai-tap (index / trac-nghiem / sap-xep)
+   Phong cách "Quiet Premium": viền mảnh, bóng tiết chế, đáp án phẳng
+   chỉ nhuộm màu khi hover hoặc khi chấm đúng/sai.
+   Dùng token dùng chung (var(--...)) để giữ dark mode.
+   Tiền tố: ex- (chung)  ·  ro- (sắp xếp từ)
    ============================================================ */
 
-/* Header dạng hàng: tiêu đề + mô tả bên trái, tabs bên phải (mockup .page-head.head-row) */
-.exq-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.4rem;
+.page.ex-page,
+.page.ex-quiz {
+  max-width: 1120px;
 }
-.exq-head .page-title {
-  margin: 0.1rem 0 0.35rem;
+
+.ex-page .ico,
+.ex-quiz .ico {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.exq-head .page-sub {
+
+/* ---------- Đầu trang (mockup .page-head) ---------- */
+.ex-head {
+  margin-bottom: 22px;
+}
+.ex-head h1 {
   margin: 0;
-  max-width: 640px;
+  font-size: 23px;
+  line-height: 1.26;
+  font-weight: 600;
+  letter-spacing: -0.026em;
+  color: var(--text);
+}
+.ex-head p {
+  margin: 4px 0 0;
+  max-width: 62ch;
+  font-size: 13.5px;
+  color: var(--text-soft);
 }
 
-/* Tabs trong header: không kéo giãn hết chiều ngang như .tabs mặc định */
-.exq-tabs {
-  flex: 0 0 auto;
-  align-self: center;
+/* ---------- Hai tab kiểu bài (mockup .tabs) ---------- */
+.ex-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.exq-tabs .tab {
-  flex: 0 0 auto;
+.ex-tabs::-webkit-scrollbar {
+  display: none;
+}
+.ex-tabs button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px 11px;
+  border: 0;
+  background: none;
+  color: var(--text-soft);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
   white-space: nowrap;
-  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: color 0.14s;
 }
-
-/* Thanh tiến độ trên thẻ bộ từ — biến thể teal như mockup .progress-teal */
-.exq-deck-bar {
-  width: 100%;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  overflow: hidden;
-  margin: 0.75rem 0 0.1rem;
+.ex-tabs button .ico {
+  width: 14.5px;
+  height: 14.5px;
 }
-.exq-deck-bar > div {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--accent-2);
-  transition: width 0.3s ease;
+.ex-tabs button:hover {
+  color: var(--text);
 }
-
-/* Dòng "Làm tiếp / Bắt đầu →" — kiểu link primary như mockup .deck-open */
-.exq-deck-open {
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
+.ex-tabs button.is-active {
+  color: var(--text);
   font-weight: 600;
-  color: var(--primary);
+}
+.ex-tabs button.is-active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--text);
+}
+
+/* ---------- Nút (mockup .btn) ---------- */
+.ex-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.008em;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: background 0.14s, border-color 0.14s, color 0.14s, transform 0.14s;
 }
-.exq-deck-open span {
-  transition: transform 0.18s;
+.ex-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--muted);
 }
-.deck-card:hover .exq-deck-open span {
-  transform: translateX(3px);
+.ex-btn:active {
+  transform: translateY(0.5px);
 }
-
-/* Mobile: header xếp dọc, tabs trải đều full-width (giống mockup ≤ 860px) */
-@media (max-width: 860px) {
-  .exq-head {
-    flex-direction: column;
-    margin-bottom: 1.1rem;
-  }
-  .exq-tabs {
-    width: 100%;
-    align-self: stretch;
-  }
-  .exq-tabs .tab {
-    flex: 1;
-  }
+.ex-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
 }
-
-/* ============================================================
-   MÀN LÀM BÀI — khớp mockup trac-nghiem.html & sap-xep.html
-   Chỉ tinh chỉnh hình học/màu qua token; giữ nguyên hành vi.
-   Selector chồng lớp (.ex-...) để thắng độ ưu tiên mà KHÔNG
-   sửa styles.css và KHÔNG đụng màu trạng thái correct/wrong.
-   ============================================================ */
-
-/* --- Trắc nghiệm: lưới đáp án 2 cột như mockup .options --- */
-.ex-options.exq-options {
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  align-items: stretch;
+.ex-btn .ico {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.75;
+  color: var(--text-soft);
 }
-/* Đáp án phẳng kiểu mockup .option (viền mảnh 1.5px, bo 14px, hover tô tím nhạt) */
-.exq-options .ex-option {
-  border-width: 1.5px;
-  border-radius: 14px;
-  padding: 15px 17px;
-}
-.exq-options .ex-option:hover:not(:disabled) {
-  background: var(--primary-tint);
-}
-
-/* Mobile ≤860px: đáp án về 1 cột (giống mockup .options ở ≤920px) */
-@media (max-width: 860px) {
-  .ex-options.exq-options {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* --- Sắp xếp từ: gợi ý dạng "chip" hổ phách như mockup .chip.chip-amber --- */
-.exq-hint-row {
-  margin-top: 0.5rem;
-}
-.exq-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.32rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--warn);
-  background: color-mix(in srgb, var(--warn) 15%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--warn) 32%, transparent);
-}
-.exq-hint strong {
-  font-weight: 800;
-}
-
-/* Vùng đáp án dạng khung đứt nét 2px (mockup .answer-zone) */
-.ex-quiz .ro-answer {
-  border-width: 2px;
-}
-
-/* Từ đã xếp: nền gradient + chữ trắng như mockup .word-chip.picked */
-.ro-answer .ro-chip.placed {
-  background: var(--grad-primary);
+.ex-btn-primary {
+  background: var(--primary);
   border-color: transparent;
   color: #fff;
   font-weight: 600;
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-primary);
+}
+.ex-btn-primary:hover {
+  background: var(--primary-hover);
+  border-color: transparent;
+}
+.ex-btn-primary .ico {
+  color: currentColor;
+}
+.ex-btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  gap: 5px;
+  font-size: 12.5px;
+  border-radius: 6px;
+}
+.ex-btn-sm .ico {
+  width: 13.5px;
+  height: 13.5px;
 }
 
-/* Chip trong kho: bo 12px + bóng nhẹ + nảy nhẹ khi hover (mockup .word-chip) */
-.ro-bank .ro-chip {
-  border-radius: 12px;
+/* Nút icon nhỏ */
+.ex-ibtn {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+.ex-ibtn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.ex-ibtn.danger:hover {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  color: var(--danger);
+}
+.ex-ibtn .ico {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---------- Lưới bộ từ (mockup .grid.g-auto + .deck) ---------- */
+.ex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 12px;
+}
+.ex-deck {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 16px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.14s, box-shadow 0.14s, transform 0.14s;
+}
+.ex-deck:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+.ex-deck:active {
+  transform: translateY(0.5px);
+}
+.ex-deck-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 13px;
+}
+.ex-deck-mark {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.ex-deck-mark .ico {
+  width: 16px;
+  height: 16px;
+}
+.ex-deck-txt {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.ex-deck-name {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.016em;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ex-deck-desc {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+.ex-bar {
+  height: 4px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.ex-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--primary);
+  transition: width 0.42s cubic-bezier(0.2, 0, 0.2, 1);
+}
+.ex-deck-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 11px;
+  font-size: 12px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+.ex-deck-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.ex-deck:hover .ex-deck-go {
+  color: var(--primary);
+}
+.ex-deck-go .ico {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.14s;
+}
+.ex-deck:hover .ex-deck-go .ico {
+  transform: translateX(2px);
+}
+
+/* ---------- Trạng thái rỗng (mockup .empty) ---------- */
+.ex-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 5px;
+  padding: 26px 24px;
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+}
+.ex-empty.is-page {
+  padding: 52px 24px;
+}
+.ex-empty .ico {
+  width: 26px;
+  height: 26px;
+  margin-bottom: 6px;
+  color: var(--muted);
+}
+.ex-empty b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.ex-empty p {
+  margin: 0;
+  max-width: 42ch;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+/* ---------- Nhãn trạng thái (mockup .badge) ---------- */
+.ex-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+}
+.ex-badge .ico {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2;
+}
+.ex-badge.ok {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 34%, var(--border));
+  color: var(--success);
+}
+
+/* Phím tắt (mockup .kbd) */
+.ex-kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  color: var(--text-soft);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ============================================================
+   MÀN LÀM BÀI — mockup trac-nghiem.html & sap-xep.html (.focus)
+   ============================================================ */
+.page.ex-quiz {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* Thanh trên (mockup .focus-bar) */
+.ex-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.ex-progress {
+  flex: 1 1 auto;
+  max-width: 420px;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.ex-progress > div {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--primary);
+  transition: width 0.35s cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+/* Sân khấu (mockup .focus-stage) */
+.ex-stage {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 660px;
+  margin: 0 auto;
+  padding-bottom: 48px;
+}
+
+/* Chọn chiều làm bài (mockup .segmented) */
+.ex-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.ex-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-soft);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s, box-shadow 0.14s;
+}
+.ex-seg button:hover {
+  color: var(--text);
+}
+.ex-seg button.is-active {
+  background: var(--surface);
+  color: var(--text);
   font-weight: 600;
   box-shadow: var(--shadow-xs);
 }
-.ro-bank .ro-chip:hover {
-  transform: translateY(-2px);
+.ex-seg .ico {
+  width: 13.5px;
+  height: 13.5px;
+}
+
+/* ---------- Đề bài (mockup .q-label / .q-word) ---------- */
+.ex-prompt {
+  text-align: center;
+  width: 100%;
+}
+.ex-prompt-label {
+  font-size: 12px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+.ex-word {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.036em;
+  line-height: 1.2;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.ex-pos {
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 600;
+  font-style: italic;
+}
+
+/* Gợi ý bài sắp xếp (mockup .q-hint) */
+.ex-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.ex-hint .ico {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+}
+.ex-hint b {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ---------- Đáp án trắc nghiệm (mockup .options / .opt) ---------- */
+.ex-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.ex-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 15px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14.5px;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: background 0.14s, border-color 0.14s, color 0.14s;
+}
+.ex-option:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+  color: var(--primary);
+}
+.ex-key {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  font-size: 11.5px;
+  font-weight: 600;
+  transition: background 0.14s, border-color 0.14s, color 0.14s;
+}
+.ex-option:hover:not(:disabled) .ex-key {
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  color: var(--primary);
+}
+.ex-option-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ex-option-main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.ex-option-ex {
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.ex-option > .ico {
+  margin-left: auto;
+  width: 16px;
+  height: 16px;
+  opacity: 0;
+  transition: opacity 0.14s;
+}
+
+/* Sau khi chấm */
+.ex-option.is-right {
+  background: color-mix(in srgb, var(--success) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 38%, var(--border));
+  color: var(--success);
+}
+.ex-option.is-right .ex-key {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+.ex-option.is-wrong {
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 38%, var(--border));
+  color: var(--danger);
+}
+.ex-option.is-wrong .ex-key {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.ex-option.is-right > .ico,
+.ex-option.is-wrong > .ico {
+  opacity: 1;
+}
+.ex-option.is-dim {
+  opacity: 0.5;
+}
+.ex-option:disabled {
+  cursor: default;
+}
+
+/* ---------- Hàng chuyển câu (mockup .nav-row) ---------- */
+.ex-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+.ex-nav-pos {
+  min-width: 62px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chân trang phím tắt (mockup .focus-foot) */
+.ex-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ex-foot span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ============================================================
+   SẮP XẾP TỪ — mockup sap-xep.html
+   ============================================================ */
+.ro-answer {
+  width: 100%;
+  min-height: 88px;
+  padding: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-content: flex-start;
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+}
+.ro-answer.is-filled {
+  border-style: solid;
+}
+.ro-answer.ok {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--success) 45%, var(--border));
+  background: color-mix(in srgb, var(--success) 7%, var(--surface));
+}
+.ro-answer.no {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+}
+.ro-placeholder {
+  margin: auto;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.ro-bank {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: center;
+  width: 100%;
+}
+.ro-chip {
+  padding: 7px 13px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: background 0.14s, border-color 0.14s, color 0.14s;
+}
+.ro-chip:hover {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+  color: var(--primary);
+}
+/* Từ đã xếp vào câu: nền chìm, hover đỏ vì bấm là trả lại kho */
+.ro-answer .ro-chip {
+  background: var(--surface-2);
+  box-shadow: none;
+}
+.ro-answer .ro-chip:hover {
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 38%, var(--border));
+  color: var(--danger);
+}
+.ro-solution {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--success);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.ro-solution span {
+  color: var(--muted);
+}
+
+/* ---------- Băng phản hồi sau khi chấm ---------- */
+.ex-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.ex-banner.ok {
+  background: color-mix(in srgb, var(--success) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 32%, var(--border));
+}
+.ex-banner.no {
+  background: color-mix(in srgb, var(--danger) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
+}
+.ex-banner-ico {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+}
+.ex-banner-ico .ico {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
+}
+.ex-banner.ok .ex-banner-ico {
+  background: var(--success);
+}
+.ex-banner.no .ex-banner-ico {
+  background: var(--danger);
+}
+.ex-banner-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ex-banner-text strong {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.ex-banner-text span {
+  font-size: 12.5px;
+  color: var(--text-soft);
+}
+.ex-banner.ok .ex-banner-text strong {
+  color: var(--success);
+}
+.ex-banner.no .ex-banner-text strong {
+  color: var(--danger);
+}
+
+/* ---------- Màn kết quả ---------- */
+.ex-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.ex-result h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+}
+.ex-result > p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.ex-ring {
+  --p: 0;
+  position: relative;
+  width: 116px;
+  height: 116px;
+  flex: 0 0 auto;
+  margin: 14px 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(var(--ring-color) calc(var(--p) * 1%), var(--surface-hover) 0);
+}
+.ex-ring.good {
+  --ring-color: var(--success);
+}
+.ex-ring.mid {
+  --ring-color: var(--warn);
+}
+.ex-ring.bad {
+  --ring-color: var(--danger);
+}
+.ex-ring > span {
+  width: 92px;
+  height: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+.ex-ring b {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ring-color);
+}
+.ex-ring small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.ex-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+}
+.ex-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 10px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.ex-stat strong {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.ex-stat span {
+  font-size: 11.5px;
+  color: var(--text-soft);
+}
+.ex-stat.ok strong {
+  color: var(--success);
+}
+.ex-stat.no strong {
+  color: var(--danger);
+}
+.ex-result-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+/* Danh sách từ sai để ôn lại */
+.ex-wrong-list {
+  width: 100%;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  text-align: left;
+}
+.ex-wrong-title {
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+.ex-wrong-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.ex-wrong-item:last-child {
+  border-bottom: none;
+}
+.ex-wrong-word {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  font-weight: 600;
+}
+.ex-wrong-meaning {
+  font-weight: 400;
+  color: var(--text-soft);
+}
+.ex-wrong-meaning::before {
+  content: '·';
+  margin-right: 6px;
+  color: var(--muted);
+}
+.ex-wrong-ex {
+  margin-top: 3px;
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--muted);
+}
+
+/* ============================================================
+   MOBILE  <= 860px
+   ============================================================ */
+@media (max-width: 860px) {
+  .ex-head {
+    margin-bottom: 16px;
+  }
+  .ex-head h1 {
+    font-size: 20px;
+  }
+  .ex-head p {
+    font-size: 13px;
+  }
+  .ex-tabs {
+    margin-bottom: 16px;
+  }
+  .ex-tabs button {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+  .ex-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ex-top {
+    gap: 10px;
+  }
+  .ex-word {
+    font-size: 27px;
+  }
+  .ex-seg {
+    width: 100%;
+  }
+  .ex-seg button {
+    flex: 1 1 0;
+    justify-content: center;
+    height: 30px;
+  }
+  .ex-nav {
+    width: 100%;
+  }
+  .ex-nav .ex-btn {
+    flex: 1 1 auto;
+  }
+  .ex-foot {
+    display: none;
+  }
+  .ex-btn {
+    height: 36px;
+  }
+  .ex-btn-sm {
+    height: 30px;
+  }
+  .ex-stats {
+    grid-template-columns: 1fr;
+  }
 }

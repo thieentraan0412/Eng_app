@@ -1,83 +1,68 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bài viết · EngMaster</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<style></style>
+<style>
+  .topic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:8px}
+  .topic{
+    display:flex;align-items:center;gap:9px;padding:11px 13px;text-align:left;
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);
+    font-size:13px;color:var(--text-2);transition:all var(--t-fast);
+  }
+  .topic:hover{border-color:var(--accent);color:var(--accent-text);background:var(--accent-soft)}
+  .topic .ico{width:14px;height:14px;color:var(--text-4)}
+  .topic:hover .ico{color:var(--accent)}
+</style>
 </head>
-<body>
-<header class="topbar">
-  <button class="burger" id="burger" aria-label="Mở menu">☰</button>
-  <div class="brand-mark">E</div>
-  <div class="topbar-title">Bài viết</div>
-</header>
-<div class="overlay" id="overlay"></div>
-<div class="app">
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-mark">E</div>
-      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
-      <button class="side-close" id="sideClose" aria-label="Đóng menu">✕</button>
-    </div>
-    <ul class="nav">
-      <li><a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a></li>
-      <li><a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a></li>
-      <li><a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a></li>
-      <li><a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a></li>
-      <li><a href="../06-doc/index.html"><span class="ico">📖</span>Đọc</a></li>
-      <li><a href="../07-viet/index.html" class="active"><span class="ico">✍️</span>Viết</a></li>
-      <li><a href="../08-chep-cau/index.html"><span class="ico">✏️</span>Chép câu</a></li>
-      <li><a href="../09-thong-ke/index.html"><span class="ico">📊</span>Thống kê</a></li>
-      <li><a href="../10-cai-dat/index.html"><span class="ico">⚙️</span>Cài đặt</a></li>
-    </ul>
-    <div class="side-user">
-      <div class="ava">T</div>
-      <div><b>thieentraan</b><span>Gói miễn phí</span></div>
-    </div>
-    <div class="side-foot"><span>v0.1.0</span><span>© EngMaster</span></div>
-  </aside>
-  <main class="content">
+<body class="app" data-page="viet" data-depth="1" data-title="Bài viết">
 
-    <div class="page-head head-row">
-      <div>
-        <h1 class="page-title">Bài viết</h1>
-        <p class="page-sub">Luyện viết tiếng Anh với gợi ý từ, kiểm tra chính tả &amp; ngữ pháp.</p>
-      </div>
-      <button class="btn btn-primary">+ Bài viết mới</button>
-    </div>
+<div class="main">
+<div class="wrap">
 
+  <div class="page-head anim">
+    <div>
+      <h1>Bài viết</h1>
+      <p>Luyện viết tiếng Anh với gợi ý từ, kiểm tra chính tả &amp; ngữ pháp theo thời gian thực.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn"><i data-ico="dice"></i> Gợi ý đề bài</button>
+      <a class="btn btn-primary" href="soan-thao.html"><i data-ico="plus"></i> Bài viết mới</a>
+    </div>
+  </div>
+
+  <!-- --------------------------------------------------- Danh sách bài -->
+  <section class="list anim anim-1" style="margin-bottom:26px">
     <a class="list-row" href="soan-thao.html">
-      <div class="stat-ico i3" style="margin:0">✍️</div>
-      <div class="row-main"><div class="row-title">sentense example</div><div class="row-sub">4 từ · sửa lần cuối hôm nay</div></div>
-      <span class="btn btn-danger btn-sm">Xóa</span>
+      <span class="list-mark"><i data-ico="pen"></i></span>
+      <span class="list-main">
+        <span class="list-title">sentense example</span>
+        <span class="list-sub">My name is thien</span>
+      </span>
+      <span class="list-side">
+        <span class="badge">4 từ</span>
+        <span class="badge badge-warn"><i data-ico="alert"></i> 1 lỗi chính tả</span>
+        <span class="icon-btn danger" role="button" tabindex="0" title="Xóa" onclick="event.preventDefault()"><i data-ico="trash"></i></span>
+      </span>
     </a>
+  </section>
 
-  </main>
+  <!-- ------------------------------------------------------ Gợi ý đề bài -->
+  <h2 class="t-label" style="margin-bottom:10px">Chủ đề gợi ý</h2>
+  <section class="topic-grid anim anim-2">
+    <a class="topic" href="soan-thao.html"><i data-ico="user"></i> Giới thiệu bản thân</a>
+    <a class="topic" href="soan-thao.html"><i data-ico="clock"></i> Thói quen hằng ngày</a>
+    <a class="topic" href="soan-thao.html"><i data-ico="book"></i> Một cuốn sách bạn thích</a>
+    <a class="topic" href="soan-thao.html"><i data-ico="trend"></i> Mạng xã hội &amp; giới trẻ</a>
+    <a class="topic" href="soan-thao.html"><i data-ico="cloud"></i> Biến đổi khí hậu</a>
+    <a class="topic" href="soan-thao.html"><i data-ico="target"></i> Mục tiêu 5 năm tới</a>
+  </section>
+
 </div>
-<nav class="tabbar">
-  <a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a>
-  <a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a>
-  <a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a>
-  <a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a>
-  <button id="tabMenu"><span class="ico">☰</span>Menu</button>
-</nav>
-<script>
-var sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
-function menu(o){sb.classList.toggle('open',o);ov.classList.toggle('show',o);}
-document.getElementById('burger').onclick=function(){menu(true)};
-document.getElementById('sideClose').onclick=function(){menu(false)};
-ov.onclick=function(){menu(false)};
-var tm=document.getElementById('tabMenu'); if(tm) tm.onclick=function(){menu(true)};
-document.querySelectorAll('[data-flip]').forEach(function(f){
-  f.addEventListener('click',function(){f.classList.toggle('flipped')});
-  f.querySelectorAll('input,textarea,button').forEach(function(i){i.addEventListener('click',function(e){e.stopPropagation()})});
-});
-document.querySelectorAll('.tabs:not([data-static])').forEach(function(g){g.querySelectorAll('.tab').forEach(function(t){if(t.tagName==='BUTTON')t.onclick=function(){g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-document.querySelectorAll('.pills').forEach(function(g){g.querySelectorAll('.pill').forEach(function(t){t.onclick=function(){g.querySelectorAll('.pill').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-</script>
+</div>
 
+<script src="../app.js"></script>
 </body>
 </html>

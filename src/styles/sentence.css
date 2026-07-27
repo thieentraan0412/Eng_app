@@ -104,6 +104,18 @@
   border-radius: 12px;
   min-height: 46px;
 }
+/* FIX chữ bị "ẩn" khi nhấp ra ngoài: sau khi chấm sai + mất focus, chữ thật
+   được set trong suốt để lộ lớp phủ tô đỏ (.sc-backdrop) phía sau. Nền trắng
+   ở trên vô tình che lớp phủ → phải ép nền ô trong suốt, và cho backdrop cùng
+   nền/viền/bo góc để chữ hiện đúng vị trí. */
+.sentence-page .sc-input.has-overlay {
+  background: transparent;
+}
+.sentence-page .sc-backdrop {
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 12px;
+}
 
 /* Hàng nút: Xem đáp án (trái) · Kiểm tra (phải), cỡ nhỏ */
 .sentence-page .sc-actions {

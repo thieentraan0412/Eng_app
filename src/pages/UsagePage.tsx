@@ -8,8 +8,8 @@ import {
   type DeckStat,
 } from '../services/cloud/CloudApiClient'
 import { getUsageStats, resetRequestStats, type UsageStats } from '../services/usageStats'
-import BarChart from '../components/BarChart'
 import Heatmap from '../components/Heatmap'
+import Icon from '../components/Icon'
 import '../styles/usage.css'
 
 // Hạn mức gói Supabase Free (tham khảo — nên đối chiếu Dashboard cho chính xác)
@@ -107,240 +107,304 @@ export default function UsagePage() {
     setUsage(getUsageStats())
   }
 
+  // Cột đứng cho request 7 ngày gần nhất (mockup .due7)
+  const reqMax = Math.max(1, ...usage.byDay.map((d) => d.count))
+
   return (
     <div className="page usage-page">
-      <div className="usage-head">
+      <div className="us-head">
         <div>
-          <h1 className="page-title">Thống kê</h1>
-          <p className="page-sub">Tiến độ học tập, tỷ lệ nhớ & dung lượng lưu trữ</p>
+          <h1>Thống kê</h1>
+          <p>Tiến độ học tập, tỷ lệ nhớ &amp; dung lượng lưu trữ.</p>
         </div>
-        <button className="btn" onClick={refresh} disabled={loading}>
-          {loading ? 'Đang tải…' : '↻ Làm mới'}
+        <button className="us-btn" onClick={refresh} disabled={loading}>
+          <Icon name="refresh" /> {loading ? 'Đang tải…' : 'Làm mới'}
         </button>
       </div>
 
-      {error && <div className="usage-error">⚠️ Không tải được thống kê: {error}</div>}
+      {error && <div className="us-error">Không tải được thống kê: {error}</div>}
 
-      {/* Tổng quan học tập (30–365 ngày) */}
+      {/* -------------------------------------------------- 4 chỉ số */}
       {studyTotals && (
-        <div className="stats-cards">
-          <div className="stats-card">
-            <div className="stats-ico i1">⏱️</div>
-            <div className="stats-num">{studyTotals.minutes.toLocaleString('vi-VN')}</div>
-            <div className="stats-lbl">Phút học (1 năm)</div>
+        <section className="us-stats">
+          <div className="us-stat">
+            <div className="us-stat-top">
+              <span className="us-stat-label">Phút học (1 năm)</span>
+              <Icon name="clock" />
+            </div>
+            <div className="us-stat-value">{studyTotals.minutes.toLocaleString('vi-VN')}</div>
           </div>
-          <div className="stats-card">
-            <div className="stats-ico i2">🔁</div>
-            <div className="stats-num">{studyTotals.cards.toLocaleString('vi-VN')}</div>
-            <div className="stats-lbl">Lượt ôn thẻ</div>
+          <div className="us-stat">
+            <div className="us-stat-top">
+              <span className="us-stat-label">Lượt ôn thẻ</span>
+              <Icon name="repeat" />
+            </div>
+            <div className="us-stat-value">{studyTotals.cards.toLocaleString('vi-VN')}</div>
           </div>
-          <div className="stats-card">
-            <div className="stats-ico i3">✨</div>
-            <div className="stats-num">{studyTotals.words.toLocaleString('vi-VN')}</div>
-            <div className="stats-lbl">Từ mới đã thêm</div>
+          <div className="us-stat">
+            <div className="us-stat-top">
+              <span className="us-stat-label">Từ mới đã thêm</span>
+              <Icon name="sparkle" />
+            </div>
+            <div className="us-stat-value">{studyTotals.words.toLocaleString('vi-VN')}</div>
           </div>
-          <div className="stats-card">
-            <div className="stats-ico i4">📝</div>
-            <div className="stats-num">{studyTotals.quizzes.toLocaleString('vi-VN')}</div>
-            <div className="stats-lbl">Quiz đã làm</div>
+          <div className="us-stat">
+            <div className="us-stat-top">
+              <span className="us-stat-label">Quiz đã làm</span>
+              <Icon name="tasks" />
+            </div>
+            <div className="us-stat-value">{studyTotals.quizzes.toLocaleString('vi-VN')}</div>
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Heatmap kiểu GitHub — phút học từng ngày trong 1 năm */}
-      <div className="usage-card">
-        <div className="usage-card-head">
-          <h2>🗓️ Lịch học cả năm</h2>
-          <span className="muted">phút học mỗi ngày</span>
+      {/* ---------------------------------------------------- Heatmap */}
+      <section className="us-card">
+        <div className="us-card-head">
+          <h2>
+            <Icon name="calendar" /> Lịch học cả năm
+          </h2>
+          <span className="us-hint">phút học mỗi ngày</span>
         </div>
-        {study ? (
-          <Heatmap data={heatDays} unit="phút" />
-        ) : (
-          <p className="muted">
-            Chưa có dữ liệu thống kê học tập. Nếu vừa nâng cấp, hãy chạy lại{' '}
-            <code>supabase/schema.sql</code> để thêm hàm ghi thống kê.
-          </p>
-        )}
-      </div>
+        <div className="us-card-body">
+          {study ? (
+            <Heatmap data={heatDays} unit="phút" />
+          ) : (
+            <p className="us-note">
+              Chưa có dữ liệu thống kê học tập. Nếu vừa nâng cấp, hãy chạy lại{' '}
+              <code>supabase/schema.sql</code> để thêm hàm ghi thống kê.
+            </p>
+          )}
+        </div>
+      </section>
 
-      <div className="stats-col2">
-        {/* Tỷ lệ nhớ (retention) 30 ngày */}
+      <div className="us-row2">
+        {/* ------------------------------------------------ Tỷ lệ nhớ */}
         {retention && (
-          <div className="usage-card">
-            <div className="usage-card-head">
-              <h2>🧠 Tỷ lệ nhớ (30 ngày)</h2>
-              <span className="usage-big">
-                {retention.total ? `${Math.round(retention.rate * 100)}%` : '—'}
-              </span>
+          <section className="us-card">
+            <div className="us-card-head">
+              <h2>
+                <Icon name="target" /> Tỷ lệ nhớ
+              </h2>
+              <span className="us-hint">30 ngày</span>
             </div>
-            {retention.total === 0 ? (
-              <p className="muted">Chưa có lượt ôn nào trong 30 ngày qua.</p>
-            ) : (
-              <>
-                <p className="muted" style={{ margin: '0 0 0.4rem' }}>
-                  Nhớ {retention.kept.toLocaleString('vi-VN')} /{' '}
-                  {retention.total.toLocaleString('vi-VN')} lượt (không bấm “Lại”)
-                </p>
-                <div className="stats-retain">
+            <div className="us-card-body">
+              {retention.total === 0 ? (
+                <p className="us-note">Chưa có lượt ôn nào trong 30 ngày qua.</p>
+              ) : (
+                <>
+                  <div className="us-recall-top">
+                    <span className="us-recall-num">{Math.round(retention.rate * 100)}%</span>
+                    <span className="us-recall-txt">
+                      Nhớ {retention.kept.toLocaleString('vi-VN')} /{' '}
+                      {retention.total.toLocaleString('vi-VN')} lượt
+                      <small>không bấm “Lại”</small>
+                    </span>
+                  </div>
                   {(['again', 'hard', 'good', 'easy'] as const).map((k) => {
                     const label = { again: 'Lại', hard: 'Khó', good: 'Được', easy: 'Dễ' }[k]
+                    const tone = { again: 'red', hard: 'amber', good: 'blue', easy: 'green' }[k]
                     const pct = retention.total
                       ? Math.round((retention.byRating[k] / retention.total) * 100)
                       : 0
                     return (
-                      <div key={k} className={`stats-retain-row r-${k}`}>
-                        <span className="stats-retain-lbl">{label}</span>
-                        <div className="stats-track">
+                      <div className="us-grade" key={k}>
+                        <span className="us-grade-name">{label}</span>
+                        <span className={`us-bar ${tone}`}>
                           <i style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="stats-retain-val">
+                        </span>
+                        <span className="us-grade-val">
                           {retention.byRating[k]} · {pct}%
                         </span>
                       </div>
                     )
                   })}
-                </div>
-              </>
-            )}
-          </div>
+                </>
+              )}
+            </div>
+          </section>
         )}
 
-        {/* Dự báo thẻ đến hạn 7 ngày tới */}
+        {/* --------------------------------------------- Thẻ đến hạn */}
         {forecast && (
-          <div className="usage-card">
-            <div className="usage-card-head">
-              <h2>🔮 Thẻ đến hạn (7 ngày tới)</h2>
+          <section className="us-card">
+            <div className="us-card-head">
+              <h2>
+                <Icon name="bell" /> Thẻ đến hạn
+              </h2>
+              <span className="us-hint">7 ngày tới</span>
             </div>
-            <div className="stats-due">
-              {forecast.map((b) => (
-                <div
-                  className={`stats-due-cell ${b.date === '' ? 'hot' : ''}`}
-                  key={b.date || 'overdue'}
-                  title={`${b.label}: ${b.count} thẻ`}
-                >
-                  <b>{b.count}</b>
-                  <span>{b.label}</span>
-                </div>
-              ))}
+            <div className="us-card-body">
+              <div className="us-cols">
+                {(() => {
+                  const max = Math.max(1, ...forecast.map((b) => b.count))
+                  return forecast.map((b) => (
+                    <div
+                      className={b.count ? 'us-col' : 'us-col is-zero'}
+                      key={b.date || 'overdue'}
+                      title={`${b.label}: ${b.count} thẻ`}
+                    >
+                      <span className="us-col-n">{b.count}</span>
+                      <span className="us-col-track">
+                        <span
+                          className="us-col-fill"
+                          style={{ height: b.count ? `${(b.count / max) * 100}%` : '2%' }}
+                        />
+                      </span>
+                      <span className="us-col-d">{b.label}</span>
+                    </div>
+                  ))
+                })()}
+              </div>
             </div>
-          </div>
+          </section>
         )}
       </div>
 
-      {/* Thống kê theo từng bộ từ */}
+      {/* ------------------------------------------------ Theo từng bộ */}
       {deckStats && deckStats.length > 0 && (
-        <div className="usage-card">
-          <div className="usage-card-head">
-            <h2>📚 Theo từng bộ từ</h2>
+        <section className="us-card">
+          <div className="us-card-head">
+            <h2>
+              <Icon name="layers" /> Theo từng bộ từ
+            </h2>
           </div>
-          <div className="deckstat-list">
-            {deckStats
-              .slice()
-              .sort((a, b) => b.total - a.total)
-              .map((d) => {
-                const pct = d.total ? Math.round((d.learned / d.total) * 100) : 0
-                return (
-                  <div className="deckstat-row" key={d.deck_id}>
-                    <div className="deckstat-top">
-                      <span className="deckstat-name">{d.name}</span>
-                      <span className="muted">
-                        {d.learned}/{d.total} đã học · {pct}%
-                        {d.due > 0 && <span className="deckstat-due"> · 🔔 {d.due} đến hạn</span>}
-                      </span>
-                    </div>
-                    <div className="ex-deck-bar">
-                      <div style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                )
-              })}
-          </div>
-        </div>
+          {deckStats
+            .slice()
+            .sort((a, b) => b.total - a.total)
+            .map((d) => {
+              const pct = d.total ? Math.round((d.learned / d.total) * 100) : 0
+              return (
+                <div className="us-kv" key={d.deck_id}>
+                  <span className="us-kv-k" title={d.name}>
+                    {d.name}
+                  </span>
+                  <span className="us-bar" title={`${pct}% đã học`}>
+                    <i style={{ width: `${pct}%` }} />
+                  </span>
+                  <span className="us-kv-v">
+                    {d.learned}/{d.total}
+                  </span>
+                  {d.due > 0 && <span className="us-badge">{d.due} đến hạn</span>}
+                </div>
+              )
+            })}
+        </section>
       )}
 
-      <div className="stats-col2">
+      {/* ------------------------------------------- Lưu trữ & đồng bộ */}
+      <h2 className="us-section-label">Lưu trữ &amp; đồng bộ</h2>
+
+      <div className="us-row2">
         {/* Dung lượng Database */}
-        <div className="usage-card">
-          <div className="usage-card-head">
-            <h2>💾 Dung lượng Database</h2>
-            {db && (
-              <span className="usage-big">
-                {fmtBytes(db.db_size_bytes)} <span className="muted">/ 500 MB</span>
+        <section className="us-card">
+          <div className="us-card-head">
+            <h2>
+              <Icon name="database" /> Dung lượng Database
+            </h2>
+          </div>
+          <div className="us-card-body">
+            <div className="us-big-row">
+              <span className="us-big">
+                {db ? fmtBytes(db.db_size_bytes) : '—'} <small>đã dùng</small>
               </span>
-            )}
+              <span className="us-hint">/ 500 MB</span>
+            </div>
+            <span className="us-bar lg">
+              <i style={{ width: `${dbPct}%` }} />
+            </span>
+            <p className="us-note">
+              Đã dùng {dbPct.toFixed(1)}% hạn mức miễn phí ·{' '}
+              {totalRows.toLocaleString('vi-VN')} bản ghi
+            </p>
           </div>
-          <div className="sp-bar usage-bar">
-            <div
-              className={`sp-bar-fill ${dbPct >= 80 ? 'is-danger' : dbPct >= 50 ? 'is-warn' : ''}`}
-              style={{ width: `${dbPct}%` }}
-            />
-          </div>
-          <div className="usage-meta">
-            <span>Đã dùng {dbPct.toFixed(1)}% hạn mức miễn phí</span>
-            <span className="muted">{totalRows.toLocaleString('vi-VN')} bản ghi</span>
-          </div>
-        </div>
+        </section>
 
         {/* Số request (đếm phía client) */}
-        <div className="usage-card">
-          <div className="usage-card-head">
-            <h2>📡 Số request tới Supabase</h2>
-            <div className="usage-req-nums">
-              <span className="usage-big">{usage.total.toLocaleString('vi-VN')}</span>
-              <span className="muted">tổng · {usage.today.toLocaleString('vi-VN')} hôm nay</span>
-            </div>
-          </div>
-          <BarChart data={usage.byDay} />
-          <div className="usage-meta">
-            <span className="muted">
-              Đếm request do app này gọi <strong>trên máy này</strong> — không phải tổng toàn hệ thống.
-            </span>
-            <button className="btn tiny" onClick={onReset}>
+        <section className="us-card">
+          <div className="us-card-head">
+            <h2>
+              <Icon name="activity" /> Request tới Supabase
+            </h2>
+            <button className="us-hint" onClick={onReset}>
               Đặt lại
             </button>
           </div>
-        </div>
+          <div className="us-card-body">
+            <div className="us-big-row">
+              <span className="us-big">{usage.total.toLocaleString('vi-VN')}</span>
+              <span className="us-hint">
+                tổng · {usage.today.toLocaleString('vi-VN')} hôm nay
+              </span>
+            </div>
+            <div className="us-cols sm">
+              {usage.byDay.map((d) => (
+                <div
+                  className={d.count ? 'us-col' : 'us-col is-zero'}
+                  key={d.date}
+                  title={`${d.date}: ${d.count} request`}
+                >
+                  <span className="us-col-track">
+                    <span
+                      className="us-col-fill"
+                      style={{ height: d.count ? `${(d.count / reqMax) * 100}%` : '3%' }}
+                    />
+                  </span>
+                  <span className="us-col-d">{Number(d.date.slice(8, 10))}</span>
+                </div>
+              ))}
+            </div>
+            <p className="us-note">
+              Đếm request do app này gọi <strong>trên máy này</strong> — không phải tổng toàn
+              hệ thống.
+            </p>
+          </div>
+        </section>
       </div>
 
-      {/* Số bản ghi từng bảng */}
-      {db && (
-        <div className="usage-card">
-          <div className="usage-card-head">
-            <h2>📋 Số bản ghi theo bảng</h2>
-          </div>
-          <div className="stats-tg">
+      <div className="us-row2">
+        {/* Số bản ghi từng bảng */}
+        {db && (
+          <section className="us-card">
+            <div className="us-card-head">
+              <h2>
+                <Icon name="stack" /> Bản ghi theo bảng
+              </h2>
+              <span className="us-hint">{totalRows.toLocaleString('vi-VN')} tổng</span>
+            </div>
             {Object.entries(db.tables)
               .sort((a, b) => b[1] - a[1])
               .map(([name, cnt]) => (
-                <div className="stats-tg-item" key={name}>
-                  <b>{cnt.toLocaleString('vi-VN')}</b>
-                  <span>{TABLE_LABEL[name] ?? name}</span>
+                <div className="us-kv" key={name}>
+                  <span className="us-kv-k">{TABLE_LABEL[name] ?? name}</span>
+                  <span className="us-kv-v">{cnt.toLocaleString('vi-VN')}</span>
                 </div>
               ))}
-          </div>
-        </div>
-      )}
+          </section>
+        )}
 
-      {/* Hạn mức gói Free */}
-      <div className="usage-card">
-        <div className="usage-card-head">
-          <h2>🆓 Hạn mức gói Free (tham khảo)</h2>
-        </div>
-        <div className="usage-rows">
+        {/* Hạn mức gói Free */}
+        <section className="us-card">
+          <div className="us-card-head">
+            <h2>
+              <Icon name="cloud" /> Hạn mức gói Free
+            </h2>
+            <span className="us-hint">tham khảo</span>
+          </div>
           {FREE_LIMITS.map((l) => (
-            <div className="usage-row" key={l.label}>
-              <span className="usage-row-name">{l.label}</span>
-              <span className="usage-row-count">
+            <div className="us-quota" key={l.label}>
+              <b>{l.label}</b>
+              <span>
                 {l.value}
-                {l.note && <em className="usage-note"> · {l.note}</em>}
+                {l.note && ` · ${l.note}`}
               </span>
             </div>
           ))}
-        </div>
-        <p className="muted usage-foot">
-          Con số băng thông & tổng request chính xác chỉ xem được ở{' '}
-          <strong>Supabase Dashboard → Settings → Usage</strong>.
-        </p>
+          <p className="us-foot-note">
+            Con số băng thông &amp; tổng request chính xác chỉ xem được ở{' '}
+            <strong>Supabase Dashboard → Settings → Usage</strong>.
+          </p>
+        </section>
       </div>
     </div>
   )

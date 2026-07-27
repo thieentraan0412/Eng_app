@@ -112,6 +112,10 @@ export default function AppLayout() {
   // và nhận yêu cầu "Lưu vào bộ từ" đến từ popup toàn cục (cửa sổ khác).
   useEffect(() => {
     if (!window.api) return // web: không có tính năng dịch toàn màn hình / quick-save
+    // Cửa sổ luôn nổi trên cùng: khôi phục theo cài đặt đã lưu ở lần mở trước
+    if (localStorage.getItem('always_on_top') === '1') {
+      void window.api.setAlwaysOnTop(true)
+    }
     if (localStorage.getItem('desktop_translate_enabled') === '1') {
       window.api.setDesktopTranslate(true)
     }
@@ -155,7 +159,7 @@ export default function AppLayout() {
       case 'dashboard':
         return <DashboardPage onNavigate={setPage} />
       case 'vocabulary':
-        return <VocabularyPage />
+        return <VocabularyPage onNavigate={setPage} />
       case 'flashcard':
         return <FlashcardPage />
       case 'reading':

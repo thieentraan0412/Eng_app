@@ -1,210 +1,434 @@
 /* ============================================================
-   Cài đặt (Settings) — ported from EngMaster_Redesign/10-cai-dat
-   Scoped with the `set-` prefix. Uses app tokens for dark-mode.
-   Reuses global .btn and .switch/.slider (toggles).
+   Cài đặt (Settings) — port từ mockup 10-cai-dat
+   Phong cách "Quiet Premium": khung hẹp, hàng cài đặt viền mảnh,
+   icon vuông trung tính, công tắc nhỏ gọn.
+   Dùng token dùng chung (var(--...)) để giữ dark mode.
+   Tiền tố: set-
    ============================================================ */
 
-/* ---------- Head ---------- */
-.set-page .page-title {
-  margin-bottom: 0.15rem;
-}
-.set-head {
-  margin-bottom: 1.15rem;
-}
-.set-sub {
-  color: var(--text-soft);
-  font-size: 0.95rem;
-  margin-top: 0.15rem;
+.page.set-page {
+  max-width: 780px;
 }
 
-/* ---------- Section card ---------- */
+.set-page .ico {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- Đầu trang (mockup .page-head) ---------- */
+.set-head {
+  margin-bottom: 22px;
+}
+.set-head h1 {
+  margin: 0;
+  font-size: 23px;
+  line-height: 1.26;
+  font-weight: 600;
+  letter-spacing: -0.026em;
+  color: var(--text);
+}
+.set-head p {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  color: var(--text-soft);
+}
+
+/* ---------- Nhãn nhóm (mockup .t-label) ---------- */
+.set-label {
+  margin: 22px 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+/* ---------- Thẻ nhóm (mockup .card) ---------- */
 .set-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  padding: 0.35rem 1.35rem;
-  box-shadow: var(--shadow-sm);
-}
-.set-section-gap {
-  margin-top: 1.15rem;
-}
-.set-card-title {
-  font-size: 1rem;
-  font-weight: 700;
-  padding: 1rem 0 0.15rem;
+  margin-bottom: 14px;
 }
 
-/* ---------- Setting row ---------- */
+/* ---------- Hàng cài đặt (mockup .set-row) ---------- */
 .set-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1.05rem 0;
+  gap: 13px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--border);
 }
 .set-row:last-child {
   border-bottom: none;
 }
 .set-ico {
-  width: 42px;
-  height: 42px;
-  border-radius: 13px;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
   display: grid;
   place-items: center;
-  font-size: 1.15rem;
-  flex-shrink: 0;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
 }
-.set-i1 { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); }
-.set-i2 { background: color-mix(in srgb, var(--accent-2) 16%, transparent); color: var(--accent-2); }
-.set-i3 { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
-.set-i4 { background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger); }
-.set-i5 { background: color-mix(in srgb, var(--accent-3) 16%, transparent); color: var(--accent-3); }
-.set-i6 { background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success); }
+.set-ico .ico {
+  width: 15px;
+  height: 15px;
+  color: var(--text-soft);
+}
 .set-ava {
-  background: linear-gradient(135deg, var(--accent-2), var(--success));
-  color: #fff;
-  font-weight: 800;
-  font-size: 1.15rem;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 600;
 }
 .set-main {
-  flex: 1;
+  flex: 1 1 130px;
   min-width: 0;
 }
 .set-title {
-  font-weight: 600;
-  font-size: 0.95rem;
+  display: block;
+  font-size: 13.8px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--text);
   overflow-wrap: anywhere;
 }
 .set-desc {
-  font-size: 0.8rem;
-  color: var(--muted);
-  margin-top: 0.12rem;
+  display: block;
+  margin-top: 1px;
+  font-size: 12.3px;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+.set-side {
+  flex: 0 0 auto;
 }
 
-/* ---------- Sign-out button (soft danger, matches mockup) ---------- */
-.set-signout {
-  flex-shrink: 0;
-  padding: 0.42rem 0.9rem;
+/* ---------- Nút (mockup .btn) ---------- */
+.set-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.008em;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: background 0.14s, border-color 0.14s, color 0.14s, transform 0.14s;
+}
+.set-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--muted);
+}
+.set-btn:active {
+  transform: translateY(0.5px);
+}
+.set-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.set-btn .ico {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.75;
+  color: var(--text-soft);
+}
+.set-btn-primary {
+  background: var(--primary);
   border-color: transparent;
-  box-shadow: none;
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: var(--shadow-primary);
+}
+.set-btn-primary:hover {
+  background: var(--primary-hover);
+  border-color: transparent;
+}
+.set-btn-primary .ico {
+  color: currentColor;
+}
+.set-btn-danger {
   color: var(--danger);
 }
-.set-signout:hover {
-  background: color-mix(in srgb, var(--danger) 20%, transparent);
-  border-color: transparent;
+.set-btn-danger:hover {
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 38%, var(--border));
+}
+.set-btn-danger .ico {
+  color: currentColor;
+}
+.set-btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  gap: 5px;
+  font-size: 12.5px;
+  border-radius: 6px;
+}
+.set-btn-sm .ico {
+  width: 13.5px;
+  height: 13.5px;
 }
 
-/* ---------- Segmented theme toggle ---------- */
+/* ---------- Nhóm nút phân đoạn (mockup .segmented) ---------- */
 .set-seg {
   display: inline-flex;
+  gap: 2px;
+  padding: 2px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 4px;
-  gap: 2px;
-  flex-shrink: 0;
+  border-radius: var(--r-sm);
 }
-.set-seg-btn {
-  padding: 7px 14px;
-  border-radius: 9px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--muted);
-  background: transparent;
-  border: 1px solid transparent;
+.set-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-soft);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
   cursor: pointer;
-  white-space: nowrap;
-  transition: color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition: background 0.14s, color 0.14s, box-shadow 0.14s;
 }
-.set-seg-btn.active {
+.set-seg button:hover {
+  color: var(--text);
+}
+.set-seg button.is-active {
   background: var(--surface);
-  color: var(--primary);
-  border-color: var(--border);
+  color: var(--text);
+  font-weight: 600;
   box-shadow: var(--shadow-xs);
 }
-
-/* ---------- Hotkey line (desktop translate) sits inside .set-main ---------- */
-.set-row .hotkey-line {
-  margin-top: 0.4rem;
+.set-seg .ico {
+  width: 13.5px;
+  height: 13.5px;
 }
 
-/* ---------- Desktop app update ---------- */
-.set-update-row {
+/* ---------- Ô chọn (mockup .select) ---------- */
+.set-select {
+  width: auto;
+  min-width: 150px;
+  height: 34px;
+  padding: 0 12px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+.set-select:hover {
+  border-color: var(--muted);
+}
+.set-select:focus {
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+
+/* ---------- Công tắc (mockup .switch) ---------- */
+.set-switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  flex: 0 0 auto;
+}
+.set-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.set-switch .track {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  background: var(--surface-hover);
+  border: 1px solid var(--border-strong);
+  transition: background 0.18s, border-color 0.18s;
+}
+.set-switch .track::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s;
+}
+.set-switch input:checked + .track {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.set-switch input:checked + .track::after {
+  transform: translateX(16px);
+}
+.set-switch input:focus-visible + .track {
+  box-shadow: var(--ring);
+}
+/* Công tắc bị khóa (vd: "luôn nổi" đang do chế độ hình-trong-hình quyết định) */
+.set-switch input:disabled + .track {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---------- Dòng phím tắt (dịch nhanh toàn màn hình) ---------- */
+.set-hotkey {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 7px;
+  font-size: 12.3px;
+  color: var(--muted);
+}
+.set-kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  color: var(--text-soft);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+.set-recording {
+  color: var(--primary);
+  font-weight: 500;
+}
+.set-hotkey-err {
+  color: var(--danger);
+}
+
+/* ---------- Cập nhật ứng dụng ---------- */
+.set-row.set-update-row {
   align-items: flex-start;
 }
-.set-update-actions {
+.set-update-row .set-side {
   align-self: center;
-  flex-shrink: 0;
-}
-.set-update-actions .btn {
-  white-space: nowrap;
 }
 .set-update-status {
-  max-width: 560px;
-  margin-top: 0.65rem;
-  padding: 0.6rem 0.75rem;
-  border-radius: 10px;
+  margin-top: 9px;
+  padding: 9px 11px;
+  border-radius: var(--r-sm);
   background: var(--surface-2);
+  border: 1px solid var(--border);
   color: var(--text-soft);
-  font-size: 0.82rem;
+  font-size: 12.3px;
 }
 .set-update-status.is-none,
 .set-update-status.is-ready {
+  background: color-mix(in srgb, var(--success) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border));
   color: var(--success);
-  background: color-mix(in srgb, var(--success) 10%, transparent);
 }
 .set-update-status.is-error {
+  background: color-mix(in srgb, var(--danger) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
   color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 9%, transparent);
 }
 .set-update-progress-label {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.45rem;
+  gap: 12px;
+  margin-bottom: 6px;
 }
 .set-update-progress {
-  height: 7px;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--surface-hover);
   overflow: hidden;
-  border-radius: 999px;
-  background: var(--border);
 }
 .set-update-progress > span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--primary), var(--success));
+  background: var(--primary);
   transition: width 0.2s ease;
 }
 
-/* ---------- Responsive ---------- */
+/* ---------- Phiên bản ở chân trang ---------- */
+.set-version {
+  margin-top: 26px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* ============================================================
+   MOBILE  <= 860px — hàng xuống dòng, phần điều khiển thụt vào
+   ============================================================ */
 @media (max-width: 860px) {
-  .set-card {
-    padding: 0.25rem 1rem;
+  .set-head {
+    margin-bottom: 16px;
+  }
+  .set-head h1 {
+    font-size: 20px;
+  }
+  .set-head p {
+    font-size: 13px;
   }
   .set-row {
-    gap: 0.75rem;
-    padding: 0.9rem 0;
-  }
-  .set-ico {
-    width: 38px;
-    height: 38px;
-    border-radius: 11px;
-    font-size: 1.05rem;
-  }
-  .set-title {
-    font-size: 0.9rem;
-  }
-  .set-seg-btn {
-    padding: 6px 11px;
-    font-size: 0.8rem;
-  }
-  .set-update-row {
     flex-wrap: wrap;
+    padding: 13px 16px;
   }
-  .set-update-actions {
-    width: 100%;
-    padding-left: 3.3rem;
+  .set-side {
+    width: calc(100% - 45px);
+    margin-left: 45px;
+  }
+  .set-side .set-switch,
+  .set-side .set-seg,
+  .set-side .set-select {
+    display: flex;
+    margin-left: auto;
+  }
+  .set-side .set-btn {
+    margin-left: auto;
+  }
+  .set-btn {
+    height: 36px;
+  }
+  .set-btn-sm {
+    height: 30px;
   }
 }

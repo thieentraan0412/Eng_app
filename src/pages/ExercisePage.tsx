@@ -2,7 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CloudApi, type Card, type Deck } from '../services/cloud/CloudApiClient'
 import { speak, ttsSupported } from '../services/tts'
 import { track } from '../services/studyTracker'
+import Icon from '../components/Icon'
 import '../styles/exercise.css'
+
+// Bộ "Từ đã lưu khi đọc" — hiện icon bóng đèn thay chữ cái đầu (giống mockup)
+const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
 
 // Trang Bài tập — trắc nghiệm sinh TỰ ĐỘNG từ các bộ từ vựng:
 //  · Anh→Việt: hiện từ tiếng Anh, chọn 1 trong 4 nghĩa tiếng Việt
@@ -228,55 +232,76 @@ export default function ExercisePage() {
       ? decks.filter((d) => d.cards.some(hasReorder))
       : decks
 
-  return (
-    <div className="page">
-      {/* Header dạng hàng: tiêu đề + mô tả bên trái, chọn kiểu bài bên phải */}
-      <div className="exq-head">
-        <div>
-          <h1 className="page-title">Bài tập</h1>
-          <p className="page-sub">
-            {mode === 'reorder'
-              ? 'Sắp xếp các từ đã xáo trộn thành câu ví dụ đúng — bấm vào một bộ để bắt đầu.'
-              : 'Trắc nghiệm sinh tự động từ các bộ từ vựng của bạn — bấm vào một bộ để bắt đầu.'}
-          </p>
-        </div>
+  // Bộ có từ nhưng KHÔNG có câu ví dụ dùng được — nêu rõ ở tab sắp xếp từ
+  const noSentenceDecks =
+    decks && mode === 'reorder' ? decks.filter((d) => !d.cards.some(hasReorder)) : []
 
-        {/* Chọn kiểu bài: trắc nghiệm / sắp xếp từ */}
-        <div className="tabs exq-tabs">
-          <button
-            className={mode === 'mcq' ? 'tab active' : 'tab'}
-            onClick={() => chooseMode('mcq')}
-          >
-            📝 Trắc nghiệm
-          </button>
-          <button
-            className={mode === 'reorder' ? 'tab active' : 'tab'}
-            onClick={() => chooseMode('reorder')}
-          >
-            🔀 Sắp xếp từ
-          </button>
-        </div>
+  const deckMark = (name: string) =>
+    name.trim() === SAVED_DECK_NAME ? <Icon name="bulb" /> : name.trim().charAt(0).toUpperCase()
+
+  return (
+    <div className="page ex-page">
+      <div className="ex-head">
+        <h1>Bài tập</h1>
+        <p>
+          {mode === 'reorder'
+            ? 'Sắp xếp các từ đã xáo trộn thành câu ví dụ đúng — bấm vào một bộ để bắt đầu.'
+            : 'Trắc nghiệm sinh tự động từ các bộ từ vựng của bạn — chọn một bộ để bắt đầu.'}
+        </p>
       </div>
+
+      {/* Chọn kiểu bài: trắc nghiệm / sắp xếp từ */}
+      <nav className="ex-tabs">
+        <button
+          className={mode === 'mcq' ? 'is-active' : ''}
+          onClick={() => chooseMode('mcq')}
+        >
+          <Icon name="tasks" /> Trắc nghiệm
+        </button>
+        <button
+          className={mode === 'reorder' ? 'is-active' : ''}
+          onClick={() => chooseMode('reorder')}
+        >
+          <Icon name="shuffle" /> Sắp xếp từ
+        </button>
+      </nav>
 
       {!decks ? (
         <p className="muted">Đang tải…</p>
       ) : !visibleDecks || visibleDecks.length === 0 ? (
-        <p className="muted">
-          {mode === 'reorder'
-            ? 'Chưa có bộ nào có câu ví dụ để sắp xếp. Hãy thêm câu ví dụ cho thẻ ở mục Từ vựng.'
-            : 'Chưa có bộ nào có từ vựng. Hãy thêm từ ở mục Từ vựng trước nhé.'}
-        </p>
+        <div className="ex-empty is-page">
+          <Icon name="layers" />
+          <b>
+            {mode === 'reorder' ? 'Chưa có câu nào để sắp xếp' : 'Chưa có bộ nào có từ vựng'}
+          </b>
+          <p>
+            {mode === 'reorder'
+              ? 'Thêm câu ví dụ (3–12 từ) cho các thẻ ở mục Từ vựng để tạo bài sắp xếp từ.'
+              : 'Hãy thêm từ ở mục Từ vựng trước, trắc nghiệm sẽ tự sinh từ các thẻ đó.'}
+          </p>
+        </div>
       ) : (
-        <div className="deck-grid">
+        <section className="ex-grid">
           {visibleDecks.map((d) => {
             if (mode === 'reorder') {
               const n = d.cards.filter(hasReorder).length
               return (
-                <button key={d.deck.id} className="deck-card" onClick={() => setSession(d)}>
-                  <div className="deck-name">{d.deck.name}</div>
-                  <span className="deck-desc">{n} câu để sắp xếp</span>
-                  <span className="exq-deck-open">
-                    Bắt đầu <span>→</span>
+                <button key={d.deck.id} className="ex-deck" onClick={() => setSession(d)}>
+                  <span className="ex-deck-top">
+                    <span className="ex-deck-mark">{deckMark(d.deck.name)}</span>
+                    <span className="ex-deck-txt">
+                      <span className="ex-deck-name">{d.deck.name}</span>
+                      <span className="ex-deck-desc">{n} câu để sắp xếp</span>
+                    </span>
+                  </span>
+                  <span className="ex-bar">
+                    <i style={{ width: '0%' }} />
+                  </span>
+                  <span className="ex-deck-meta">
+                    <span>Câu ví dụ từ các thẻ</span>
+                    <span className="ex-deck-go">
+                      Bắt đầu <Icon name="right" />
+                    </span>
                   </span>
                 </button>
               )
@@ -285,22 +310,42 @@ export default function ExercisePage() {
             const done = Math.min(answeredCount(saved), d.cards.length)
             const pct = d.cards.length ? Math.round((done / d.cards.length) * 100) : 0
             return (
-              <button key={d.deck.id} className="deck-card" onClick={() => setSession(d)}>
-                <div className="deck-name">{d.deck.name}</div>
-                <span className="deck-desc">
-                  {d.cards.length} từ · {d.cards.length} câu hỏi
+              <button key={d.deck.id} className="ex-deck" onClick={() => setSession(d)}>
+                <span className="ex-deck-top">
+                  <span className="ex-deck-mark">{deckMark(d.deck.name)}</span>
+                  <span className="ex-deck-txt">
+                    <span className="ex-deck-name">{d.deck.name}</span>
+                    <span className="ex-deck-desc">
+                      {d.cards.length} từ · {d.cards.length} câu hỏi
+                    </span>
+                  </span>
                 </span>
-                <div className="exq-deck-bar" title={`${pct}%`}>
-                  <div style={{ width: `${pct}%` }} />
-                </div>
-                <span className="exq-deck-open">
-                  {done > 0 ? `Đã làm ${done}/${d.cards.length} · Làm tiếp ` : 'Bắt đầu '}
-                  <span>→</span>
+                <span className="ex-bar" title={`${pct}%`}>
+                  <i style={{ width: `${pct}%` }} />
+                </span>
+                <span className="ex-deck-meta">
+                  <span>{done > 0 ? `Đã làm ${done}/${d.cards.length}` : 'Chưa làm'}</span>
+                  <span className="ex-deck-go">
+                    {done > 0 ? 'Làm tiếp' : 'Bắt đầu'} <Icon name="right" />
+                  </span>
                 </span>
               </button>
             )
           })}
-        </div>
+
+          {/* Tab sắp xếp từ: nêu rõ bộ nào chưa có câu ví dụ (giống mockup) */}
+          {noSentenceDecks.length > 0 && (
+            <div className="ex-empty">
+              <Icon name="alert" />
+              <b>
+                {noSentenceDecks.length === 1
+                  ? `Bộ “${noSentenceDecks[0].deck.name}” chưa có câu ví dụ`
+                  : `${noSentenceDecks.length} bộ chưa có câu ví dụ`}
+              </b>
+              <p>Thêm câu ví dụ cho các thẻ trong bộ để tạo bài sắp xếp từ.</p>
+            </div>
+          )}
+        </section>
       )}
     </div>
   )
@@ -406,6 +451,9 @@ function VocabQuiz({
       } else if (answered && e.key === 'Enter') {
         e.preventDefault()
         setIdx((i) => Math.min(i + 1, questions.length))
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        onExit()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -445,77 +493,70 @@ function VocabQuiz({
     // Vòng tròn điểm số: % đúng, đổi màu theo mức (xanh / vàng / đỏ)
     const pctRight = questions.length ? Math.round((right / questions.length) * 100) : 0
     const ringCls = pctRight >= 80 ? 'good' : pctRight >= 50 ? 'mid' : 'bad'
-    const R = 52
-    const CIRC = 2 * Math.PI * R
     return (
-      <div className="page center ex-result">
-        <h1 className="page-title">
-          {pctRight >= 80 ? '🎉 Tuyệt vời!' : pctRight >= 50 ? '👍 Khá lắm!' : '💪 Cố lên!'}
-        </h1>
-        <p className="muted">
-          Bộ “{deck.name}” · {en2vi ? 'Anh → Việt' : 'Việt → Anh'}
-        </p>
+      <div className="page ex-quiz">
+        <div className="ex-result">
+          <h1>
+            {pctRight >= 80 ? 'Tuyệt vời!' : pctRight >= 50 ? 'Khá lắm!' : 'Cố lên!'}
+          </h1>
+          <p>
+            Bộ “{deck.name}” · {en2vi ? 'Anh → Việt' : 'Việt → Anh'}
+          </p>
 
-        <svg className={`ex-ring ${ringCls}`} viewBox="0 0 120 120">
-          <circle className="ex-ring-track" cx="60" cy="60" r={R} />
-          <circle
-            className="ex-ring-fill"
-            cx="60"
-            cy="60"
-            r={R}
-            strokeDasharray={`${(pctRight / 100) * CIRC} ${CIRC}`}
-          />
-          <text className="ex-ring-pct" x="60" y="58">
-            {pctRight}%
-          </text>
-          <text className="ex-ring-sub" x="60" y="78">
-            chính xác
-          </text>
-        </svg>
+          <span className={`ex-ring ${ringCls}`} style={{ ['--p' as string]: pctRight }}>
+            <span>
+              <b>{pctRight}%</b>
+              <small>chính xác</small>
+            </span>
+          </span>
 
-        <div className="ex-stats">
-          <div className="ex-stat ok">
-            <strong>{right}</strong>
-            <span>Đúng</span>
+          <div className="ex-stats">
+            <div className="ex-stat ok">
+              <strong>{right}</strong>
+              <span>Đúng</span>
+            </div>
+            <div className="ex-stat no">
+              <strong>{wrongCards.length}</strong>
+              <span>Sai / bỏ trống</span>
+            </div>
+            <div className="ex-stat">
+              <strong>{questions.length}</strong>
+              <span>Tổng số câu</span>
+            </div>
           </div>
-          <div className="ex-stat no">
-            <strong>{wrongCards.length}</strong>
-            <span>Sai / bỏ trống</span>
-          </div>
-          <div className="ex-stat">
-            <strong>{questions.length}</strong>
-            <span>Tổng số câu</span>
-          </div>
-        </div>
 
-        <div className="review-actions">
-          {wrongCards.length > 0 && (
-            <button className="btn primary" onClick={retryWrong}>
-              ✍️ Làm lại {wrongCards.length} câu sai
+          <div className="ex-result-actions">
+            {wrongCards.length > 0 && (
+              <button className="ex-btn ex-btn-primary" onClick={retryWrong}>
+                <Icon name="pen" /> Làm lại {wrongCards.length} câu sai
+              </button>
+            )}
+            <button
+              className={wrongCards.length > 0 ? 'ex-btn' : 'ex-btn ex-btn-primary'}
+              onClick={restart}
+            >
+              <Icon name="undo" /> Làm lại toàn bộ
             </button>
-          )}
-          <button className={wrongCards.length > 0 ? 'btn' : 'btn primary'} onClick={restart}>
-            🔁 Làm lại toàn bộ
-          </button>
-          <button className="btn" onClick={onExit}>
-            Chọn bộ khác
-          </button>
-        </div>
-
-        {wrongCards.length > 0 && (
-          <div className="ex-wrong-list">
-            <div className="ex-wrong-title">Ôn lại các từ sai / bỏ trống</div>
-            {wrongCards.map((c) => (
-              <div key={c.id} className="ex-wrong-item">
-                <div className="ex-wrong-word">
-                  {c.word} {c.pos && <span className="fc-pos">{c.pos}</span>}
-                  <span className="ex-wrong-meaning">{c.meaning}</span>
-                </div>
-                {exampleOf(c) && <div className="ex-wrong-ex">“{exampleOf(c)}”</div>}
-              </div>
-            ))}
+            <button className="ex-btn" onClick={onExit}>
+              Chọn bộ khác
+            </button>
           </div>
-        )}
+
+          {wrongCards.length > 0 && (
+            <div className="ex-wrong-list">
+              <div className="ex-wrong-title">Ôn lại các từ sai / bỏ trống</div>
+              {wrongCards.map((c) => (
+                <div key={c.id} className="ex-wrong-item">
+                  <div className="ex-wrong-word">
+                    {c.word} {c.pos && <span className="ex-pos">{c.pos}</span>}
+                    <span className="ex-wrong-meaning">{c.meaning}</span>
+                  </div>
+                  {exampleOf(c) && <div className="ex-wrong-ex">“{exampleOf(c)}”</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     )
   }
@@ -523,110 +564,129 @@ function VocabQuiz({
   const isCorrect = answered && picked === q.card.id
   return (
     <div className="page ex-quiz">
-      {/* Thanh trên: thoát ✕ · tiến độ lớn · điểm đúng */}
+      {/* Thanh trên: thoát · tiến độ · số câu đúng */}
       <div className="ex-top">
-        <button className="ex-exit" onClick={onExit} title="Thoát">
-          ✕
+        <button className="ex-ibtn danger" onClick={onExit} title="Thoát (Esc)">
+          <Icon name="x" />
         </button>
-        <div className="ex-bar" title={`Câu ${idx + 1}/${questions.length}`}>
-          <div
-            className="ex-bar-fill"
-            style={{ width: `${Math.round((idx / questions.length) * 100)}%` }}
-          />
+        <div className="ex-progress" title={`Câu ${idx + 1}/${questions.length}`}>
+          <div style={{ width: `${Math.round((idx / questions.length) * 100)}%` }} />
         </div>
-        <span className="ex-score" title="Số câu đúng">
-          ✓ {right}
+        <span className="ex-badge ok" title="Số câu đúng">
+          <Icon name="check" /> {right} đúng
         </span>
       </div>
 
-      {/* Nút đổi chiều làm bài — chỉ đổi cách hiển thị, đáp án đã chọn giữ nguyên */}
-      <button
-        className="fc-dir-toggle"
-        onClick={() => setDirection((d) => (d === 'en2vi' ? 'vi2en' : 'en2vi'))}
-        title="Đổi chiều làm bài"
-      >
-        🔁 {en2vi ? 'Anh → Việt' : 'Việt → Anh'}
-      </button>
-
-      {/* Đề bài */}
-      <div className="ex-prompt">
-        <div className="ex-prompt-label">
-          Câu {idx + 1}/{questions.length} · {en2vi ? 'Chọn nghĩa tiếng Việt đúng' : 'Chọn từ tiếng Anh đúng'}
+      <div className="ex-stage">
+        {/* Đổi chiều làm bài — chỉ đổi cách hiển thị, đáp án đã chọn giữ nguyên */}
+        <div className="ex-seg">
+          <button
+            className={en2vi ? 'is-active' : ''}
+            onClick={() => setDirection('en2vi')}
+            title="Hiện từ tiếng Anh, chọn nghĩa"
+          >
+            <Icon name="repeat" /> Anh → Việt
+          </button>
+          <button
+            className={en2vi ? '' : 'is-active'}
+            onClick={() => setDirection('vi2en')}
+            title="Hiện nghĩa, chọn từ tiếng Anh"
+          >
+            <Icon name="lang" /> Việt → Anh
+          </button>
         </div>
-        <div className="ex-word">
-          {en2vi ? q.card.word : q.card.meaning}
-          {en2vi && q.card.pos && <span className="fc-pos">{q.card.pos}</span>}
-          {en2vi && ttsSupported && (
-            <button
-              type="button"
-              className="fc-speak"
-              title="Phát âm"
-              onClick={() => speak(q.card.word)}
-            >
-              🔊
-            </button>
-          )}
-        </div>
-      </div>
 
-      {/* 4 đáp án đánh số (bấm phím 1-4 cũng chọn được) — câu ví dụ chỉ hiện SAU khi chọn */}
-      <div className="ex-options exq-options">
-        {q.options.map((c, i) => {
-          const ex = answered ? exampleOf(c) : null
-          let cls = 'ex-option'
-          let key: string = String(i + 1)
-          if (answered) {
-            if (c.id === q.card.id) {
-              cls += ' correct'
-              key = '✓'
-            } else if (c.id === picked) {
-              cls += ' wrong'
-              key = '✕'
-            } else cls += ' dim'
-          }
-          return (
-            <button key={c.id} className={cls} onClick={() => choose(c)} disabled={answered}>
-              <span className="ex-key">{key}</span>
-              <span className="ex-option-body">
-                <span className="ex-option-main">
-                  {en2vi ? c.meaning : c.word}
-                  {!en2vi && c.pos && <span className="fc-pos">{c.pos}</span>}
+        {/* Đề bài */}
+        <div className="ex-prompt">
+          <p className="ex-prompt-label">
+            Câu {idx + 1} / {questions.length} ·{' '}
+            {en2vi ? 'Chọn nghĩa tiếng Việt đúng' : 'Chọn từ tiếng Anh đúng'}
+          </p>
+          <p className="ex-word">
+            {en2vi ? q.card.word : q.card.meaning}
+            {en2vi && q.card.pos && <span className="ex-pos">{q.card.pos}</span>}
+            {en2vi && ttsSupported && (
+              <button
+                type="button"
+                className="ex-ibtn"
+                title="Phát âm"
+                onClick={() => speak(q.card.word)}
+              >
+                <Icon name="speak" />
+              </button>
+            )}
+          </p>
+        </div>
+
+        {/* 4 đáp án đánh số (bấm phím 1-4 cũng chọn được) — ví dụ chỉ hiện SAU khi chọn */}
+        <div className="ex-options">
+          {q.options.map((c, i) => {
+            const ex = answered ? exampleOf(c) : null
+            let cls = 'ex-option'
+            if (answered) {
+              if (c.id === q.card.id) cls += ' is-right'
+              else if (c.id === picked) cls += ' is-wrong'
+              else cls += ' is-dim'
+            }
+            const isRight = answered && c.id === q.card.id
+            const isWrong = answered && c.id === picked && c.id !== q.card.id
+            return (
+              <button key={c.id} className={cls} onClick={() => choose(c)} disabled={answered}>
+                <span className="ex-key">{i + 1}</span>
+                <span className="ex-option-body">
+                  <span className="ex-option-main">
+                    {en2vi ? c.meaning : c.word}
+                    {!en2vi && c.pos && <span className="ex-pos">{c.pos}</span>}
+                  </span>
+                  {ex && <span className="ex-option-ex">“{ex}”</span>}
                 </span>
-                {ex && <span className="ex-option-ex">“{ex}”</span>}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+                {isRight && <Icon name="check" />}
+                {isWrong && <Icon name="x" />}
+              </button>
+            )
+          })}
+        </div>
 
-      {/* Dưới cùng: chưa trả lời -> điều hướng; trả lời rồi -> banner phản hồi kiểu Duolingo */}
-      {answered ? (
-        <div className={`ex-banner ${isCorrect ? 'ok' : 'no'}`}>
-          <button className="ex-banner-back" onClick={goBack} disabled={idx === 0} title="Câu trước">
-            ←
-          </button>
-          <span className="ex-banner-ico">{isCorrect ? '✓' : '✕'}</span>
-          <div className="ex-banner-text">
-            <strong>{isCorrect ? 'Chính xác!' : 'Chưa đúng'}</strong>
-            {!isCorrect && <span>Đáp án: {en2vi ? q.card.meaning : q.card.word}</span>}
+        {/* Chưa trả lời -> điều hướng; trả lời rồi -> băng phản hồi */}
+        {answered ? (
+          <div className={`ex-banner ${isCorrect ? 'ok' : 'no'}`}>
+            <span className="ex-banner-ico">
+              <Icon name={isCorrect ? 'check' : 'x'} />
+            </span>
+            <div className="ex-banner-text">
+              <strong>{isCorrect ? 'Chính xác!' : 'Chưa đúng'}</strong>
+              {!isCorrect && <span>Đáp án: {en2vi ? q.card.meaning : q.card.word}</span>}
+            </div>
+            <button className="ex-btn" onClick={goBack} disabled={idx === 0} title="Câu trước">
+              <Icon name="left" />
+            </button>
+            <button className="ex-btn ex-btn-primary" onClick={goNext}>
+              {idx + 1 < questions.length ? 'Tiếp tục' : 'Xem kết quả'} <Icon name="right" />
+            </button>
           </div>
-          <button className="ex-continue" onClick={goNext}>
-            {idx + 1 < questions.length ? 'Tiếp tục →' : 'Xem kết quả'}
-          </button>
-        </div>
-      ) : (
-        <div className="review-nav">
-          <button className="btn" onClick={goBack} disabled={idx === 0}>
-            ← Trước
-          </button>
-          <span className="review-nav-pos">
-            {idx + 1} / {questions.length}
+        ) : (
+          <div className="ex-nav">
+            <button className="ex-btn ex-btn-sm" onClick={goBack} disabled={idx === 0}>
+              <Icon name="left" /> Trước
+            </button>
+            <span className="ex-nav-pos">
+              {idx + 1} / {questions.length}
+            </span>
+            <button className="ex-btn ex-btn-sm" onClick={goNext}>
+              Bỏ qua <Icon name="right" />
+            </button>
+          </div>
+        )}
+
+        <p className="ex-foot">
+          <span>
+            Bấm <span className="ex-kbd">1</span>–<span className="ex-kbd">4</span> để chọn nhanh
           </span>
-          <button className="btn" onClick={goNext}>
-            Bỏ qua →
-          </button>
-        </div>
-      )}
+          <span>
+            <span className="ex-kbd">Esc</span> thoát
+          </span>
+        </p>
+      </div>
     </div>
   )
 }
@@ -752,6 +812,11 @@ function ReorderQuiz({
   // Enter: đủ từ -> chấm; đã chấm -> sang câu kế
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onExit()
+        return
+      }
       if (e.key !== 'Enter') return
       e.preventDefault()
       if (checked) next()
@@ -764,12 +829,16 @@ function ReorderQuiz({
 
   if (questions.length === 0) {
     return (
-      <div className="page center">
-        <h1 className="page-title">Chưa có câu để sắp xếp</h1>
-        <p className="muted">Bộ “{deck.name}” chưa có thẻ nào kèm câu ví dụ phù hợp (3–12 từ).</p>
-        <button className="btn primary" onClick={onExit}>
-          Chọn bộ khác
-        </button>
+      <div className="page ex-quiz">
+        <div className="ex-result">
+          <h1>Chưa có câu để sắp xếp</h1>
+          <p>Bộ “{deck.name}” chưa có thẻ nào kèm câu ví dụ phù hợp (3–12 từ).</p>
+          <div className="ex-result-actions">
+            <button className="ex-btn ex-btn-primary" onClick={onExit}>
+              Chọn bộ khác
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
@@ -778,8 +847,6 @@ function ReorderQuiz({
   if (!q) {
     const right = results.filter(Boolean).length
     const pctRight = Math.round((right / questions.length) * 100)
-    const R = 52
-    const CIRC = 2 * Math.PI * R
     const ringCls = pctRight >= 80 ? 'good' : pctRight >= 50 ? 'mid' : 'bad'
     const replay = () => {
       counted.current = false
@@ -787,48 +854,38 @@ function ReorderQuiz({
       setIdx(0)
     }
     return (
-      <div className="page center ex-result">
-        <h1 className="page-title">
-          {pctRight >= 80 ? '🎉 Tuyệt vời!' : pctRight >= 50 ? '👍 Khá lắm!' : '💪 Cố lên!'}
-        </h1>
-        <p className="muted">Bộ “{deck.name}” · Sắp xếp từ</p>
-        <svg className={`ex-ring ${ringCls}`} viewBox="0 0 120 120">
-          <circle className="ex-ring-track" cx="60" cy="60" r={R} />
-          <circle
-            className="ex-ring-fill"
-            cx="60"
-            cy="60"
-            r={R}
-            strokeDasharray={`${(pctRight / 100) * CIRC} ${CIRC}`}
-          />
-          <text className="ex-ring-pct" x="60" y="58">
-            {pctRight}%
-          </text>
-          <text className="ex-ring-sub" x="60" y="78">
-            chính xác
-          </text>
-        </svg>
-        <div className="ex-stats">
-          <div className="ex-stat ok">
-            <strong>{right}</strong>
-            <span>Đúng</span>
+      <div className="page ex-quiz">
+        <div className="ex-result">
+          <h1>{pctRight >= 80 ? 'Tuyệt vời!' : pctRight >= 50 ? 'Khá lắm!' : 'Cố lên!'}</h1>
+          <p>Bộ “{deck.name}” · Sắp xếp từ</p>
+          <span className={`ex-ring ${ringCls}`} style={{ ['--p' as string]: pctRight }}>
+            <span>
+              <b>{pctRight}%</b>
+              <small>chính xác</small>
+            </span>
+          </span>
+          <div className="ex-stats">
+            <div className="ex-stat ok">
+              <strong>{right}</strong>
+              <span>Đúng</span>
+            </div>
+            <div className="ex-stat no">
+              <strong>{questions.length - right}</strong>
+              <span>Sai</span>
+            </div>
+            <div className="ex-stat">
+              <strong>{questions.length}</strong>
+              <span>Tổng số câu</span>
+            </div>
           </div>
-          <div className="ex-stat no">
-            <strong>{questions.length - right}</strong>
-            <span>Sai</span>
+          <div className="ex-result-actions">
+            <button className="ex-btn ex-btn-primary" onClick={replay}>
+              <Icon name="undo" /> Làm lại
+            </button>
+            <button className="ex-btn" onClick={onExit}>
+              Chọn bộ khác
+            </button>
           </div>
-          <div className="ex-stat">
-            <strong>{questions.length}</strong>
-            <span>Tổng số câu</span>
-          </div>
-        </div>
-        <div className="review-actions">
-          <button className="btn primary" onClick={replay}>
-            🔁 Làm lại
-          </button>
-          <button className="btn" onClick={onExit}>
-            Chọn bộ khác
-          </button>
         </div>
       </div>
     )
@@ -837,93 +894,101 @@ function ReorderQuiz({
   return (
     <div className="page ex-quiz">
       <div className="ex-top">
-        <button className="ex-exit" onClick={onExit} title="Thoát">
-          ✕
+        <button className="ex-ibtn danger" onClick={onExit} title="Thoát (Esc)">
+          <Icon name="x" />
         </button>
-        <div className="ex-bar" title={`Câu ${idx + 1}/${questions.length}`}>
-          <div
-            className="ex-bar-fill"
-            style={{ width: `${Math.round((idx / questions.length) * 100)}%` }}
-          />
+        <div className="ex-progress" title={`Câu ${idx + 1}/${questions.length}`}>
+          <div style={{ width: `${Math.round((idx / questions.length) * 100)}%` }} />
         </div>
-        <span className="ex-score" title="Số câu đúng">
-          ✓ {results.filter(Boolean).length}
+        <span className="ex-badge ok" title="Số câu đúng">
+          <Icon name="check" /> {results.filter(Boolean).length} đúng
         </span>
       </div>
 
-      <div className="ex-prompt">
-        <div className="ex-prompt-label">
-          Câu {idx + 1}/{questions.length} · Sắp xếp các từ thành câu đúng
-        </div>
-        <div className="exq-hint-row">
-          <span className="exq-hint">
-            💡 Gợi ý: <strong>{q.card.word}</strong>
+      <div className="ex-stage">
+        <div className="ex-prompt">
+          <p className="ex-prompt-label">
+            Câu {idx + 1} / {questions.length} · Sắp xếp các từ thành câu đúng
+          </p>
+          <p className="ex-hint">
+            <Icon name="bulb" /> Gợi ý: <b>{q.card.word}</b>
             {q.card.meaning ? ` — ${q.card.meaning}` : ''}
-          </span>
+          </p>
         </div>
-      </div>
 
-      {/* Vùng đã xếp — bấm 1 từ để trả lại kho */}
-      <div className={`ro-answer ${checked ? (correct ? 'ok' : 'no') : ''}`}>
-        {placed.length === 0 ? (
-          <span className="ro-placeholder muted">Bấm các từ bên dưới để xếp câu…</span>
-        ) : (
-          placed.map((c, i) => (
-            <button key={`${c.id}-${i}`} className="ro-chip placed" onClick={() => unpick(i)}>
-              {c.text}
-            </button>
-          ))
-        )}
-      </div>
-
-      {/* Kho từ đã xáo trộn */}
-      {!checked && (
-        <div className="ro-bank">
-          {bank.map((c, i) => (
-            <button key={`${c.id}-${i}`} className="ro-chip" onClick={() => pick(c, i)}>
-              {c.text}
-            </button>
-          ))}
+        {/* Vùng đã xếp — bấm 1 từ để trả lại kho */}
+        <div
+          className={`ro-answer ${checked ? (correct ? 'ok' : 'no') : placed.length ? 'is-filled' : ''}`}
+        >
+          {placed.length === 0 ? (
+            <span className="ro-placeholder">Bấm các từ bên dưới để xếp câu…</span>
+          ) : (
+            placed.map((c, i) => (
+              <button key={`${c.id}-${i}`} className="ro-chip" onClick={() => unpick(i)}>
+                {c.text}
+              </button>
+            ))
+          )}
         </div>
-      )}
 
-      {/* Phản hồi sau khi chấm */}
-      {checked && !correct && (
-        <div className="ro-solution">
-          <span className="muted">Đáp án đúng:</span> {q.sentence}
-        </div>
-      )}
-
-      {checked ? (
-        <div className={`ex-banner ${correct ? 'ok' : 'no'}`}>
-          <span className="ex-banner-ico">{correct ? '✓' : '✕'}</span>
-          <div className="ex-banner-text">
-            <strong>{correct ? 'Chính xác!' : 'Chưa đúng'}</strong>
+        {/* Kho từ đã xáo trộn */}
+        {!checked && (
+          <div className="ro-bank">
+            {bank.map((c, i) => (
+              <button key={`${c.id}-${i}`} className="ro-chip" onClick={() => pick(c, i)}>
+                {c.text}
+              </button>
+            ))}
           </div>
-          <button className="ex-continue" onClick={next}>
-            {idx + 1 < questions.length ? 'Tiếp tục →' : 'Xem kết quả'}
-          </button>
-        </div>
-      ) : (
-        <div className="review-nav">
-          <button
-            className="btn"
-            onClick={() => {
-              if (placed.length) unpick(placed.length - 1)
-            }}
-            disabled={placed.length === 0}
-          >
-            ↩ Bỏ từ cuối
-          </button>
-          <button
-            className="btn primary"
-            onClick={check}
-            disabled={placed.length !== q.answer.length}
-          >
-            Kiểm tra
-          </button>
-        </div>
-      )}
+        )}
+
+        {/* Phản hồi sau khi chấm */}
+        {checked && !correct && (
+          <div className="ro-solution">
+            <span>Đáp án đúng:</span> {q.sentence}
+          </div>
+        )}
+
+        {checked ? (
+          <div className={`ex-banner ${correct ? 'ok' : 'no'}`}>
+            <span className="ex-banner-ico">
+              <Icon name={correct ? 'check' : 'x'} />
+            </span>
+            <div className="ex-banner-text">
+              <strong>{correct ? 'Chính xác!' : 'Chưa đúng'}</strong>
+            </div>
+            <button className="ex-btn ex-btn-primary" onClick={next}>
+              {idx + 1 < questions.length ? 'Tiếp tục' : 'Xem kết quả'} <Icon name="right" />
+            </button>
+          </div>
+        ) : (
+          <div className="ex-nav">
+            <button
+              className="ex-btn"
+              onClick={() => {
+                if (placed.length) unpick(placed.length - 1)
+              }}
+              disabled={placed.length === 0}
+            >
+              <Icon name="undo" /> Bỏ từ cuối
+            </button>
+            <button
+              className="ex-btn ex-btn-primary"
+              onClick={check}
+              disabled={placed.length !== q.answer.length}
+            >
+              <Icon name="check" /> Kiểm tra
+            </button>
+          </div>
+        )}
+
+        <p className="ex-foot">
+          <span>Bấm từ trong câu để trả lại kho</span>
+          <span>
+            <span className="ex-kbd">Esc</span> thoát
+          </span>
+        </p>
+      </div>
     </div>
   )
 }

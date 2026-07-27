@@ -1,100 +1,103 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chép câu · EngMaster</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<style></style>
+<style>
+  .new-folder{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+    min-height:120px;padding:16px;text-align:center;color:var(--text-3);
+    border:1px dashed var(--border-2);border-radius:var(--r-lg);transition:all var(--t-fast);
+  }
+  .new-folder:hover{border-color:var(--accent);color:var(--accent-text);background:var(--accent-soft)}
+  .new-folder b{font-size:13.5px;font-weight:600}
+  .new-folder span{font-size:12px}
+</style>
 </head>
-<body>
-<header class="topbar">
-  <button class="burger" id="burger" aria-label="Mở menu">☰</button>
-  <div class="brand-mark">E</div>
-  <div class="topbar-title">Chép câu</div>
-</header>
-<div class="overlay" id="overlay"></div>
-<div class="app">
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-mark">E</div>
-      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
-      <button class="side-close" id="sideClose" aria-label="Đóng menu">✕</button>
-    </div>
-    <ul class="nav">
-      <li><a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a></li>
-      <li><a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a></li>
-      <li><a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a></li>
-      <li><a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a></li>
-      <li><a href="../06-doc/index.html"><span class="ico">📖</span>Đọc</a></li>
-      <li><a href="../07-viet/index.html"><span class="ico">✍️</span>Viết</a></li>
-      <li><a href="../08-chep-cau/index.html" class="active"><span class="ico">✏️</span>Chép câu</a></li>
-      <li><a href="../09-thong-ke/index.html"><span class="ico">📊</span>Thống kê</a></li>
-      <li><a href="../10-cai-dat/index.html"><span class="ico">⚙️</span>Cài đặt</a></li>
-    </ul>
-    <div class="side-user">
-      <div class="ava">T</div>
-      <div><b>thieentraan</b><span>Gói miễn phí</span></div>
-    </div>
-    <div class="side-foot"><span>v0.1.0</span><span>© EngMaster</span></div>
-  </aside>
-  <main class="content">
+<body class="app" data-page="chep-cau" data-depth="1" data-title="Chép câu">
 
-    <div class="page-head">
-      <h1 class="page-title">Chép câu</h1>
-      <p class="page-sub">Tạo thư mục và quản lý các câu luyện dịch Việt → Anh · đồng bộ đám mây</p>
-    </div>
+<div class="main">
+<div class="wrap">
 
-    <div class="card">
-      <div class="form-row">
-        <input class="input" placeholder="Tên thư mục mới (VD: Thì hiện tại hoàn thành)">
-        <button class="btn btn-primary">+ Tạo thư mục</button>
-      </div>
+  <div class="page-head anim">
+    <div>
+      <h1>Chép câu</h1>
+      <p>Tạo thư mục và quản lý các câu luyện dịch Việt → Anh. Dữ liệu đồng bộ đám mây.</p>
     </div>
-
-    <div class="deck-grid section-gap">
-      <a class="deck-card" href="thu-muc.html">
-        <div class="deck-actions"><span class="icon-btn">✎</span><span class="icon-btn">✕</span></div>
-        <div class="deck-ava">📁</div>
-        <div class="deck-name">Session 1</div>
-        <div class="deck-desc">Đã làm 38/100 câu</div>
-        <div class="progress" style="margin-top:12px"><div class="progress-fill" style="width:38%"></div></div>
-        <div class="deck-open">Mở thư mục <span>→</span></div>
-      </a>
-      <a class="deck-card" href="thu-muc.html">
-        <div class="deck-actions"><span class="icon-btn">✎</span><span class="icon-btn">✕</span></div>
-        <div class="deck-ava">📁</div>
-        <div class="deck-name">advance</div>
-        <div class="deck-desc">Đã làm 0/100 câu</div>
-        <div class="progress" style="margin-top:12px"><div class="progress-fill" style="width:1%"></div></div>
-        <div class="deck-open">Mở thư mục <span>→</span></div>
-      </a>
+    <div class="page-actions">
+      <button class="btn btn-primary" id="btnNew"><i data-ico="plus"></i> Tạo thư mục</button>
     </div>
+  </div>
 
-  </main>
+  <div class="card card-pad anim anim-1" id="formNew" style="display:none;margin-bottom:14px">
+    <div class="input-group">
+      <input class="input" placeholder="Tên thư mục mới (VD: Session 2)" autofocus>
+      <button class="btn btn-primary"><i data-ico="plus"></i> Tạo thư mục</button>
+      <button class="btn btn-ghost" id="btnCancel">Hủy</button>
+    </div>
+  </div>
+
+  <section class="grid g-auto anim anim-2">
+
+    <a class="deck" href="thu-muc.html">
+      <span class="deck-tools">
+        <span class="icon-btn" role="button" tabindex="0" title="Đổi tên" onclick="event.preventDefault()"><i data-ico="pencil"></i></span>
+        <span class="icon-btn danger" role="button" tabindex="0" title="Xóa" onclick="event.preventDefault()"><i data-ico="trash"></i></span>
+      </span>
+      <span class="deck-top">
+        <span class="deck-mark"><i data-ico="folder"></i></span>
+        <span>
+          <span class="deck-name">Session 1</span>
+          <span class="deck-desc">Đã làm 95 / 100 câu</span>
+        </span>
+      </span>
+      <span class="bar bar-accent"><i style="width:95%"></i></span>
+      <span class="deck-meta">
+        <span class="badge badge-ok"><i data-ico="check"></i> 93 đúng</span>
+        <span class="deck-go">Mở thư mục <i data-ico="right"></i></span>
+      </span>
+    </a>
+
+    <a class="deck" href="thu-muc.html">
+      <span class="deck-tools">
+        <span class="icon-btn" role="button" tabindex="0" title="Đổi tên" onclick="event.preventDefault()"><i data-ico="pencil"></i></span>
+        <span class="icon-btn danger" role="button" tabindex="0" title="Xóa" onclick="event.preventDefault()"><i data-ico="trash"></i></span>
+      </span>
+      <span class="deck-top">
+        <span class="deck-mark"><i data-ico="folder"></i></span>
+        <span>
+          <span class="deck-name">advance</span>
+          <span class="deck-desc">Đã làm 0 / 100 câu</span>
+        </span>
+      </span>
+      <span class="bar bar-accent"><i style="width:0%"></i></span>
+      <span class="deck-meta">
+        <span class="badge">Chưa bắt đầu</span>
+        <span class="deck-go">Mở thư mục <i data-ico="right"></i></span>
+      </span>
+    </a>
+
+    <button class="new-folder" id="btnNew2">
+      <i data-ico="plus"></i>
+      <b>Tạo thư mục mới</b>
+      <span>Nhóm câu luyện dịch theo buổi học hoặc trình độ</span>
+    </button>
+
+  </section>
+
 </div>
-<nav class="tabbar">
-  <a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a>
-  <a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a>
-  <a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a>
-  <a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a>
-  <button id="tabMenu"><span class="ico">☰</span>Menu</button>
-</nav>
-<script>
-var sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
-function menu(o){sb.classList.toggle('open',o);ov.classList.toggle('show',o);}
-document.getElementById('burger').onclick=function(){menu(true)};
-document.getElementById('sideClose').onclick=function(){menu(false)};
-ov.onclick=function(){menu(false)};
-var tm=document.getElementById('tabMenu'); if(tm) tm.onclick=function(){menu(true)};
-document.querySelectorAll('[data-flip]').forEach(function(f){
-  f.addEventListener('click',function(){f.classList.toggle('flipped')});
-  f.querySelectorAll('input,textarea,button').forEach(function(i){i.addEventListener('click',function(e){e.stopPropagation()})});
-});
-document.querySelectorAll('.tabs:not([data-static])').forEach(function(g){g.querySelectorAll('.tab').forEach(function(t){if(t.tagName==='BUTTON')t.onclick=function(){g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-document.querySelectorAll('.pills').forEach(function(g){g.querySelectorAll('.pill').forEach(function(t){t.onclick=function(){g.querySelectorAll('.pill').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-</script>
+</div>
 
+<script src="../app.js"></script>
+<script>
+  function open(){ document.getElementById('formNew').style.display='block';
+                   document.querySelector('#formNew .input').focus(); }
+  document.getElementById('btnNew').onclick  = open;
+  document.getElementById('btnNew2').onclick = open;
+  document.getElementById('btnCancel').onclick = function(){
+    document.getElementById('formNew').style.display='none'; };
+</script>
 </body>
 </html>

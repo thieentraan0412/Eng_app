@@ -1,112 +1,178 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Phiên ôn tập — ADV · EngMaster</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phiên ôn tập · EngMaster</title>
 <link rel="stylesheet" href="style.css">
-<style></style>
+<style>
+  .fc{
+    width:100%;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--r-xl);padding:34px 30px;cursor:pointer;
+    transition:border-color var(--t-fast),box-shadow var(--t-fast);
+    min-height:262px;display:flex;flex-direction:column;
+  }
+  .fc:hover{border-color:var(--border-2);box-shadow:var(--sh-md)}
+  .fc-front{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;flex:1 1 auto;text-align:center}
+  .fc-word{font-size:36px;font-weight:600;letter-spacing:-.038em;line-height:1.15}
+  .fc-row{display:flex;align-items:center;gap:9px;justify-content:center}
+  .fc-hint{font-size:12.5px;color:var(--text-4);display:flex;align-items:center;gap:6px}
+
+  .fc-back{border-top:1px solid var(--border);margin-top:20px;padding-top:18px;
+    display:flex;flex-direction:column;gap:14px;text-align:left}
+  [hidden]{display:none!important}   /* .fc-back/.grades có display riêng nên phải ép ẩn */
+  .fc-mean{font-size:19px;font-weight:600;letter-spacing:-.022em;color:var(--accent-text);
+    padding-left:var(--meta-key-w);margin-bottom:2px}
+
+  /* Lưới nhãn – giá trị: mọi hàng chia cùng một mốc cột */
+  .fc-back{--meta-key-w:100px}
+  .meta-row{display:flex;align-items:flex-start;gap:12px}
+  .meta-key{
+    flex:0 0 calc(var(--meta-key-w) - 12px);min-width:0;
+    font-size:10.5px;font-weight:600;letter-spacing:.05em;line-height:24px;
+    text-transform:uppercase;color:var(--text-4);
+  }
+  .meta-vals{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 auto;min-width:0}
+  .tok{font-size:12px;line-height:18px;font-weight:500;color:var(--text-2);background:var(--surface-2);
+    border:1px solid var(--border);padding:2px 8px;border-radius:5px}
+  .tok-pat{background:transparent;border-style:dashed;color:var(--text-3);font-style:italic}
+  .ex{display:flex;align-items:center;gap:8px;min-height:24px;
+    font-size:13px;color:var(--text-2);line-height:1.5}
+  .ex-mark{width:2px;align-self:stretch;background:var(--border-2);border-radius:2px;flex:0 0 auto}
+  .ex .icon-btn{width:22px;height:22px}
+  .ex .icon-btn .ico{width:15px;height:15px}
+  .fc-back .input-group{margin-top:2px;padding-left:var(--meta-key-w)}
+
+  /* Hàng đánh giá SRS */
+  .grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%}
+  .grade{
+    display:flex;flex-direction:column;align-items:center;gap:1px;padding:10px 8px;
+    background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r-md);
+    transition:all var(--t-fast);box-shadow:var(--sh-xs);
+  }
+  .grade b{font-size:13px;font-weight:600;letter-spacing:-.012em}
+  .grade small{font-size:11px;color:var(--text-4);font-variant-numeric:tabular-nums}
+  .grade:hover{transform:translateY(-1px);box-shadow:var(--sh-sm)}
+  .g1:hover{border-color:var(--err-border);background:var(--err-soft);color:var(--err)}
+  .g2:hover{border-color:var(--warn-border);background:var(--warn-soft);color:var(--warn)}
+  .g3:hover{border-color:var(--info-border);background:var(--info-soft);color:var(--info)}
+  .g4:hover{border-color:var(--ok-border);background:var(--ok-soft);color:var(--ok)}
+  .grade:hover small{color:inherit;opacity:.75}
+
+  .nav-row{display:flex;align-items:center;justify-content:center;gap:12px;width:100%}
+  .nav-pos{font-size:12.5px;color:var(--text-3);font-variant-numeric:tabular-nums;min-width:62px;text-align:center}
+  .toggles{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+
+  @media (max-width:920px){
+    .fc{padding:26px 18px;min-height:224px}
+    .fc-word{font-size:29px}
+    .grades{grid-template-columns:repeat(2,1fr)}
+    .fc-back{--meta-key-w:0px}
+    .meta-key{display:none}
+    .meta-row{gap:0}
+    .focus-foot{display:none}
+  }
+</style>
 </head>
 <body>
-<header class="topbar">
-  <button class="burger" id="burger" aria-label="Mở menu">☰</button>
-  <div class="brand-mark">E</div>
-  <div class="topbar-title">Phiên ôn tập — ADV</div>
-</header>
-<div class="overlay" id="overlay"></div>
-<div class="app">
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-mark">E</div>
-      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
-      <button class="side-close" id="sideClose" aria-label="Đóng menu">✕</button>
-    </div>
-    <ul class="nav">
-      <li><a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a></li>
-      <li><a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a></li>
-      <li><a href="../04-on-tap/index.html" class="active"><span class="ico">🔁</span>Ôn tập</a></li>
-      <li><a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a></li>
-      <li><a href="../06-doc/index.html"><span class="ico">📖</span>Đọc</a></li>
-      <li><a href="../07-viet/index.html"><span class="ico">✍️</span>Viết</a></li>
-      <li><a href="../08-chep-cau/index.html"><span class="ico">✏️</span>Chép câu</a></li>
-      <li><a href="../09-thong-ke/index.html"><span class="ico">📊</span>Thống kê</a></li>
-      <li><a href="../10-cai-dat/index.html"><span class="ico">⚙️</span>Cài đặt</a></li>
-    </ul>
-    <div class="side-user">
-      <div class="ava">T</div>
-      <div><b>thieentraan</b><span>Gói miễn phí</span></div>
-    </div>
-    <div class="side-foot"><span>v0.1.0</span><span>© EngMaster</span></div>
-  </aside>
-  <main class="content">
 
-    <div class="fc-stage">
-      <div class="fc-head">
-        <a class="icon-btn" href="index.html" title="Kết thúc phiên">✕</a>
-        <span class="chip">Còn lại 5 thẻ</span>
-        <span class="chip chip-teal">✓ 0/5 đã ôn</span>
+<div class="focus">
+
+  <!-- ------------------------------------------------------- Thanh trên -->
+  <header class="focus-bar">
+    <a class="icon-btn" href="index.html" aria-label="Thoát phiên ôn"><i data-ico="x"></i></a>
+    <span class="bar bar-accent"><i style="width:90%" id="prog"></i></span>
+    <span class="badge"><i data-ico="check"></i> 0 / 73</span>
+    <button class="icon-btn" data-theme-toggle aria-label="Đổi giao diện"></button>
+  </header>
+
+  <!-- ------------------------------------------------------------ Sân khấu -->
+  <div class="focus-stage">
+
+    <div class="toggles">
+      <button class="chip is-active"><i data-ico="repeat"></i> Anh → Việt</button>
+      <button class="chip"><i data-ico="keyboard"></i> Gõ từ</button>
+      <button class="chip"><i data-ico="file"></i> Ví dụ</button>
+    </div>
+
+    <!-- Thẻ -->
+    <article class="fc" id="card">
+      <div class="fc-front">
+        <div class="fc-row">
+          <span class="fc-word">Then</span>
+          <span class="pos">adv</span>
+          <button class="icon-btn" title="Phát âm" onclick="event.stopPropagation()"><i data-ico="speak"></i></button>
+        </div>
+        <p class="fc-hint" id="hint"><i data-ico="eye"></i> Bấm thẻ hoặc <span class="kbd">Space</span> để xem nghĩa</p>
       </div>
-      <div class="fc-modes">
-        <div class="tabs">
-          <button class="tab active">🔁 Anh → Việt</button>
-          <button class="tab">⌨️ Gõ từ</button>
-          <button class="tab">📝 Ví dụ</button>
+
+      <div class="fc-back" id="back" hidden>
+        <p class="fc-mean">Sau đó</p>
+
+        <div class="meta-row"><span class="meta-key">Collocation</span>
+          <span class="meta-vals"><span class="tok">were then</span><span class="tok">since then</span>
+            <span class="tok">even then</span><span class="tok">then there</span></span></div>
+
+        <div class="meta-row"><span class="meta-key">Pattern</span>
+          <span class="meta-vals"><span class="tok tok-pat">then to do sth</span>
+            <span class="tok tok-pat">then in sth</span></span></div>
+
+        <div class="meta-row"><span class="meta-key">Ví dụ</span>
+          <span class="meta-vals" style="flex-direction:column;align-items:stretch;gap:7px">
+            <span class="ex"><i class="ex-mark"></i> He was happy then.
+              <button class="icon-btn" onclick="event.stopPropagation()"><i data-ico="speak"></i></button></span>
+            <span class="ex"><i class="ex-mark"></i> He fixed it, then left.
+              <button class="icon-btn" onclick="event.stopPropagation()"><i data-ico="speak"></i></button></span>
+          </span></div>
+
+        <div class="input-group" onclick="event.stopPropagation()">
+          <input class="input" placeholder="Thêm câu ví dụ của bạn…">
+          <button class="btn btn-sm"><i data-ico="plus"></i> Lưu ví dụ</button>
         </div>
       </div>
+    </article>
 
-      <div class="flip-wrap" data-flip>
-        <div class="flip-inner">
-          <div class="fc-face">
-            <div class="fc-word">negative impact <span class="pos-badge">n</span><button class="speak">🔊</button></div>
-            <input class="input" style="max-width:340px;text-align:center" placeholder="Gõ lại từ để nhớ chính tả…">
-            <div class="fc-hint">Bấm thẻ hoặc phím Tab để xem nghĩa</div>
-          </div>
-          <div class="fc-face fc-back">
-            <div class="fc-meaning">tác động tiêu cực</div>
-            <div class="chip-row" style="justify-content:center"><span class="chip chip-primary">impact on sth</span></div>
-            <p style="font-style:italic;color:var(--ink-soft);font-size:.9rem;text-align:center">“staying up late can have negative impact on health” <button class="speak" style="width:30px;height:30px;font-size:.8rem">🔊</button></p>
-            <input class="input" style="max-width:340px" placeholder="Viết câu ví dụ của bạn với từ này…">
-          </div>
-        </div>
-      </div>
-
-      <div class="grade-row">
-        <button class="grade g1">Lại (1)<small>1 ngày</small></button>
-        <button class="grade g2">Khó (2)<small>1 ngày</small></button>
-        <button class="grade g3">Được (3)<small>1 ngày</small></button>
-        <button class="grade g4">Dễ (4)<small>2 ngày</small></button>
-      </div>
-      <div class="fc-nav">
-        <button class="btn btn-ghost btn-sm" disabled style="opacity:.5">← Trước</button>
-        <span>1 / 5</span>
-        <button class="btn btn-soft btn-sm">Tiếp →</button>
-      </div>
+    <!-- Đánh giá SRS -->
+    <div class="grades" id="grades" hidden>
+      <button class="grade g1"><b>Lại</b><small>1 ngày</small></button>
+      <button class="grade g2"><b>Khó</b><small>1 ngày</small></button>
+      <button class="grade g3"><b>Được</b><small>3 ngày</small></button>
+      <button class="grade g4"><b>Dễ</b><small>6 ngày</small></button>
     </div>
 
-  </main>
+    <div class="nav-row">
+      <button class="btn btn-sm"><i data-ico="left"></i> Trước</button>
+      <span class="nav-pos">66 / 73</span>
+      <button class="btn btn-sm">Tiếp <i data-ico="right"></i></button>
+    </div>
+
+    <p class="focus-foot">
+      <span><span class="kbd">Space</span> lật thẻ</span>
+      <span><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="kbd">4</span> đánh giá</span>
+      <span><span class="kbd">←</span><span class="kbd">→</span> chuyển thẻ</span>
+      <span><span class="kbd">Esc</span> thoát</span>
+    </p>
+  </div>
 </div>
-<nav class="tabbar">
-  <a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a>
-  <a href="../03-tu-vung/index.html"><span class="ico">📇</span>Từ vựng</a>
-  <a href="../04-on-tap/index.html" class="active"><span class="ico">🔁</span>Ôn tập</a>
-  <a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a>
-  <button id="tabMenu"><span class="ico">☰</span>Menu</button>
-</nav>
-<script>
-var sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
-function menu(o){sb.classList.toggle('open',o);ov.classList.toggle('show',o);}
-document.getElementById('burger').onclick=function(){menu(true)};
-document.getElementById('sideClose').onclick=function(){menu(false)};
-ov.onclick=function(){menu(false)};
-var tm=document.getElementById('tabMenu'); if(tm) tm.onclick=function(){menu(true)};
-document.querySelectorAll('[data-flip]').forEach(function(f){
-  f.addEventListener('click',function(){f.classList.toggle('flipped')});
-  f.querySelectorAll('input,textarea,button').forEach(function(i){i.addEventListener('click',function(e){e.stopPropagation()})});
-});
-document.querySelectorAll('.tabs:not([data-static])').forEach(function(g){g.querySelectorAll('.tab').forEach(function(t){if(t.tagName==='BUTTON')t.onclick=function(){g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-document.querySelectorAll('.pills').forEach(function(g){g.querySelectorAll('.pill').forEach(function(t){t.onclick=function(){g.querySelectorAll('.pill').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-</script>
 
+<script src="../app.js"></script>
+<script>
+  var card = document.getElementById('card'),
+      back = document.getElementById('back'),
+      grades = document.getElementById('grades'),
+      hint = document.getElementById('hint');
+
+  function flip(){
+    var open = back.hasAttribute('hidden');
+    if (open){ back.removeAttribute('hidden'); grades.removeAttribute('hidden'); hint.style.display='none'; }
+    else     { back.setAttribute('hidden',''); grades.setAttribute('hidden',''); hint.style.display=''; }
+  }
+  card.addEventListener('click', flip);
+  document.addEventListener('keydown', function(e){
+    if (e.code === 'Space'){ e.preventDefault(); flip(); }
+    if (e.key === 'Escape') location.href = 'index.html';
+  });
+</script>
 </body>
 </html>

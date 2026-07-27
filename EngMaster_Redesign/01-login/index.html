@@ -1,42 +1,143 @@
-<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Đăng nhập · EngMaster</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"><style></style></head><body>
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đăng nhập · EngMaster</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .auth{min-height:100vh;display:grid;grid-template-columns:1fr 1fr}
+  .auth-form-col{display:flex;flex-direction:column;padding:32px 40px}
+  .auth-inner{margin:auto;width:100%;max-width:352px}
+  .auth-brand{display:flex;align-items:center;gap:9px}
+  .auth-head{margin:36px 0 24px}
+  .auth-head h1{font-size:25px;font-weight:600;letter-spacing:-.03em;line-height:1.2}
+  .auth-head p{margin-top:6px;font-size:13.5px;color:var(--text-2)}
+  .auth-form{display:flex;flex-direction:column;gap:14px}
+  .auth-form .input{height:38px}
+  .pw-wrap{position:relative}
+  .pw-wrap .input{padding-right:38px}
+  .pw-eye{position:absolute;right:4px;top:50%;translate:0 -50%;width:30px;height:30px;
+    border-radius:6px;display:grid;place-items:center;color:var(--text-4)}
+  .pw-eye:hover{color:var(--text-2);background:var(--surface-2)}
+  .label-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .link{font-size:12px;font-weight:500;color:var(--accent-text)}
+  .link:hover{text-decoration:underline}
+  .check{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--text-2)}
+  .check input{appearance:none;width:16px;height:16px;flex:0 0 auto;border-radius:4.5px;
+    border:1px solid var(--border-2);background:var(--surface);transition:all var(--t-fast)}
+  .check input:checked{background:var(--accent);border-color:var(--accent);
+    background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m2.5 6.2 2.6 2.6 4.4-5'/%3E%3C/svg%3E");
+    background-position:center;background-repeat:no-repeat}
+  .or{display:flex;align-items:center;gap:12px;margin:4px 0;font-size:11.5px;color:var(--text-4)}
+  .or::before,.or::after{content:"";flex:1;height:1px;background:var(--border)}
+  .auth-foot{font-size:12.5px;color:var(--text-3);text-align:center;margin-top:22px}
+  .auth-legal{font-size:11.5px;color:var(--text-4);text-align:center;margin-top:auto;padding-top:28px}
+
+  /* Cột phải: bảng "chứng thực" tĩnh, không trang trí thừa */
+  .auth-aside{
+    background:var(--surface-2);border-left:1px solid var(--border);
+    display:flex;flex-direction:column;justify-content:center;gap:26px;padding:48px 56px;
+  }
+  .quote{font-size:19px;line-height:1.5;letter-spacing:-.022em;font-weight:500;max-width:30ch}
+  .quote span{color:var(--text-3)}
+  .aside-stats{display:flex;gap:34px;flex-wrap:wrap}
+  .aside-stats b{display:block;font-size:22px;font-weight:700;letter-spacing:-.035em;
+    font-variant-numeric:tabular-nums}
+  .aside-stats span{font-size:12px;color:var(--text-3)}
+  .aside-feats{display:flex;flex-direction:column;gap:11px;padding-top:4px}
+  .feat{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-2)}
+  .feat .ico{width:15px;height:15px;color:var(--text-3)}
+
+  @media (max-width:920px){
+    .auth{grid-template-columns:1fr}
+    .auth-aside{display:none}
+    .auth-form-col{padding:24px 20px}
+    .auth-head{margin:28px 0 20px}
+  }
+</style>
+</head>
+<body>
+
 <div class="auth">
-  <section class="auth-brand">
-    <div class="brand" style="padding:0 0 26px">
-      <div class="brand-mark">E</div>
-      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
+  <!-- ---------------------------------------------------------- Cột form -->
+  <section class="auth-form-col">
+    <div class="auth-brand">
+      <span class="brand-mark">E</span>
+      <span class="brand-name">EngMaster</span>
+      <span class="spacer"></span>
+      <button class="icon-btn" data-theme-toggle aria-label="Đổi giao diện"></button>
     </div>
-    <h1 style="font-size:2rem;font-weight:800;letter-spacing:-.5px;line-height:1.25;position:relative;z-index:1">Học tiếng Anh mỗi ngày,<br>tiến bộ thấy rõ từng tuần.</h1>
-    <p style="color:#B9B3E6;margin-top:12px;max-width:420px;position:relative;z-index:1">Flashcard SRS, đọc &amp; tra từ, luyện viết và chép câu — mọi thiết bị, đồng bộ đám mây.</p>
-    <div>
-      <div class="feature-li"><div class="fi">📇</div><div><b>Flashcard thông minh (SRS)</b><p>Lặp lại ngắt quãng, nhớ lâu hơn với 4 mức đánh giá.</p></div></div>
-      <div class="feature-li"><div class="fi">📖</div><div><b>Đọc &amp; tra từ tức thì</b><p>Bôi chữ để dịch, lưu từ mới vào bộ thẻ chỉ với một chạm.</p></div></div>
-      <div class="feature-li"><div class="fi">✏️</div><div><b>Luyện dịch Việt → Anh</b><p>100+ câu theo cấp độ A1–B2 kèm chấm điểm &amp; sửa chính tả.</p></div></div>
-    </div>
-  </section>
-  <section class="auth-panel">
-    <div class="auth-card">
-      <h2 style="font-size:1.5rem;font-weight:800;letter-spacing:-.3px">Chào mừng trở lại 👋</h2>
-      <p style="color:var(--ink-soft);font-size:.92rem;margin:6px 0 24px">Đăng nhập để tiếp tục hành trình học của bạn — mọi thiết bị.</p>
-      <div class="field">
-        <label>Email</label>
-        <input class="input" type="email" placeholder="ban@email.com" value="thieentraan@gmail.com">
+
+    <div class="auth-inner">
+      <div class="auth-head">
+        <h1>Đăng nhập</h1>
+        <p>Tiếp tục việc học của bạn — dữ liệu đồng bộ trên mọi thiết bị.</p>
       </div>
-      <div class="field">
-        <label>Mật khẩu</label>
-        <div style="position:relative">
-          <input class="input" type="password" placeholder="Ít nhất 6 ký tự" value="123456" style="padding-right:46px">
-          <button class="icon-btn" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none">👁</button>
+
+      <form class="auth-form" onsubmit="event.preventDefault();location.href='../02-trang-chu/index.html'">
+        <div class="field">
+          <label for="em">Email</label>
+          <input class="input" id="em" type="email" placeholder="ban@email.com" autocomplete="email" required>
         </div>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0 20px">
-        <label style="display:flex;align-items:center;gap:10px;font-size:.83rem;color:var(--ink-soft);cursor:pointer">
-          <span class="switch"><input type="checkbox" checked><span class="slider"></span></span>
-          Ghi nhớ đăng nhập
+
+        <div class="field">
+          <div class="label-row">
+            <label for="pw">Mật khẩu</label>
+            <a class="link" href="#">Quên mật khẩu?</a>
+          </div>
+          <div class="pw-wrap">
+            <input class="input" id="pw" type="password" placeholder="Ít nhất 6 ký tự"
+                   autocomplete="current-password" minlength="6" required>
+            <button type="button" class="pw-eye" id="eye" aria-label="Hiện mật khẩu"><i data-ico="eye"></i></button>
+          </div>
+        </div>
+
+        <label class="check">
+          <input type="checkbox" checked>
+          <span>Ghi nhớ đăng nhập <span class="muted-2">(lưu mật khẩu mã hóa trên máy này)</span></span>
         </label>
-        <a href="#" style="font-size:.83rem;font-weight:600;color:var(--primary)">Quên mật khẩu?</a>
-      </div>
-      <a class="btn btn-primary btn-block" href="../02-trang-chu/index.html">Đăng nhập</a>
+
+        <button class="btn btn-primary btn-lg btn-block" type="submit">Đăng nhập</button>
+
+        <div class="or">hoặc</div>
+
+        <button class="btn btn-lg btn-block" type="button">
+          <i data-ico="mail"></i> Gửi liên kết đăng nhập qua email
+        </button>
+      </form>
+
+      <p class="auth-foot">Chưa có tài khoản? <a class="link" href="#">Tạo tài khoản miễn phí</a></p>
     </div>
+
+    <p class="auth-legal">Bằng việc tiếp tục, bạn đồng ý với Điều khoản &amp; Chính sách bảo mật.</p>
   </section>
+
+  <!-- ------------------------------------------------------- Cột giới thiệu -->
+  <aside class="auth-aside">
+    <p class="quote">Học từ vựng theo lịch lặp lại ngắt quãng.<br><span>Nhớ lâu hơn, ôn ít hơn.</span></p>
+
+    <div class="aside-stats">
+      <div><b>98</b><span>thẻ trong kho</span></div>
+      <div><b>4</b><span>bộ từ vựng</span></div>
+      <div><b>200</b><span>câu luyện dịch</span></div>
+    </div>
+
+    <div class="aside-feats">
+      <div class="feat"><i data-ico="repeat"></i> Ôn tập SRS với 4 mức đánh giá</div>
+      <div class="feat"><i data-ico="book"></i> Bôi chữ trong bài đọc để tra &amp; lưu từ</div>
+      <div class="feat"><i data-ico="type"></i> Kiểm tra chính tả, ngữ pháp khi viết</div>
+      <div class="feat"><i data-ico="cloud"></i> Đồng bộ đám mây, dùng trên mọi thiết bị</div>
+    </div>
+  </aside>
 </div>
-</body></html>
+
+<script src="../app.js"></script>
+<script>
+  document.getElementById('eye').addEventListener('click', function () {
+    var i = document.getElementById('pw');
+    i.type = i.type === 'password' ? 'text' : 'password';
+  });
+</script>
+</body>
+</html>

@@ -1,129 +1,289 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Silk (Reading) — Từ vựng · EngMaster</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Silk (Reading) · Từ vựng · EngMaster</title>
 <link rel="stylesheet" href="style.css">
-<style></style>
+<style>
+  /* --- Form thêm thẻ --- */
+  .add-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .add-grid .field.full{grid-column:1/-1}
+
+  /* --- Thẻ từ --- */
+  .word-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(324px,1fr));gap:12px}
+  .word{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+    padding:15px 16px;transition:border-color var(--t-fast),box-shadow var(--t-fast);
+  }
+  .word:hover{border-color:var(--border-2);box-shadow:var(--sh-sm)}
+  .word-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:2px}
+  .word-en{font-size:16.5px;font-weight:600;letter-spacing:-.022em;line-height:1.3}
+  .word-tools{margin-left:auto;display:flex;gap:2px;opacity:0;transition:opacity var(--t-fast)}
+  .word:hover .word-tools,.word:focus-within .word-tools{opacity:1}
+  .word-tools .icon-btn{width:26px;height:26px}
+  .word-tools .ico{width:13.5px;height:13.5px}
+  .word-vi{font-size:13.5px;color:var(--text-2);margin-bottom:11px}
+
+  .meta-row{display:flex;gap:9px;margin-top:9px}
+  .meta-key{
+    flex:0 0 74px;font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--text-4);padding-top:4px;
+  }
+  .meta-vals{display:flex;flex-wrap:wrap;gap:5px;flex:1 1 auto}
+  .tok{
+    font-size:11.8px;font-weight:500;color:var(--text-2);
+    background:var(--surface-2);border:1px solid var(--border);
+    padding:2px 7px;border-radius:5px;white-space:nowrap;
+  }
+  .tok-pat{background:transparent;border-style:dashed;color:var(--text-3);font-style:italic}
+  .examples{margin-top:11px;padding-top:11px;border-top:1px solid var(--border);
+    display:flex;flex-direction:column;gap:6px}
+  .ex{display:flex;align-items:flex-start;gap:7px;font-size:12.8px;color:var(--text-2);line-height:1.5}
+  .ex::before{content:"";width:2px;align-self:stretch;flex:0 0 auto;
+    background:var(--border-2);border-radius:2px}
+  .word-simple .word-en{font-size:15px}
+  @media (max-width:920px){
+    .add-grid{grid-template-columns:1fr}
+    .word-grid{grid-template-columns:1fr}
+    .word-tools{opacity:1}
+    .meta-key{flex-basis:60px}
+  }
+</style>
 </head>
-<body>
-<header class="topbar">
-  <button class="burger" id="burger" aria-label="Mở menu">☰</button>
-  <div class="brand-mark">E</div>
-  <div class="topbar-title">Silk (Reading) — Từ vựng</div>
-</header>
-<div class="overlay" id="overlay"></div>
-<div class="app">
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-mark">E</div>
-      <div><div class="brand-name">EngMaster</div><div class="brand-sub">Học tiếng Anh</div></div>
-      <button class="side-close" id="sideClose" aria-label="Đóng menu">✕</button>
-    </div>
-    <ul class="nav">
-      <li><a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a></li>
-      <li><a href="../03-tu-vung/index.html" class="active"><span class="ico">📇</span>Từ vựng</a></li>
-      <li><a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a></li>
-      <li><a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a></li>
-      <li><a href="../06-doc/index.html"><span class="ico">📖</span>Đọc</a></li>
-      <li><a href="../07-viet/index.html"><span class="ico">✍️</span>Viết</a></li>
-      <li><a href="../08-chep-cau/index.html"><span class="ico">✏️</span>Chép câu</a></li>
-      <li><a href="../09-thong-ke/index.html"><span class="ico">📊</span>Thống kê</a></li>
-      <li><a href="../10-cai-dat/index.html"><span class="ico">⚙️</span>Cài đặt</a></li>
-    </ul>
-    <div class="side-user">
-      <div class="ava">T</div>
-      <div><b>thieentraan</b><span>Gói miễn phí</span></div>
-    </div>
-    <div class="side-foot"><span>v0.1.0</span><span>© EngMaster</span></div>
-  </aside>
-  <main class="content">
+<body class="app" data-page="tu-vung" data-depth="1" data-title="Silk (Reading)">
 
-    <a class="back-link" href="index.html">← Quay lại danh sách</a>
-    <div class="head-row" style="margin-bottom:18px">
-      <h1 class="page-title" style="font-size:1.35rem">Silk (Reading)</h1>
-      <span class="chip chip-primary">73 thẻ</span>
-    </div>
+<div class="main">
+<div class="wrap">
 
-    <div class="card">
-      <div class="card-title" style="margin-bottom:14px">➕ Thêm thẻ mới</div>
-      <div class="form-grid">
-        <input class="input" placeholder="Từ tiếng Anh *">
-        <input class="input" placeholder="Nghĩa tiếng Việt">
-        <input class="input" placeholder="Collocation">
-        <input class="input" placeholder="Pattern (mẫu câu)">
+  <a class="crumb" href="index.html"><i data-ico="left"></i> Tất cả bộ từ</a>
+
+  <div class="page-head anim">
+    <div>
+      <h1>Silk (Reading)</h1>
+      <p>73 thẻ · đã học 71 · tỷ lệ hoàn thành 97%</p>
+    </div>
+    <div class="page-actions">
+      <a class="btn" href="../04-on-tap/flashcard.html"><i data-ico="repeat"></i> Ôn bộ này</a>
+      <button class="btn btn-primary" id="btnAdd"><i data-ico="plus"></i> Thêm thẻ</button>
+    </div>
+  </div>
+
+  <!-- --------------------------------------------------- Form thêm thẻ -->
+  <div class="card anim anim-1" id="formAdd" style="display:none;margin-bottom:16px">
+    <div class="card-head"><h2><i data-ico="plus"></i> Thêm thẻ mới</h2>
+      <button class="icon-btn" id="btnClose"><i data-ico="x"></i></button></div>
+    <div class="card-body">
+      <div class="add-grid">
+        <div class="field"><label>Từ tiếng Anh *</label><input class="input" placeholder="veteran"></div>
+        <div class="field"><label>Nghĩa tiếng Việt</label><input class="input" placeholder="cựu chiến binh"></div>
+        <div class="field"><label>Collocation</label><input class="input" placeholder="war veteran, veteran troops…"></div>
+        <div class="field"><label>Pattern (mẫu câu)</label><input class="input" placeholder="veteran of sth, veteran in sth…"></div>
+        <div class="field full"><label>Câu ví dụ</label><input class="input" placeholder="He is a veteran of two wars."></div>
       </div>
-      <div class="form-row" style="margin-top:12px">
-        <input class="input" placeholder="Câu ví dụ">
-        <button class="btn btn-primary">+ Thêm thẻ</button>
+      <div class="row" style="margin-top:14px">
+        <button class="btn btn-primary"><i data-ico="plus"></i> Thêm thẻ</button>
+        <span class="muted-2 t-xs">Ngăn cách nhiều giá trị bằng dấu phẩy</span>
       </div>
     </div>
+  </div>
 
-    <div class="card section-gap">
-      <div class="head-row">
-        <div class="fc-word" style="font-size:1.2rem">Veteran <span class="pos-badge">n</span><button class="speak">🔊</button></div>
-        <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">Sửa</button><button class="btn btn-danger btn-sm">Xóa</button></div>
-      </div>
-      <p style="font-weight:600;color:var(--primary-deep);margin:6px 0 12px">Cựu chiến binh</p>
-      <div class="card-note" style="margin-bottom:6px">Collocation</div>
-      <div class="chip-row"><span class="chip chip-teal">war veteran</span><span class="chip chip-teal">veteran who</span><span class="chip chip-teal">vietnam veteran</span><span class="chip chip-teal">veteran troops</span></div>
-      <div class="card-note" style="margin:10px 0 6px">Pattern</div>
-      <div class="chip-row"><span class="chip chip-primary">veteran of sth</span><span class="chip chip-primary">veteran in sth</span><span class="chip chip-primary">veteran with sth</span></div>
+  <!-- ------------------------------------------------- Bộ lọc danh sách -->
+  <div class="row wrapping anim anim-1" style="margin-bottom:14px">
+    <label class="search">
+      <i data-ico="search"></i>
+      <input class="input" type="search" placeholder="Tìm trong 73 thẻ…">
+    </label>
+    <div class="spacer"></div>
+    <div class="chipset">
+      <button class="chip is-active">Tất cả 73</button>
+      <button class="chip">Danh từ</button>
+      <button class="chip">Động từ</button>
+      <button class="chip">Tính từ</button>
+      <button class="chip">Cụm từ</button>
     </div>
+  </div>
 
-    <div class="card">
-      <div class="head-row">
-        <div class="fc-word" style="font-size:1.2rem">reared <span class="pos-badge">v</span><button class="speak">🔊</button></div>
-        <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">Sửa</button><button class="btn btn-danger btn-sm">Xóa</button></div>
+  <!-- ---------------------------------------------------- Lưới thẻ từ -->
+  <section class="word-grid anim anim-2">
+
+    <article class="word">
+      <div class="word-head">
+        <span class="word-en">Veteran</span><span class="pos">n</span>
+        <span class="word-tools">
+          <button class="icon-btn" title="Nghe"><i data-ico="speak"></i></button>
+          <button class="icon-btn" title="Sửa"><i data-ico="pencil"></i></button>
+          <button class="icon-btn danger" title="Xóa"><i data-ico="trash"></i></button>
+        </span>
       </div>
-      <p style="font-weight:600;color:var(--primary-deep);margin:6px 0 12px">cất, đứng dựng lên, giáo dục</p>
-      <div class="card-note" style="margin-bottom:6px">Collocation</div>
-      <div class="chip-row"><span class="chip chip-teal">were reared</span><span class="chip chip-teal">reared up</span><span class="chip chip-teal">twins reared</span><span class="chip chip-teal">being reared</span></div>
-      <div class="card-note" style="margin:10px 0 6px">Pattern</div>
-      <div class="chip-row"><span class="chip chip-primary">reared in sth</span><span class="chip chip-primary">reared on sth</span><span class="chip chip-primary">reared by sth</span></div>
-      <p style="font-style:italic;color:var(--ink-soft);font-size:.87rem;margin-top:12px">“The family has been rearing cattle for 200 years.”<br>“The horse was shocked, and thus reared.”</p>
-    </div>
+      <p class="word-vi">Cựu chiến binh</p>
+      <div class="meta-row"><span class="meta-key">Collocation</span>
+        <span class="meta-vals"><span class="tok">war veteran</span><span class="tok">veteran who</span>
+          <span class="tok">vietnam veteran</span><span class="tok">veteran troops</span></span></div>
+      <div class="meta-row"><span class="meta-key">Pattern</span>
+        <span class="meta-vals"><span class="tok tok-pat">veteran of sth</span>
+          <span class="tok tok-pat">veteran in sth</span><span class="tok tok-pat">veteran with sth</span></span></div>
+    </article>
 
-    <div class="card">
-      <div class="head-row">
-        <div class="fc-word" style="font-size:1.2rem">stifled <span class="pos-badge">v</span><button class="speak">🔊</button></div>
-        <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">Sửa</button><button class="btn btn-danger btn-sm">Xóa</button></div>
+    <article class="word">
+      <div class="word-head">
+        <span class="word-en">Blessing</span><span class="pos">v</span>
+        <span class="word-tools">
+          <button class="icon-btn" title="Nghe"><i data-ico="speak"></i></button>
+          <button class="icon-btn" title="Sửa"><i data-ico="pencil"></i></button>
+          <button class="icon-btn danger" title="Xóa"><i data-ico="trash"></i></button>
+        </span>
       </div>
-      <p style="font-weight:600;color:var(--primary-deep);margin:6px 0 12px">bị bóp nghẹt</p>
-      <div class="card-note" style="margin-bottom:6px">Collocation</div>
-      <div class="chip-row"><span class="chip chip-teal">were stifled</span><span class="chip chip-teal">being stifled</span><span class="chip chip-teal">almost stifled</span><span class="chip chip-teal">felt stifled</span></div>
-      <div class="card-note" style="margin:10px 0 6px">Pattern</div>
-      <div class="chip-row"><span class="chip chip-primary">stifled by sth</span><span class="chip chip-primary">stifled in sth</span><span class="chip chip-primary">stifled with sth</span></div>
-      <p style="font-style:italic;color:var(--ink-soft);font-size:.87rem;margin-top:12px">“The army stifled the rebellion.”</p>
-    </div>
+      <p class="word-vi">ban phước, giáng phước</p>
+      <div class="meta-row"><span class="meta-key">Collocation</span>
+        <span class="meta-vals"><span class="tok">great blessing</span><span class="tok">mixed blessing</span>
+          <span class="tok">blessing upon</span><span class="tok">divine blessing</span></span></div>
+      <div class="meta-row"><span class="meta-key">Pattern</span>
+        <span class="meta-vals"><span class="tok tok-pat">blessing of sth</span>
+          <span class="tok tok-pat">blessing to do sth</span><span class="tok tok-pat">blessing on sth</span></span></div>
+    </article>
 
-    <div style="text-align:center;margin-top:18px"><button class="btn btn-soft">Hiện thêm (70 thẻ còn lại)</button></div>
+    <article class="word">
+      <div class="word-head">
+        <span class="word-en">reared</span><span class="pos">v</span>
+        <span class="word-tools">
+          <button class="icon-btn" title="Nghe"><i data-ico="speak"></i></button>
+          <button class="icon-btn" title="Sửa"><i data-ico="pencil"></i></button>
+          <button class="icon-btn danger" title="Xóa"><i data-ico="trash"></i></button>
+        </span>
+      </div>
+      <p class="word-vi">cất, đứng dựng lên, giáo dục</p>
+      <div class="meta-row"><span class="meta-key">Collocation</span>
+        <span class="meta-vals"><span class="tok">were reared</span><span class="tok">reared up</span>
+          <span class="tok">twins reared</span><span class="tok">being reared</span></span></div>
+      <div class="meta-row"><span class="meta-key">Pattern</span>
+        <span class="meta-vals"><span class="tok tok-pat">reared in sth</span>
+          <span class="tok tok-pat">reared on sth</span><span class="tok tok-pat">reared by sth</span></span></div>
+      <div class="examples">
+        <p class="ex">The family has been rearing cattle for 200 years.</p>
+        <p class="ex">The horse was shocked, and thus reared.</p>
+      </div>
+    </article>
 
-  </main>
+    <article class="word">
+      <div class="word-head">
+        <span class="word-en">stifled</span><span class="pos">v</span>
+        <span class="word-tools">
+          <button class="icon-btn" title="Nghe"><i data-ico="speak"></i></button>
+          <button class="icon-btn" title="Sửa"><i data-ico="pencil"></i></button>
+          <button class="icon-btn danger" title="Xóa"><i data-ico="trash"></i></button>
+        </span>
+      </div>
+      <p class="word-vi">bị bóp nghẹt</p>
+      <div class="meta-row"><span class="meta-key">Collocation</span>
+        <span class="meta-vals"><span class="tok">were stifled</span><span class="tok">being stifled</span>
+          <span class="tok">almost stifled</span><span class="tok">felt stifled</span></span></div>
+      <div class="meta-row"><span class="meta-key">Pattern</span>
+        <span class="meta-vals"><span class="tok tok-pat">stifled by sth</span>
+          <span class="tok tok-pat">stifled in sth</span><span class="tok tok-pat">stifled with sth</span></span></div>
+      <div class="examples">
+        <p class="ex">The army stifled the rebellion.</p>
+        <p class="ex">The heat was stifling the children.</p>
+      </div>
+    </article>
+
+    <article class="word">
+      <div class="word-head">
+        <span class="word-en">fibres</span><span class="pos">n</span>
+        <span class="word-tools">
+          <button class="icon-btn" title="Nghe"><i data-ico="speak"></i></button>
+          <button class="icon-btn" title="Sửa"><i data-ico="pencil"></i></button>
+          <button class="icon-btn danger" title="Xóa"><i data-ico="trash"></i></button>
+        </span>
+      </div>
+      <p class="word-vi">sợi</p>
+      <div class="meta-row"><span class="meta-key">Collocation</span>
+        <span class="meta-vals"><span class="tok">nerve fibres</span><span class="tok">muscle fibres</span>
+          <span class="tok">muscular fibres</span><span class="tok">fibres which</span></span></div>
+      <div class="meta-row"><span class="meta-key">Pattern</span>
+        <span class="meta-vals"><span class="tok tok-pat">fibres of sth</span>
+          <span class="tok tok-pat">fibres in sth</span><span class="tok tok-pat">fibres from sth</span></span></div>
+      <div class="examples">
+        <p class="ex">The microscope showed several different fibres stuck to the sole of the shoe.</p>
+      </div>
+    </article>
+
+    <article class="word">
+      <div class="word-head">
+        <span class="word-en">industrialisation</span><span class="pos">n</span>
+        <span class="word-tools">
+          <button class="icon-btn" title="Nghe"><i data-ico="speak"></i></button>
+          <button class="icon-btn" title="Sửa"><i data-ico="pencil"></i></button>
+          <button class="icon-btn danger" title="Xóa"><i data-ico="trash"></i></button>
+        </span>
+      </div>
+      <p class="word-vi">công nghiệp hóa</p>
+      <div class="meta-row"><span class="meta-key">Collocation</span>
+        <span class="meta-vals"><span class="tok">rapid industrialisation</span><span class="tok">rural industrialisation</span>
+          <span class="tok">industrialisation process</span></span></div>
+      <div class="meta-row"><span class="meta-key">Pattern</span>
+        <span class="meta-vals"><span class="tok tok-pat">industrialisation of sth</span>
+          <span class="tok tok-pat">industrialisation in sth</span></span></div>
+    </article>
+
+    <article class="word word-simple">
+      <div class="word-head">
+        <span class="word-en">driving the trend</span>
+        <span class="word-tools">
+          <button class="icon-btn" title="Nghe"><i data-ico="speak"></i></button>
+          <button class="icon-btn" title="Sửa"><i data-ico="pencil"></i></button>
+          <button class="icon-btn danger" title="Xóa"><i data-ico="trash"></i></button>
+        </span>
+      </div>
+      <p class="word-vi" style="margin-bottom:0">thúc đẩy xu hướng</p>
+    </article>
+
+    <article class="word word-simple">
+      <div class="word-head">
+        <span class="word-en">greatly facilitated</span>
+        <span class="word-tools">
+          <button class="icon-btn" title="Nghe"><i data-ico="speak"></i></button>
+          <button class="icon-btn" title="Sửa"><i data-ico="pencil"></i></button>
+          <button class="icon-btn danger" title="Xóa"><i data-ico="trash"></i></button>
+        </span>
+      </div>
+      <p class="word-vi" style="margin-bottom:0">tạo điều kiện thuận lợi rất nhiều</p>
+    </article>
+
+    <article class="word">
+      <div class="word-head">
+        <span class="word-en">magnificent</span><span class="pos">adj</span>
+        <span class="word-tools">
+          <button class="icon-btn" title="Nghe"><i data-ico="speak"></i></button>
+          <button class="icon-btn" title="Sửa"><i data-ico="pencil"></i></button>
+          <button class="icon-btn danger" title="Xóa"><i data-ico="trash"></i></button>
+        </span>
+      </div>
+      <p class="word-vi">tráng lệ</p>
+      <div class="meta-row"><span class="meta-key">Collocation</span>
+        <span class="meta-vals"><span class="tok">magnificent view</span><span class="tok">magnificent work</span>
+          <span class="tok">magnificent palace</span><span class="tok">magnificent temple</span></span></div>
+      <div class="meta-row"><span class="meta-key">Pattern</span>
+        <span class="meta-vals"><span class="tok tok-pat">magnificent in sth</span>
+          <span class="tok tok-pat">magnificent as sth</span></span></div>
+    </article>
+
+  </section>
+
+  <div class="row" style="justify-content:center;margin-top:18px">
+    <button class="btn"><i data-ico="down"></i> Hiện thêm (64 thẻ còn lại)</button>
+  </div>
+
 </div>
-<nav class="tabbar">
-  <a href="../02-trang-chu/index.html"><span class="ico">🏠</span>Trang chủ</a>
-  <a href="../03-tu-vung/index.html" class="active"><span class="ico">📇</span>Từ vựng</a>
-  <a href="../04-on-tap/index.html"><span class="ico">🔁</span>Ôn tập</a>
-  <a href="../05-bai-tap/index.html"><span class="ico">📝</span>Bài tập</a>
-  <button id="tabMenu"><span class="ico">☰</span>Menu</button>
-</nav>
-<script>
-var sb=document.getElementById('sidebar'),ov=document.getElementById('overlay');
-function menu(o){sb.classList.toggle('open',o);ov.classList.toggle('show',o);}
-document.getElementById('burger').onclick=function(){menu(true)};
-document.getElementById('sideClose').onclick=function(){menu(false)};
-ov.onclick=function(){menu(false)};
-var tm=document.getElementById('tabMenu'); if(tm) tm.onclick=function(){menu(true)};
-document.querySelectorAll('[data-flip]').forEach(function(f){
-  f.addEventListener('click',function(){f.classList.toggle('flipped')});
-  f.querySelectorAll('input,textarea,button').forEach(function(i){i.addEventListener('click',function(e){e.stopPropagation()})});
-});
-document.querySelectorAll('.tabs:not([data-static])').forEach(function(g){g.querySelectorAll('.tab').forEach(function(t){if(t.tagName==='BUTTON')t.onclick=function(){g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-document.querySelectorAll('.pills').forEach(function(g){g.querySelectorAll('.pill').forEach(function(t){t.onclick=function(){g.querySelectorAll('.pill').forEach(function(x){x.classList.remove('active')});t.classList.add('active');}})});
-</script>
+</div>
 
+<script src="../app.js"></script>
+<script>
+  document.getElementById('btnAdd').onclick   = function(){
+    document.getElementById('formAdd').style.display='block';
+    document.querySelector('#formAdd .input').focus(); };
+  document.getElementById('btnClose').onclick = function(){
+    document.getElementById('formAdd').style.display='none'; };
+</script>
 </body>
 </html>
