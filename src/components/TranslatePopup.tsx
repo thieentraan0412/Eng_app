@@ -93,7 +93,8 @@ export default function TranslatePopup({ onSave }: Props) {
   useEffect(() => {
     function handleMouseUp(e: MouseEvent) {
       // Bôi chữ BÊN TRONG popup (VD: đang sửa nghĩa) -> không mở popup mới
-      if ((e.target as HTMLElement).closest('.translate-popup')) return
+      const target = e.target as HTMLElement
+      if (target.closest('.translate-popup') || target.closest('.reading-text')) return
       let text = ''
       let x = 0
       let top = 0

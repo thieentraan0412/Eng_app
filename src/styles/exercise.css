@@ -686,10 +686,10 @@
   border-color: color-mix(in srgb, var(--success) 45%, var(--border));
   background: color-mix(in srgb, var(--success) 7%, var(--surface));
 }
-.ro-answer.no {
+.ro-answer.is-drag-over {
   border-style: solid;
-  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
-  background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+  border-color: var(--primary);
+  background: var(--primary-tint);
 }
 .ro-placeholder {
   margin: auto;
@@ -702,7 +702,25 @@
   flex-wrap: wrap;
   gap: 7px;
   justify-content: center;
+  align-items: center;
   width: 100%;
+  min-height: 52px;
+  padding: 7px;
+  border: 1px dashed transparent;
+  border-radius: var(--r-md);
+  transition: border-color 0.14s, background 0.14s;
+}
+.ro-bank:empty {
+  border-color: var(--border);
+}
+.ro-bank:empty::after {
+  content: 'Thả từ vào đây';
+  color: var(--muted);
+  font-size: 12px;
+}
+.ro-bank.is-drag-over {
+  border-color: var(--primary);
+  background: var(--primary-tint);
 }
 .ro-chip {
   padding: 7px 13px;
@@ -723,28 +741,56 @@
   background: var(--primary-tint);
   color: var(--primary);
 }
+.ro-chip[draggable='true'] {
+  cursor: grab;
+}
+.ro-chip.is-dragging {
+  opacity: 0.35;
+  cursor: grabbing;
+}
+.ro-chip.is-drop-before {
+  box-shadow: -3px 0 0 var(--primary);
+}
+.ro-chip:disabled {
+  cursor: default;
+  opacity: 1;
+}
 /* Từ đã xếp vào câu: nền chìm, hover đỏ vì bấm là trả lại kho */
 .ro-answer .ro-chip {
   background: var(--surface-2);
   box-shadow: none;
 }
-.ro-answer .ro-chip:hover {
+.ro-answer .ro-chip:not(:disabled):hover {
   background: color-mix(in srgb, var(--danger) 10%, var(--surface));
   border-color: color-mix(in srgb, var(--danger) 38%, var(--border));
   color: var(--danger);
 }
-.ro-solution {
-  width: 100%;
-  padding: 11px 14px;
-  border-radius: var(--r-md);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--success);
-  font-size: 13.5px;
-  line-height: 1.55;
+.ro-answer .ro-chip.is-wrong,
+.ro-answer .ro-chip.is-wrong:hover {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 48%, var(--border));
+  color: var(--danger);
 }
-.ro-solution span {
-  color: var(--muted);
+.ro-answer-reveal {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 11px 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+  border-radius: var(--r-md);
+  background: var(--primary-tint);
+  color: var(--text);
+}
+.ro-answer-reveal span {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  font-size: 12.5px;
+}
+.ro-answer-reveal strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 /* ---------- Băng phản hồi sau khi chấm ---------- */

@@ -43,6 +43,13 @@ contextBridge.exposeInMainWorld('api', {
 
   // ----- Cửa sổ: luôn nổi trên cùng + thu gọn kiểu hình-trong-hình -----
   setAlwaysOnTop: (on: boolean): Promise<boolean> => ipcRenderer.invoke('window:always-on-top', on),
+  setAlwaysOnTopHotkey: (accel: string): Promise<boolean> =>
+    ipcRenderer.invoke('window:always-on-top-hotkey:set', accel),
+  onAlwaysOnTopState: (cb: (on: boolean) => void): (() => void) => {
+    const h = (_event: IpcRendererEvent, on: boolean) => cb(on)
+    ipcRenderer.on('window:always-on-top-state', h)
+    return () => ipcRenderer.removeListener('window:always-on-top-state', h)
+  },
   setMiniWindow: (on: boolean): Promise<boolean> => ipcRenderer.invoke('window:mini', on),
   getWindowState: (): Promise<{ alwaysOnTop: boolean; mini: boolean }> =>
     ipcRenderer.invoke('window:get-state'),

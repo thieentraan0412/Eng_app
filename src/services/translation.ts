@@ -14,6 +14,17 @@ export interface DictEntry {
 }
 
 const dict = rawDict as Record<string, DictEntry>
+const TRANSLATE_TIMEOUT_MS = 6000
+
+async function fetchWithTimeout(url: string): Promise<Response> {
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), TRANSLATE_TIMEOUT_MS)
+  try {
+    return await fetch(url, { signal: controller.signal })
+  } finally {
+    window.clearTimeout(timer)
+  }
+}
 
 export interface TranslateResult {
   word: string
@@ -64,9 +75,8 @@ export function glossPhrase(text: string): WordGloss[] {
 // Ưu tiên Google Translate (đáng tin cả với từ đơn), dự phòng MyMemory.
 // Trả null nếu lỗi/không dịch được (kể cả khi API trả lại đúng từ gốc tiếng Anh).
 export async function translateOnline(text: string): Promise<string | null> {
-  const g = await googleTranslate(text)
-  if (g) return g
-  return myMemoryTranslate(text)
+  const [google, memory] = await Promise.all([googleTranslate(text), myMemoryTranslate(text)])
+  return google ?? memory
 }
 
 // Tra ĐA NGHĨA online — dùng chế độ từ điển của Google (dt=bd):
@@ -159,7 +169,7 @@ async function fetchSensesRaw(word: string): Promise<OnlineSense[]> {
     const url =
       'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&dt=bd&q=' +
       encodeURIComponent(word)
-    const res = await fetch(url)
+    const res = await fetchWithTimeout(url)
     if (!res.ok) return []
     const data = await res.json()
 
@@ -224,7 +234,7 @@ async function googleTranslate(text: string): Promise<string | null> {
     const url =
       'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=' +
       encodeURIComponent(text)
-    const res = await fetch(url)
+    const res = await fetchWithTimeout(url)
     if (!res.ok) return null
     const data = await res.json()
     // data[0] = danh sách các đoạn [đoạnDịch, đoạnGốc, …] -> nối lại thành câu
@@ -242,7 +252,7 @@ async function myMemoryTranslate(text: string): Promise<string | null> {
   try {
     const url =
       'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=en|vi'
-    const res = await fetch(url)
+    const res = await fetchWithTimeout(url)
     if (!res.ok) return null
     const data = await res.json()
     return accept(data?.responseData?.translatedText, text)
@@ -254,9 +264,8 @@ async function myMemoryTranslate(text: string): Promise<string | null> {
 // ---------- Dịch NGƯỢC: Việt -> Anh (dùng khi import câu tiếng Việt) ----------
 // Trả null nếu lỗi/không dịch được. Cần internet.
 export async function translateToEnglish(text: string): Promise<string | null> {
-  const g = await googleTranslateVE(text)
-  if (g) return g
-  return myMemoryTranslateVE(text)
+  const [google, memory] = await Promise.all([googleTranslateVE(text), myMemoryTranslateVE(text)])
+  return google ?? memory
 }
 
 async function googleTranslateVE(text: string): Promise<string | null> {
@@ -264,7 +273,7 @@ async function googleTranslateVE(text: string): Promise<string | null> {
     const url =
       'https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=en&dt=t&q=' +
       encodeURIComponent(text)
-    const res = await fetch(url)
+    const res = await fetchWithTimeout(url)
     if (!res.ok) return null
     const data = await res.json()
     const segs = data?.[0]
@@ -280,7 +289,7 @@ async function myMemoryTranslateVE(text: string): Promise<string | null> {
   try {
     const url =
       'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=vi|en'
-    const res = await fetch(url)
+    const res = await fetchWithTimeout(url)
     if (!res.ok) return null
     const data = await res.json()
     return accept(data?.responseData?.translatedText, text)

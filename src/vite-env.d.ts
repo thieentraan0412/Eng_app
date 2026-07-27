@@ -35,6 +35,8 @@ export interface EngMasterApi {
 
   // Cửa sổ (luôn nổi trên cùng / thu gọn hình-trong-hình)
   setAlwaysOnTop: (on: boolean) => Promise<boolean>
+  setAlwaysOnTopHotkey: (accel: string) => Promise<boolean>
+  onAlwaysOnTopState: (cb: (on: boolean) => void) => () => void
   setMiniWindow: (on: boolean) => Promise<boolean>
   getWindowState: () => Promise<{ alwaysOnTop: boolean; mini: boolean }>
 

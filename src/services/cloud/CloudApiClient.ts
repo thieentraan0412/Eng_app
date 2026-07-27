@@ -201,7 +201,7 @@ export interface DeckStat {
 }
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10)
+  return localDay()
 }
 
 // Ngày YYYY-MM-DD theo GIỜ ĐỊA PHƯƠNG cách hôm nay `offset` ngày

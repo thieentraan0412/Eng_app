@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { CloudApi, type Reading, type ReadingHighlight } from '../services/cloud/CloudApiClient'
+import {
+  CloudApi,
+  type Deck,
+  type Reading,
+  type ReadingHighlight,
+} from '../services/cloud/CloudApiClient'
 import { bestEnglishVoice, speak, ttsSupported } from '../services/tts'
+import { isSingleWord, translate, translateOnline } from '../services/translation'
 import Icon from '../components/Icon'
 import '../styles/reading.css'
 
@@ -75,19 +81,60 @@ function splitChunks(text: string): string[] {
   return chunks
 }
 
+function sentenceAround(text: string, start: number, end: number): string {
+  const before = text.slice(0, start)
+  const left = Math.max(
+    before.lastIndexOf('.'),
+    before.lastIndexOf('!'),
+    before.lastIndexOf('?'),
+    before.lastIndexOf('\n'),
+  )
+  const after = text.slice(end)
+  const stops = [after.indexOf('.'), after.indexOf('!'), after.indexOf('?'), after.indexOf('\n')]
+    .filter((i) => i >= 0)
+    .sort((a, b) => a - b)
+  const right = stops.length ? end + stops[0] + 1 : text.length
+  return text
+    .slice(left + 1, right)
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+interface SaveWordEntry {
+  word: string
+  meaning: string
+  phonetic?: string
+  pos?: string
+}
+
+interface SavedReadingWord extends SaveWordEntry {
+  example?: string
+}
+
+interface LookupState {
+  word: string
+  meaning: string | null
+  phonetic?: string
+  pos?: string
+  example: string
+  status: 'loading' | 'ready' | 'error'
+}
+
 interface ViewerProps {
   reading: Reading
   onBack: () => void
   onHighlightsChange: (highlights: ReadingHighlight[]) => void
+  onSaveWord: (entry: SaveWordEntry, deckId?: string) => Promise<void>
 }
 
 // Trình đọc 1 bài: bôi chọn văn bản -> thanh chọn màu hiện phía trên vùng chọn;
 // bấm vào vùng đã bôi -> thêm/sửa ghi chú; nghe đọc cả bài bằng TTS.
-function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
+function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: ViewerProps) {
   const contentRef = useRef<HTMLDivElement>(null)
+  const lookupRequestRef = useRef(0)
   const text = reading.content ?? ''
   const storageKey = `reading_hl_${reading.id}`
-  const lookupKey = `reading_lookups_${reading.id}`
+  const savedWordsKey = `reading_saved_words_${reading.id}`
 
   const [highlights, setHighlights] = useState<ReadingHighlight[]>(() => {
     if (reading.highlights?.length) return reading.highlights
@@ -108,14 +155,19 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
     end: number
     draft: string
   } | null>(null)
-  // Các từ đã tra trong bài này (bôi chọn từ/cụm ngắn -> popup dịch hiện ra)
-  const [lookups, setLookups] = useState<string[]>(() => {
+  const [savedInReading, setSavedInReading] = useState<SavedReadingWord[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem(lookupKey) ?? '[]') as string[]
+      const value = JSON.parse(localStorage.getItem(savedWordsKey) ?? '[]') as unknown
+      return Array.isArray(value) ? (value as SavedReadingWord[]) : []
     } catch {
       return []
     }
   })
+  const [lookup, setLookup] = useState<LookupState | null>(null)
+  const [savingWord, setSavingWord] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [decks, setDecks] = useState<Deck[]>([])
+  const [deckId, setDeckId] = useState('')
   // Trạng thái đọc bài bằng TTS
   const [tts, setTts] = useState<'idle' | 'playing' | 'paused'>('idle')
   // Cỡ chữ vùng đọc (nhớ lựa chọn) · chế độ tập trung · tiến độ đọc
@@ -168,19 +220,106 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
     }
   }, [fontSize])
 
-  // Cuộn tới vùng đã bôi khi bấm ở cột bên phải + nháy sáng để dễ thấy
-  const scrollToHighlight = (h: ReadingHighlight) => {
-    const el = contentRef.current?.querySelector<HTMLElement>(
-      `mark[data-range="${h.start}-${h.end}"]`,
-    )
-    if (!el) return
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    el.classList.remove('is-flash')
-    void el.offsetWidth // ép trình duyệt tính lại để animation chạy lại
-    el.classList.add('is-flash')
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length
+
+  const lookupText = (selectedText: string, example: string) => {
+    const source = selectedText.replace(/\s+/g, ' ').trim()
+    if (!source || source.length > 200 || !/[A-Za-z]/.test(source)) return
+
+    const requestId = ++lookupRequestRef.current
+    const offline = isSingleWord(source) ? translate(source) : null
+    setSaveError(null)
+
+    if (offline?.vi) {
+      setLookup({
+        word: offline.word,
+        meaning: offline.vi,
+        phonetic: offline.phonetic,
+        pos: offline.pos,
+        example,
+        status: 'ready',
+      })
+      return
+    }
+
+    setLookup({ word: source, meaning: null, example, status: 'loading' })
+    void translateOnline(source).then((meaning) => {
+      if (lookupRequestRef.current !== requestId) return
+      setLookup({
+        word: source,
+        meaning,
+        example,
+        status: meaning ? 'ready' : 'error',
+      })
+    })
   }
 
-  const wordCount = text.trim().split(/\s+/).filter(Boolean).length
+  const persistSavedWords = (next: SavedReadingWord[]) => {
+    setSavedInReading(next)
+    try {
+      localStorage.setItem(savedWordsKey, JSON.stringify(next))
+    } catch {
+      /* localStorage đầy: vẫn giữ trạng thái trong phiên hiện tại */
+    }
+  }
+
+  const saveLookupWord = async () => {
+    if (!lookup?.meaning || lookup.status !== 'ready' || savingWord) return
+    setSavingWord(true)
+    setSaveError(null)
+    const entry: SavedReadingWord = {
+      word: lookup.word,
+      meaning: lookup.meaning,
+      phonetic: lookup.phonetic,
+      pos: lookup.pos,
+      example: lookup.example,
+    }
+    try {
+      await onSaveWord(entry, deckId || undefined)
+      const key = entry.word.trim().toLowerCase()
+      persistSavedWords([
+        entry,
+        ...savedInReading.filter((item) => item.word.trim().toLowerCase() !== key),
+      ])
+    } catch {
+      setSaveError('Không thể lưu từ. Vui lòng kiểm tra kết nối rồi thử lại.')
+    } finally {
+      setSavingWord(false)
+    }
+  }
+
+  const removeSavedWord = (word: string) => {
+    const key = word.trim().toLowerCase()
+    persistSavedWords(savedInReading.filter((item) => item.word.trim().toLowerCase() !== key))
+  }
+
+  useEffect(
+    () => () => {
+      lookupRequestRef.current += 1
+    },
+    [],
+  )
+
+  useEffect(() => {
+    let cancelled = false
+    void CloudApi.listDecks()
+      .then((items) => {
+        if (cancelled) return
+        setDecks(items)
+        const lastDeckId = localStorage.getItem('last_deck_id')
+        setDeckId(
+          (lastDeckId && items.some((deck) => deck.id === lastDeckId)
+            ? lastDeckId
+            : items[0]?.id) ?? '',
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setDecks([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Đóng thanh màu / popover ghi chú khi bấm ra ngoài
   useEffect(() => {
@@ -217,25 +356,8 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
     const rect = range.getBoundingClientRect()
     setBar({ x: rect.left + rect.width / 2, y: rect.top - 8, start, end })
 
-    // Thống kê từ đã tra: chỉ tính cụm ngắn dạng chữ (≤3 từ, ≤40 ký tự)
     const selText = range.toString().trim()
-    if (
-      /^[A-Za-z][A-Za-z' -]*$/.test(selText) &&
-      selText.length <= 40 &&
-      selText.split(/\s+/).length <= 3
-    ) {
-      const w = selText.toLowerCase()
-      setLookups((ls) => {
-        if (ls.includes(w)) return ls
-        const next = [...ls, w]
-        try {
-          localStorage.setItem(lookupKey, JSON.stringify(next))
-        } catch {
-          /* đầy -> bỏ qua */
-        }
-        return next
-      })
-    }
+    lookupText(selText, sentenceAround(text, start, end))
   }
 
   const save = (next: ReadingHighlight[]) => {
@@ -271,11 +393,6 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
       ),
     )
     setNotePop(null)
-  }
-
-  const clearLookups = () => {
-    setLookups([])
-    localStorage.removeItem(lookupKey)
   }
 
   // ----- TTS đọc cả bài: xếp hàng từng đoạn ngắn, tạm dừng / tiếp tục được -----
@@ -428,74 +545,147 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
 
         {/* ------------------------------------------- Cột bên phải */}
         <aside className="read-aside">
-          <div className="read-card-box">
+          <div className="read-card-box read-lookup-card">
             <div className="read-card-head">
               <h2>
-                <Icon name="bulb" /> Vùng đã bôi
+                <Icon name="search" /> Tra từ
               </h2>
-              <span className="read-card-hint">{highlights.length}</span>
             </div>
-            {highlights.length === 0 ? (
-              <p className="read-saved-empty">
-                Chưa bôi vùng nào. Bôi chữ trong bài rồi chọn màu để đánh dấu, bấm lại vùng đã
-                bôi để thêm ghi chú.
+            {!lookup ? (
+              <p className="read-lookup-empty">
+                Bôi một từ hoặc cụm từ bất kỳ trong bài để xem nghĩa, ngữ cảnh và lưu vào bộ từ
+                của bạn.
               </p>
             ) : (
-              highlights.map((h) => (
-                <div key={`${h.start}-${h.end}`}>
-                  <button
-                    className="read-saved-row"
-                    onClick={() => scrollToHighlight(h)}
-                    title="Bấm để tới vị trí trong bài"
-                  >
-                    <span className={`read-saved-dot hl-${h.color}`} />
-                    <b>{text.slice(h.start, h.end)}</b>
-                    <span
-                      className="read-ibtn danger"
-                      role="button"
-                      tabIndex={0}
-                      title="Bỏ bôi"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        save(subtractRange(highlights, h.start, h.end))
-                      }}
+              <div className="read-lookup-body">
+                <div className="read-lookup-word">
+                  <span>{lookup.word}</span>
+                  {ttsSupported && (
+                    <button
+                      className="read-ibtn"
+                      type="button"
+                      title="Phát âm"
+                      aria-label={`Phát âm ${lookup.word}`}
+                      onClick={() => speak(lookup.word)}
                     >
-                      <Icon name="trash" />
-                    </span>
-                  </button>
-                  {h.note && (
-                    <span className="read-saved-note">
-                      <Icon name="pencil" /> {h.note}
-                    </span>
+                      <Icon name="speak" />
+                    </button>
                   )}
                 </div>
-              ))
+
+                {lookup.status === 'loading' ? (
+                  <p className="read-lookup-loading">Đang tra nghĩa…</p>
+                ) : lookup.status === 'error' || !lookup.meaning ? (
+                  <>
+                    <p className="read-lookup-unavailable">Chưa tìm thấy nghĩa phù hợp</p>
+                    <p className="read-lookup-example">
+                      Không thể kết nối dịch trực tuyến. Vui lòng kiểm tra mạng rồi bôi lại từ.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="read-lookup-meaning">{lookup.meaning}</p>
+                    {lookup.example && <p className="read-lookup-example">{lookup.example}</p>}
+                  </>
+                )}
+
+                {saveError && <p className="read-lookup-error">{saveError}</p>}
+                {lookup.status === 'ready' && lookup.meaning && (
+                  <>
+                    <label className="read-deck-picker">
+                      <span>Chọn bộ từ để lưu</span>
+                      <select
+                        value={deckId}
+                        onChange={(event) => setDeckId(event.target.value)}
+                        disabled={savingWord || decks.length === 0}
+                      >
+                        {decks.length === 0 ? (
+                          <option value="">Bộ từ mặc định</option>
+                        ) : (
+                          decks.map((deck) => (
+                            <option key={deck.id} value={deck.id}>
+                              {deck.name}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      className="read-btn read-btn-sm read-btn-primary read-lookup-save"
+                      disabled={
+                        savingWord ||
+                        savedInReading.some(
+                          (item) =>
+                            item.word.trim().toLowerCase() === lookup.word.trim().toLowerCase(),
+                        )
+                      }
+                      onClick={saveLookupWord}
+                    >
+                      {savedInReading.some(
+                        (item) =>
+                          item.word.trim().toLowerCase() === lookup.word.trim().toLowerCase(),
+                      ) ? (
+                        <>
+                          <Icon name="check" /> Đã lưu vào bộ từ
+                        </>
+                      ) : (
+                        <>
+                          <Icon name="plus" /> {savingWord ? 'Đang lưu…' : 'Lưu vào bộ từ'}
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
             )}
           </div>
 
           <div className="read-card-box">
             <div className="read-card-head">
               <h2>
-                <Icon name="search" /> Từ đã tra
+                <Icon name="bulb" /> Đã lưu trong bài
               </h2>
-              {lookups.length > 0 ? (
-                <button className="read-card-hint" onClick={clearLookups}>
-                  Xóa lịch sử
-                </button>
-              ) : (
-                <span className="read-card-hint">0</span>
-              )}
+              <span className="read-card-hint">{savedInReading.length}</span>
             </div>
-            {lookups.length === 0 ? (
+            {savedInReading.length === 0 ? (
               <p className="read-saved-empty">
-                Bôi một từ trong bài để tra nghĩa — các từ đã tra sẽ được liệt kê ở đây.
+                Chưa lưu từ nào. Bôi một từ trong bài rồi bấm <b>Lưu vào bộ từ</b>.
               </p>
             ) : (
-              <div className="read-lookup-chips">
-                {lookups.map((w) => (
-                  <span className="read-tok" key={w}>
-                    {w}
-                  </span>
+              <div className="read-vocab-list">
+                {savedInReading.map((item) => (
+                  <div className="read-vocab-row" key={item.word.toLowerCase()}>
+                    <button
+                      type="button"
+                      className="read-vocab-main"
+                      title="Xem lại nghĩa"
+                      onClick={() => {
+                        lookupRequestRef.current += 1
+                        setSaveError(null)
+                        setLookup({
+                          word: item.word,
+                          meaning: item.meaning,
+                          phonetic: item.phonetic,
+                          pos: item.pos,
+                          example: item.example ?? '',
+                          status: 'ready',
+                        })
+                      }}
+                    >
+                      <b>{item.word}</b>
+                      <span>{item.meaning || '—'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="read-ibtn danger"
+                      title="Bỏ khỏi danh sách trong bài"
+                      aria-label={`Bỏ ${item.word} khỏi danh sách trong bài`}
+                      onClick={() => removeSavedWord(item.word)}
+                    >
+                      <Icon name="trash" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -588,7 +778,11 @@ function ReadingViewer({ reading, onBack, onHighlightsChange }: ViewerProps) {
 }
 
 // Trang Đọc — danh sách bài đọc (lưu cloud); mở bài để đọc + bôi màu tra từ.
-export default function ReadingPage() {
+interface ReadingPageProps {
+  onSaveWord: (entry: SaveWordEntry, deckId?: string) => Promise<void>
+}
+
+export default function ReadingPage({ onSaveWord }: ReadingPageProps) {
   const [readings, setReadings] = useState<Reading[]>([])
   const [selected, setSelected] = useState<Reading | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -638,6 +832,7 @@ export default function ReadingPage() {
       <ReadingViewer
         reading={selected}
         onBack={() => setSelected(null)}
+        onSaveWord={onSaveWord}
         onHighlightsChange={(hs) => {
           setSelected((s) => (s ? { ...s, highlights: hs } : s))
           setReadings((x) => x.map((r) => (r.id === selected.id ? { ...r, highlights: hs } : r)))

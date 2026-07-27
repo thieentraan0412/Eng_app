@@ -125,6 +125,34 @@ function setAlwaysOnTop(on: boolean) {
 // Bật/tắt cửa sổ luôn nổi trên các ứng dụng khác
 ipcMain.handle('window:always-on-top', (_e, on: boolean): boolean => setAlwaysOnTop(on))
 
+// ---------- Phím tắt toàn cục: bật/tắt "Luôn nổi trên cùng" ----------
+let alwaysOnTopHotkey = ''
+
+function toggleAlwaysOnTopByHotkey() {
+  if (!win || win.isDestroyed() || boundsBeforeMini !== null) return
+  const next = setAlwaysOnTop(!win.isAlwaysOnTop())
+  win.webContents.send('window:always-on-top-state', next)
+}
+
+ipcMain.handle('window:always-on-top-hotkey:set', (_e, accel: string): boolean => {
+  if (alwaysOnTopHotkey) {
+    try {
+      globalShortcut.unregister(alwaysOnTopHotkey)
+    } catch {
+      /* bỏ qua */
+    }
+    alwaysOnTopHotkey = ''
+  }
+  if (!accel) return true
+  try {
+    const ok = globalShortcut.register(accel, toggleAlwaysOnTopByHotkey)
+    if (ok) alwaysOnTopHotkey = accel
+    return ok
+  } catch {
+    return false
+  }
+})
+
 // Thu gọn về góc phải-dưới màn hình đang chứa cửa sổ / khôi phục kích thước cũ
 ipcMain.handle('window:mini', (_e, on: boolean): boolean => {
   if (!win || win.isDestroyed()) return false

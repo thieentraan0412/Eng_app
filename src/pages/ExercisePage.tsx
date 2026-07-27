@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { CloudApi, type Card, type Deck } from '../services/cloud/CloudApiClient'
 import { speak, ttsSupported } from '../services/tts'
 import { track } from '../services/studyTracker'
@@ -377,6 +377,8 @@ function VocabQuiz({
   const [idx, setIdx] = useState(initial.startIdx)
   // Đáp án đã chọn theo từng câu (id thẻ đúng -> id thẻ đã chọn) — lùi lại vẫn thấy lựa chọn cũ
   const [answers, setAnswers] = useState<Record<string, string>>(initial.answers)
+  // Dùng chung tùy chọn tự phát âm với trang Ôn tập / Cài đặt.
+  const autoSpeak = localStorage.getItem('fc_autospeak') !== '0'
 
   // Mỗi lần trả lời / đổi đề -> lưu tiến độ vào localStorage (offline)
   // + đẩy lên Supabase để thiết bị khác vào là tiếp đúng câu
@@ -401,6 +403,14 @@ function VocabQuiz({
   const answered = picked !== null
   const en2vi = direction === 'en2vi'
 
+  // Chiều Anh→Việt: từ tiếng Anh hiện ngay nên đọc mỗi khi chuyển sang câu mới.
+  // Chiều Việt→Anh không đọc ở đây để tránh làm lộ đáp án.
+  useEffect(() => {
+    if (!ttsSupported || !autoSpeak || !en2vi || !q) return
+    const timer = window.setTimeout(() => speak(q.card.word), 0)
+    return () => window.clearTimeout(timer)
+  }, [autoSpeak, en2vi, q?.card.id])
+
   // Số câu đúng tính từ toàn bộ đáp án đã chọn
   const right = questions.filter((x) => answers[x.card.id] === x.card.id).length
 
@@ -422,8 +432,8 @@ function VocabQuiz({
   const choose = (c: Card) => {
     if (answered || !q) return
     setAnswers((a) => ({ ...a, [q.card.id]: c.id }))
-    // Chọn xong mới đọc từ tiếng Anh (chiều Việt→Anh đọc sớm sẽ lộ đáp án)
-    if (ttsSupported) speak(q.card.word)
+    // Chiều Việt→Anh chỉ đọc sau khi chọn, khi đáp án tiếng Anh đã được mở.
+    if (ttsSupported && autoSpeak && !en2vi) speak(q.card.word)
     // Chọn ĐÚNG -> tự nhảy sang câu mới; chọn sai thì đứng lại để xem đáp án
     if (c.id === q.card.id) {
       autoNext.current = window.setTimeout(() => {
@@ -716,6 +726,10 @@ const normSentence = (chips: Chip[]) =>
     .replace(/\s+/g, ' ')
     .trim()
 
+const sameChipText = (left: Chip, right: Chip | undefined) =>
+  right !== undefined &&
+  left.text.trim().toLocaleLowerCase() === right.text.trim().toLocaleLowerCase()
+
 // Xáo trộn chip sao cho KHÁC thứ tự gốc (thử vài lần, cùng lắm đảo ngược)
 function scramble(chips: Chip[]): Chip[] {
   if (chips.length < 2) return [...chips]
@@ -756,6 +770,13 @@ function ReorderQuiz({
   const [bank, setBank] = useState<Chip[]>([]) // các từ còn trong kho
   const [checked, setChecked] = useState(false)
   const [correct, setCorrect] = useState(false)
+  const [showAnswer, setShowAnswer] = useState(false)
+  const [draggingId, setDraggingId] = useState<number | null>(null)
+  const [dropTarget, setDropTarget] = useState<{
+    area: 'placed' | 'bank'
+    index: number
+  } | null>(null)
+  const justDragged = useRef(false)
   // Kết quả từng câu để tính điểm ở màn cuối
   const [results, setResults] = useState<boolean[]>([])
 
@@ -768,6 +789,9 @@ function ReorderQuiz({
     setPlaced([])
     setChecked(false)
     setCorrect(false)
+    setShowAnswer(false)
+    setDraggingId(null)
+    setDropTarget(null)
   }, [idx, q])
 
   // Xong toàn bộ -> đếm +1 quiz vào study_stats (1 lần / lượt)
@@ -791,6 +815,78 @@ function ReorderQuiz({
       setBank((b) => [...b, chip])
       return p.filter((_, i) => i !== from)
     })
+  }
+
+  const moveChip = (chipId: number, area: 'placed' | 'bank', targetIndex: number) => {
+    if (checked) return
+    const chip = [...placed, ...bank].find((item) => item.id === chipId)
+    if (!chip) return
+
+    const sourceArea = placed.some((item) => item.id === chipId) ? 'placed' : 'bank'
+    const source = sourceArea === 'placed' ? placed : bank
+    const sourceIndex = source.findIndex((item) => item.id === chipId)
+    const nextPlaced = placed.filter((item) => item.id !== chipId)
+    const nextBank = bank.filter((item) => item.id !== chipId)
+    const target = area === 'placed' ? nextPlaced : nextBank
+    let insertAt = targetIndex
+    if (sourceArea === area && sourceIndex >= 0 && sourceIndex < targetIndex) insertAt -= 1
+    insertAt = Math.max(0, Math.min(insertAt, target.length))
+    target.splice(insertAt, 0, chip)
+
+    setPlaced(nextPlaced)
+    setBank(nextBank)
+  }
+
+  const startDrag = (event: DragEvent<HTMLButtonElement>, chipId: number) => {
+    if (checked) {
+      event.preventDefault()
+      return
+    }
+    justDragged.current = true
+    setDraggingId(chipId)
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', String(chipId))
+  }
+
+  const finishDrag = () => {
+    setDraggingId(null)
+    setDropTarget(null)
+    window.setTimeout(() => {
+      justDragged.current = false
+    }, 0)
+  }
+
+  const dropChip = (
+    event: DragEvent<HTMLElement>,
+    area: 'placed' | 'bank',
+    index: number,
+  ) => {
+    event.preventDefault()
+    event.stopPropagation()
+    const raw = event.dataTransfer.getData('text/plain')
+    const transferred = raw ? Number(raw) : Number.NaN
+    const chipId = draggingId ?? (Number.isFinite(transferred) ? transferred : null)
+    if (chipId !== null) moveChip(chipId, area, index)
+    finishDrag()
+  }
+
+  const dragOver = (
+    event: DragEvent<HTMLElement>,
+    area: 'placed' | 'bank',
+    index: number,
+  ) => {
+    if (checked) return
+    event.preventDefault()
+    event.stopPropagation()
+    event.dataTransfer.dropEffect = 'move'
+    setDropTarget((current) =>
+      current?.area === area && current.index === index ? current : { area, index },
+    )
+  }
+
+  const clickWithoutDrag = (action: () => void) => {
+    if (justDragged.current) return
+    action()
   }
 
   const check = () => {
@@ -918,34 +1014,84 @@ function ReorderQuiz({
 
         {/* Vùng đã xếp — bấm 1 từ để trả lại kho */}
         <div
-          className={`ro-answer ${checked ? (correct ? 'ok' : 'no') : placed.length ? 'is-filled' : ''}`}
+          className={`ro-answer${checked && correct ? ' ok' : placed.length ? ' is-filled' : ''}${
+            dropTarget?.area === 'placed' && dropTarget.index === placed.length
+              ? ' is-drag-over'
+              : ''
+          }`}
+          onDragOver={(event) => dragOver(event, 'placed', placed.length)}
+          onDrop={(event) => dropChip(event, 'placed', placed.length)}
         >
           {placed.length === 0 ? (
-            <span className="ro-placeholder">Bấm các từ bên dưới để xếp câu…</span>
+            <span className="ro-placeholder">Bấm hoặc kéo từ vào đây để xếp câu…</span>
           ) : (
-            placed.map((c, i) => (
-              <button key={`${c.id}-${i}`} className="ro-chip" onClick={() => unpick(i)}>
-                {c.text}
-              </button>
-            ))
+            placed.map((c, i) => {
+              const wrong = checked && !sameChipText(c, q.answer[i])
+              const dropBefore =
+                dropTarget?.area === 'placed' &&
+                dropTarget.index === i &&
+                draggingId !== c.id
+              return (
+                <button
+                  key={c.id}
+                  className={`ro-chip${wrong ? ' is-wrong' : ''}${
+                    draggingId === c.id ? ' is-dragging' : ''
+                  }${dropBefore ? ' is-drop-before' : ''}`}
+                  draggable={!checked}
+                  disabled={checked}
+                  onClick={() => clickWithoutDrag(() => unpick(i))}
+                  onDragStart={(event) => startDrag(event, c.id)}
+                  onDragEnd={finishDrag}
+                  onDragOver={(event) => dragOver(event, 'placed', i)}
+                  onDrop={(event) => dropChip(event, 'placed', i)}
+                  title={checked ? (wrong ? 'Từ này sai vị trí' : 'Đúng vị trí') : 'Kéo để đổi vị trí'}
+                >
+                  {c.text}
+                </button>
+              )
+            })
           )}
         </div>
 
-        {/* Kho từ đã xáo trộn */}
-        {!checked && (
-          <div className="ro-bank">
-            {bank.map((c, i) => (
-              <button key={`${c.id}-${i}`} className="ro-chip" onClick={() => pick(c, i)}>
-                {c.text}
-              </button>
-            ))}
+        {checked && showAnswer && (
+          <div className="ro-answer-reveal" role="status">
+            <span>Đáp án đúng</span>
+            <strong>{q.answer.map((chip) => chip.text).join(' ')}</strong>
           </div>
         )}
 
-        {/* Phản hồi sau khi chấm */}
-        {checked && !correct && (
-          <div className="ro-solution">
-            <span>Đáp án đúng:</span> {q.sentence}
+        {/* Kho từ đã xáo trộn */}
+        {!checked && (
+          <div
+            className={`ro-bank${
+              dropTarget?.area === 'bank' && dropTarget.index === bank.length
+                ? ' is-drag-over'
+                : ''
+            }`}
+            onDragOver={(event) => dragOver(event, 'bank', bank.length)}
+            onDrop={(event) => dropChip(event, 'bank', bank.length)}
+          >
+            {bank.map((c, i) => {
+              const dropBefore =
+                dropTarget?.area === 'bank' && dropTarget.index === i && draggingId !== c.id
+              return (
+                <button
+                  key={c.id}
+                  className={`ro-chip${draggingId === c.id ? ' is-dragging' : ''}${
+                    dropBefore ? ' is-drop-before' : ''
+                  }`}
+                  draggable
+                  onClick={() => clickWithoutDrag(() => pick(c, i))}
+                  onDragStart={(event) => startDrag(event, c.id)}
+                  onDragEnd={finishDrag}
+                  onDragOver={(event) => dragOver(event, 'bank', i)}
+                  onDrop={(event) => dropChip(event, 'bank', i)}
+                  title="Kéo vào câu hoặc bấm để thêm"
+                >
+                  {c.text}
+                </button>
+              )
+            })}
           </div>
         )}
 
@@ -957,6 +1103,9 @@ function ReorderQuiz({
             <div className="ex-banner-text">
               <strong>{correct ? 'Chính xác!' : 'Chưa đúng'}</strong>
             </div>
+            <button className="ex-btn" onClick={() => setShowAnswer((value) => !value)}>
+              <Icon name="eye" /> {showAnswer ? 'Ẩn đáp án' : 'Xem đáp án'}
+            </button>
             <button className="ex-btn ex-btn-primary" onClick={next}>
               {idx + 1 < questions.length ? 'Tiếp tục' : 'Xem kết quả'} <Icon name="right" />
             </button>
@@ -983,7 +1132,7 @@ function ReorderQuiz({
         )}
 
         <p className="ex-foot">
-          <span>Bấm từ trong câu để trả lại kho</span>
+          <span>Kéo thả để đổi vị trí · bấm từ trong câu để trả lại kho</span>
           <span>
             <span className="ex-kbd">Esc</span> thoát
           </span>

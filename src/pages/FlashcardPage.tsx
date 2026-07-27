@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type TouchEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from 'react'
 import { CloudApi, type Deck, type Card } from '../services/cloud/CloudApiClient'
 import { previewInterval, type Rating } from '../services/srs'
 import { speak, stopSpeaking, ttsSupported } from '../services/tts'
@@ -50,6 +50,16 @@ function todayLocal(): string {
   ).padStart(2, '0')}`
 }
 
+// Tìm ký tự đầu tiên người dùng nhập sai hoặc còn thiếu.
+function firstMismatchIndex(answer: string, input: string): number {
+  const expected = answer.toLocaleLowerCase()
+  const actual = input.toLocaleLowerCase()
+  const limit = Math.min(expected.length, actual.length)
+  let i = 0
+  while (i < limit && expected[i] === actual[i]) i += 1
+  return i
+}
+
 // Bộ "Từ đã lưu khi đọc" — hiện icon bóng đèn thay chữ cái đầu (giống mockup)
 const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
 
@@ -63,24 +73,46 @@ export default function FlashcardPage() {
   const [reviewedToday, setReviewedToday] = useState(0)
   // Chiều học chọn trước khi vào phiên (dùng chung khóa với ReviewSession)
   const [frontVi, setFrontVi] = useState(() => localStorage.getItem('fc_front_vi') === '1')
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
+    let cancelled = false
+    setDecks(null)
+    setLoadError(null)
     ;(async () => {
       const ds = await CloudApi.listDecks()
       const withCards = await Promise.all(
         ds.map(async (deck) => ({ deck, cards: await CloudApi.listCards(deck.id) })),
       )
-      setDecks(withCards)
-    })().catch(() => setDecks([]))
+      if (!cancelled) setDecks(withCards)
+    })().catch((error) => {
+      if (cancelled) return
+      setDecks([])
+      setLoadError((error as Error).message || 'Không thể tải dữ liệu ôn tập.')
+    })
     CloudApi.listReviewProgress()
-      .then((rows) => setRvMap(new Map(rows.map((r) => [r.deck_id, r.data as ReviewSaved]))))
+      .then((rows) => {
+        if (!cancelled)
+          setRvMap(new Map(rows.map((r) => [r.deck_id, r.data as ReviewSaved])))
+      })
       .catch(() => {
         /* offline -> dùng bản local trong rvPick */
       })
     CloudApi.studyStatsByDay(1)
-      .then((rows) => setReviewedToday(rows[rows.length - 1]?.cards_reviewed ?? 0))
-      .catch(() => setReviewedToday(0))
-  }, [session]) // quay lại từ phiên ôn -> tải lại số liệu mới nhất
+      .then((rows) => {
+        if (!cancelled) {
+          const cloudCount = rows[rows.length - 1]?.cards_reviewed ?? 0
+          setReviewedToday((current) => Math.max(current, cloudCount))
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setReviewedToday(0)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [session, reloadKey]) // quay lại từ phiên ôn -> tải lại số liệu mới nhất
 
   const pickDirection = (vi: boolean) => {
     setFrontVi(vi)
@@ -88,7 +120,13 @@ export default function FlashcardPage() {
   }
 
   if (session) {
-    return <ReviewSession deck={session} onExit={() => setSession(null)} />
+    return (
+      <ReviewSession
+        deck={session}
+        onExit={() => setSession(null)}
+        onReviewed={() => setReviewedToday((count) => count + 1)}
+      />
+    )
   }
 
   const today = todayLocal()
@@ -168,7 +206,16 @@ export default function FlashcardPage() {
       )}
 
       {/* ------------------------------------------------------- Chọn bộ */}
-      {!decks ? (
+      {loadError ? (
+        <div className="fc-empty">
+          <Icon name="alert" />
+          <b>Không thể tải dữ liệu ôn tập</b>
+          <p>{loadError}</p>
+          <button className="fc-btn" type="button" onClick={() => setReloadKey((key) => key + 1)}>
+            <Icon name="refresh" /> Thử lại
+          </button>
+        </div>
+      ) : !decks ? (
         <p className="muted">Đang tải…</p>
       ) : decks.length === 0 ? (
         <div className="fc-empty">
@@ -181,7 +228,12 @@ export default function FlashcardPage() {
           <h2 className="fc-section-label">Chọn bộ để ôn</h2>
           <section className="fc-grid">
             {rows.map(({ deck, cards, learned, due, pct }) => (
-              <button key={deck.id} className="fc-deck" onClick={() => setSession(deck)}>
+              <button
+                key={deck.id}
+                className="fc-deck"
+                disabled={cards.length === 0}
+                onClick={() => setSession(deck)}
+              >
                 <span className="fc-deck-top">
                   <span className="fc-deck-mark">
                     {deck.name.trim() === SAVED_DECK_NAME ? (
@@ -213,7 +265,13 @@ export default function FlashcardPage() {
                     </span>
                   )}
                   <span className="fc-deck-go">
-                    Bắt đầu <Icon name="right" />
+                    {cards.length === 0 ? (
+                      'Chưa thể ôn'
+                    ) : (
+                      <>
+                        Bắt đầu <Icon name="right" />
+                      </>
+                    )}
                   </span>
                 </span>
               </button>
@@ -272,7 +330,15 @@ const RATINGS: { key: Rating; label: string; cls: string }[] = [
   { key: 'easy', label: 'Dễ (4)', cls: 'easy' },
 ]
 
-function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
+function ReviewSession({
+  deck,
+  onExit,
+  onReviewed,
+}: {
+  deck: Deck
+  onExit: () => void
+  onReviewed: () => void
+}) {
   const [queue, setQueue] = useState<Card[] | null>(null)
   const [idx, setIdx] = useState(0)
   const [flipped, setFlipped] = useState(false)
@@ -285,8 +351,14 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   // Câu ví dụ của riêng bạn — nhập ở mặt sau thẻ, lưu thêm vào ví dụ của thẻ
   const [myEx, setMyEx] = useState('')
   const [savingEx, setSavingEx] = useState(false)
+  const [ratingCard, setRatingCard] = useState(false)
   // Chế độ Việt→Anh: gõ từ tiếng Anh; đúng thì tự sang từ mới
-  const [typed, setTyped] = useState('')
+  // Gắn nội dung nhập với đúng thẻ để sự kiện bàn phím/IME đến trễ từ thẻ cũ
+  // không thể làm giá trị đó xuất hiện trên thẻ mới.
+  const [typedEntry, setTypedEntry] = useState<{ cardId: string | null; value: string }>({
+    cardId: null,
+    value: '',
+  })
   const [answerState, setAnswerState] = useState<'idle' | 'correct' | 'wrong'>('idle')
   // Số chữ cái đã được gợi ý (lộ dần từ đầu từ)
   const [hintLevel, setHintLevel] = useState(0)
@@ -297,11 +369,43 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   // Bật/tắt câu ví dụ ở mặt sau (cả ví dụ có sẵn lẫn ô tự viết; mặc định BẬT)
   const [showExamples, setShowExamples] = useState(() => localStorage.getItem('fc_show_examples') !== '0')
   const answerRef = useRef<HTMLInputElement>(null)
+  const activeCardIdRef = useRef<string | null>(null)
+  const isComposingRef = useRef(false)
+  const answerAdvanceTimerRef = useRef<number | null>(null)
+  const ratingRef = useRef(false)
+  const savingExRef = useRef(false)
+  const mountedRef = useRef(true)
   // Vuốt ngang (mobile) để chuyển thẻ
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const swiped = useRef(false)
 
+  // Xóa ngay cả giá trị DOM lẫn state để không có một nhịp nào ô nhập còn giữ từ cũ.
+  // Việc này vẫn tái sử dụng cùng input nên không làm đóng bàn phím trên mobile.
+  const resetTyping = () => {
+    isComposingRef.current = false
+    if (answerAdvanceTimerRef.current !== null) {
+      window.clearTimeout(answerAdvanceTimerRef.current)
+      answerAdvanceTimerRef.current = null
+    }
+    if (answerRef.current) answerRef.current.value = ''
+    setTypedEntry({ cardId: null, value: '' })
+    setAnswerState('idle')
+    setHintLevel(0)
+  }
+
+  const resetCardInput = () => {
+    resetTyping()
+    setMyEx('')
+  }
+
+  const toggleCard = () => {
+    // Khi quay từ mặt đáp án về mặt trước, bắt đầu một lượt nhập mới.
+    if (flipped) resetTyping()
+    setFlipped(!flipped)
+  }
+
   const toggleTyping = () => {
+    resetTyping()
     setShowTyping((v) => {
       const nv = !v
       localStorage.setItem('fc_show_typing', nv ? '1' : '0')
@@ -318,6 +422,7 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   }
 
   const toggleFront = () => {
+    resetCardInput()
     setFrontVi((v) => {
       const nv = !v
       localStorage.setItem('fc_front_vi', nv ? '1' : '0')
@@ -325,6 +430,22 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
     })
     setFlipped(false)
   }
+
+  const safeExit = () => {
+    if (!ratingRef.current) onExit()
+  }
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (answerAdvanceTimerRef.current !== null) {
+        window.clearTimeout(answerAdvanceTimerRef.current)
+        answerAdvanceTimerRef.current = null
+      }
+      stopSpeaking()
+    }
+  }, [])
 
   // Vào phiên: có phiên đang dở (local/cloud) -> khôi phục đúng thẻ đang học;
   // không có -> lấy thẻ đến hạn hôm nay như bình thường.
@@ -375,6 +496,8 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   }, [deck.id])
 
   const current = queue?.[idx]
+  activeCardIdRef.current = current?.id ?? null
+  const typed = current && typedEntry.cardId === current.id ? typedEntry.value : ''
 
   // Các thẻ đã học qua trong bộ này (tích lũy vĩnh viễn — hiện "Đã học x/y" ở danh sách)
   const seen = useRef<Set<string>>(new Set())
@@ -409,13 +532,13 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
     }, 800)
   }, [deck.id, queue, idx, done, practice, current])
 
-  // Sang thẻ khác -> xóa nội dung đang nhập dở
-  useEffect(() => {
-    setMyEx('')
-    setTyped('')
-    setAnswerState('idle')
-    setHintLevel(0)
-  }, [idx])
+  // Sang thẻ khác -> xóa nội dung đang nhập trước khi trình duyệt vẽ thẻ mới.
+  // Dùng layout effect để người dùng gõ nhanh không bị nối chữ mới vào đáp án của thẻ trước.
+  useLayoutEffect(() => {
+    resetCardInput()
+    // Chỉ chạy khi đổi thẻ; resetCardInput cố ý không nằm trong dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id])
 
   // Tự focus vào ô gõ từ tiếng Anh mỗi khi qua thẻ mới (cả 2 chiều học)
   useEffect(() => {
@@ -446,13 +569,25 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   // So khớp đáp án tiếng Anh (bỏ hoa/thường, khoảng trắng thừa)
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
 
+  const scheduleNextCard = () => {
+    if (answerAdvanceTimerRef.current !== null) return
+    answerAdvanceTimerRef.current = window.setTimeout(() => {
+      answerAdvanceTimerRef.current = null
+      void rate('good')
+    }, 700)
+  }
+
   // Người dùng gõ từ tiếng Anh (chế độ Việt→Anh). Gõ đúng -> tự sang từ mới.
-  const onTypeAnswer = (value: string) => {
-    setTyped(value)
-    if (!current) return
+  const onTypeAnswer = (value: string, cardId: string, canAdvance = true) => {
+    // Bỏ qua input event còn sót lại từ ô nhập của flashcard trước.
+    if (!current || activeCardIdRef.current !== cardId || current.id !== cardId) return
+    setTypedEntry({ cardId, value })
+    // Người dùng vừa sửa câu trả lời: lần gợi ý kế tiếp bắt đầu từ lỗi mới.
+    setHintLevel(0)
     if (norm(value) && norm(value) === norm(current.word)) {
       setAnswerState('correct')
-      setTimeout(() => goNext(), 700)
+      // Bộ gõ/IME có thể báo đúng trước khi commit từ cuối. Chỉ chuyển thẻ sau compositionend.
+      if (canAdvance && !isComposingRef.current) scheduleNextCard()
     } else if (answerState === 'wrong') {
       setAnswerState('idle')
     }
@@ -460,27 +595,43 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
 
   // Nhấn Enter mà chưa đúng -> báo sai để người dùng thử lại
   const checkAnswer = () => {
-    if (!current || !typed.trim()) return
+    if (!current || !typed.trim() || isComposingRef.current) return
     if (norm(typed) === norm(current.word)) {
       setAnswerState('correct')
-      setTimeout(() => goNext(), 700)
+      scheduleNextCard()
     } else {
       setAnswerState('wrong')
+      // Chấm sai thì tự mở ngay chữ đầu tiên tại vị trí sai/còn thiếu.
+      setHintLevel(1)
     }
   }
 
-  // Gợi ý: lộ thêm một chữ cái từ đầu từ mỗi lần bấm
+  const hintMismatch = current ? firstMismatchIndex(current.word, typed) : 0
+  // Khoảng trắng luôn được hiển thị nên không chiếm một lượt bấm gợi ý.
+  const hintPositions = current
+    ? current.word
+        .split('')
+        .map((ch, i) => ({ ch, i }))
+        .filter(({ ch, i }) => i >= hintMismatch && ch !== ' ')
+        .map(({ i }) => i)
+    : []
+
+  // Gợi ý: lộ thêm một chữ cái kể từ vị trí đầu tiên sai/còn thiếu.
   const revealHint = () => {
     if (!current) return
-    setHintLevel((n) => Math.min(n + 1, current.word.length))
+    setHintLevel((n) => Math.min(n + 1, hintPositions.length))
     answerRef.current?.focus()
   }
 
-  // Chuỗi che: chữ đã lộ hiển thị, còn lại là "_", giữ nguyên khoảng trắng
+  // Giữ phần đã nhập đúng, mở chữ từ vị trí sai, che phần còn lại.
   const maskedWord = current
     ? current.word
         .split('')
-        .map((ch, i) => (ch === ' ' ? ' ' : i < hintLevel ? ch : '_'))
+        .map((ch, i) => {
+          if (ch === ' ' || i < hintMismatch) return ch
+          const revealOrder = hintPositions.indexOf(i)
+          return revealOrder >= 0 && revealOrder < hintLevel ? ch : '_'
+        })
         .join(' ')
     : ''
 
@@ -494,42 +645,64 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
       setMyEx('')
       return
     }
+    savingExRef.current = true
     setSavingEx(true)
+    setError(null)
     try {
       const updated = await CloudApi.updateCardExample(current.id, [...lines, t].join('\n'))
+      if (!mountedRef.current) return
       setQueue((q) => (q ? q.map((c) => (c.id === updated.id ? updated : c)) : q))
       setMyEx('')
     } catch (e) {
-      setError((e as Error).message)
+      if (mountedRef.current) setError((e as Error).message)
     } finally {
-      setSavingEx(false)
+      savingExRef.current = false
+      if (mountedRef.current) setSavingEx(false)
     }
   }
 
-  const rate = async (rating: Rating) => {
-    if (!current) return
+  async function rate(rating: Rating) {
+    if (!current || ratingRef.current || savingExRef.current) return
+    ratingRef.current = true
+    setRatingCard(true)
+    setError(null)
     // Học lại: chỉ luyện, không ghi SRS
-    if (!practice) {
-      try {
-        await CloudApi.reviewCard(current, rating)
+    try {
+      if (!practice) {
+        const updated = await CloudApi.reviewCard(current, rating)
         track.cards(1) // đếm vào study_stats: 1 thẻ đã ôn thật
-      } catch (e) {
-        setError((e as Error).message)
-        return
+        if (!mountedRef.current) return
+        onReviewed()
+        setQueue((cards) =>
+          cards ? cards.map((card) => (card.id === updated.id ? updated : card)) : cards,
+        )
       }
+      if (!mountedRef.current) return
+      setDone((d) => d + 1)
+      resetCardInput()
+      setFlipped(false)
+      setIdx((i) => i + 1)
+    } catch (e) {
+      if (mountedRef.current) {
+        setError((e as Error).message)
+        setAnswerState('idle')
+      }
+    } finally {
+      ratingRef.current = false
+      if (mountedRef.current) setRatingCard(false)
     }
-    setDone((d) => d + 1)
-    setFlipped(false)
-    setIdx((i) => i + 1)
   }
 
   // Chuyển thẻ thủ công (không đánh giá, không ghi SRS)
   const goNext = () => {
-    if (!queue) return
+    if (!queue || ratingRef.current || savingExRef.current) return
+    resetCardInput()
     setFlipped(false)
     setIdx((i) => Math.min(i + 1, queue.length))
   }
   const goBack = () => {
+    if (ratingRef.current || savingExRef.current) return
+    resetCardInput()
     setFlipped(false)
     setIdx((i) => Math.max(0, i - 1))
   }
@@ -562,8 +735,10 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
 
   // Học lại toàn bộ thẻ trong bộ (không đụng tới lịch ôn)
   const restudy = async () => {
+    if (ratingRef.current) return
     setError(null)
     setPractice(true)
+    resetCardInput()
     setFlipped(false)
     setIdx(0)
     setDone(0)
@@ -581,14 +756,20 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
       if (!current) return
       // Đang gõ trong ô nhập (VD: ô câu ví dụ) -> không kích hoạt phím tắt
       const t = e.target as HTMLElement
-      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return
+      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          safeExit()
+        }
+        return
+      }
       if (e.code === 'Space') {
         e.preventDefault()
-        setFlipped((f) => !f)
+        toggleCard()
       } else if (e.key === 'Tab') {
         // Tab cũng lật thẻ (đồng bộ với Tab trong ô nhập — xem onKeyDown của input)
         e.preventDefault()
-        setFlipped((f) => !f)
+        toggleCard()
       } else if (e.key === 'ArrowRight') {
         e.preventDefault()
         goNext()
@@ -597,9 +778,9 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
         goBack()
       } else if (e.key === 'Escape') {
         e.preventDefault()
-        onExit()
+        safeExit()
       } else if (flipped && ['1', '2', '3', '4'].includes(e.key)) {
-        rate(RATINGS[Number(e.key) - 1].key)
+        void rate(RATINGS[Number(e.key) - 1].key)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -607,7 +788,20 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current, flipped])
 
-  if (error) return <div className="page"><div className="alert error">{error}</div></div>
+  if (error && !queue) {
+    return (
+      <div className="page rev-session">
+        <div className="fc-empty">
+          <Icon name="alert" />
+          <b>Không thể mở phiên ôn tập</b>
+          <p>{error}</p>
+          <button className="fc-btn" type="button" onClick={safeExit}>
+            <Icon name="left" /> Quay lại
+          </button>
+        </div>
+      </div>
+    )
+  }
   if (!queue) return <div className="page"><p className="muted">Đang tải…</p></div>
 
   if (!current) {
@@ -626,7 +820,7 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
             <button className="fc-btn fc-btn-primary" onClick={restudy}>
               <Icon name="undo" /> Học lại cả bộ
             </button>
-            <button className="fc-btn" onClick={onExit}>
+            <button className="fc-btn" onClick={safeExit}>
               Xong
             </button>
           </div>
@@ -662,7 +856,12 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
   return (
     <div className="page rev-session">
       <div className="rev-top">
-        <button className="rev-ibtn danger" onClick={onExit} title="Thoát phiên ôn (Esc)">
+        <button
+          className="rev-ibtn danger"
+          onClick={safeExit}
+          disabled={ratingCard}
+          title="Thoát phiên ôn (Esc)"
+        >
           <Icon name="x" />
         </button>
         <div className="rev-bar" title={`Còn lại ${total - idx} thẻ`}>
@@ -674,14 +873,29 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
         </span>
       </div>
 
+      {error && (
+        <div className="rev-error alert error">
+          <span>{error}</span>
+          <button type="button" onClick={() => setError(null)} aria-label="Đóng thông báo lỗi">
+            <Icon name="x" />
+          </button>
+        </div>
+      )}
+
       <div className="rev-stage" onTouchStart={onStageTouchStart} onTouchEnd={onStageTouchEnd}>
         <div className="rev-toggle-row">
-          <button className="rev-toggle is-active" onClick={toggleFront} title="Đổi chiều học">
+          <button
+            className="rev-toggle is-active"
+            onClick={toggleFront}
+            disabled={ratingCard}
+            title="Đổi chiều học"
+          >
             <Icon name={frontVi ? 'lang' : 'repeat'} /> {frontVi ? 'Việt → Anh' : 'Anh → Việt'}
           </button>
           <button
             className={showTyping ? 'rev-toggle is-active' : 'rev-toggle'}
             onClick={toggleTyping}
+            disabled={ratingCard}
             title={showTyping ? 'Đang hiện ô gõ từ — bấm để ẩn' : 'Ô gõ từ đang ẩn — bấm để hiện'}
           >
             <Icon name="keyboard" /> Gõ từ
@@ -689,6 +903,7 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
           <button
             className={showExamples ? 'rev-toggle is-active' : 'rev-toggle'}
             onClick={toggleExamples}
+            disabled={ratingCard}
             title={showExamples ? 'Đang hiện câu ví dụ — bấm để ẩn' : 'Câu ví dụ đang ẩn — bấm để hiện'}
           >
             <Icon name="file" /> Ví dụ
@@ -706,7 +921,7 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
             // Đang bôi chữ (để dịch/copy) -> không lật thẻ, để popup dịch hiện lên
             const sel = window.getSelection()
             if (sel && !sel.isCollapsed && sel.toString().trim()) return
-            setFlipped((f) => !f)
+            toggleCard()
           }}
         >
           <div className="rev-front">
@@ -738,21 +953,46 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
                     }}
                   >
                     <input
+                      key={current.id}
                       ref={answerRef}
                       autoFocus
+                      autoComplete="off"
+                      name={`flashcard-answer-${current.id}`}
                       placeholder={frontVi ? 'Gõ từ tiếng Anh…' : 'Gõ lại từ để nhớ chính tả…'}
                       value={typed}
-                      // Giữ cùng một input và không bật readOnly khi trả lời đúng:
-                      // mobile sẽ duy trì focus + bàn phím khi tự chuyển sang thẻ mới.
+                      onFocus={(e) => {
+                        // HMR/IME đôi khi giữ giá trị nội bộ của input cũ dù React đã reset state.
+                        // Đồng bộ lại DOM ngay khi ô của thẻ mới nhận focus.
+                        if (e.currentTarget.value !== typed) e.currentTarget.value = typed
+                      }}
+                      onBeforeInput={(e) => {
+                        // Xóa giá trị DOM cũ trước khi ký tự đầu tiên của thẻ mới được chèn.
+                        if (e.currentTarget.value !== typed) e.currentTarget.value = typed
+                      }}
+                      // Mỗi thẻ dùng một input DOM mới để trình duyệt/IME không khôi phục
+                      // giá trị của thẻ trước khi người dùng gõ ký tự đầu tiên.
                       onChange={(e) => {
-                        if (answerState !== 'correct') onTypeAnswer(e.target.value)
+                        if (answerState !== 'correct') {
+                          const composing =
+                            isComposingRef.current ||
+                            Boolean((e.nativeEvent as InputEvent).isComposing)
+                          onTypeAnswer(e.target.value, current.id, !composing)
+                        }
+                      }}
+                      onCompositionStart={() => {
+                        isComposingRef.current = true
+                      }}
+                      onCompositionEnd={(e) => {
+                        isComposingRef.current = false
+                        onTypeAnswer(e.currentTarget.value, current.id, true)
                       }}
                       onKeyDown={(e) => {
+                        if ((e.nativeEvent as KeyboardEvent).isComposing) return
                         // Đang gõ trong ô nhập: Tab = lật thẻ xem nghĩa (lật lại bằng Tab lần
                         // nữa — khi đó focus đã rời input nên phím tắt toàn trang xử lý)
                         if (e.key === 'Tab') {
                           e.preventDefault()
-                          setFlipped((f) => !f)
+                          toggleCard()
                         }
                       }}
                     />
@@ -774,7 +1014,7 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
                           type="button"
                           className="fc-btn fc-btn-sm"
                           onClick={revealHint}
-                          disabled={hintLevel >= current.word.length}
+                          disabled={hintLevel >= hintPositions.length}
                         >
                           <Icon name="bulb" /> Gợi ý
                         </button>
@@ -834,22 +1074,35 @@ function ReviewSession({ deck, onExit }: { deck: Deck; onExit: () => void }) {
         {flipped && (
           <div className="rev-grade-row">
             {RATINGS.map((r, i) => (
-              <button key={r.key} className={`rev-grade rev-g${i + 1}`} onClick={() => rate(r.key)}>
+              <button
+                key={r.key}
+                className={`rev-grade rev-g${i + 1}`}
+                disabled={ratingCard || savingEx}
+                onClick={() => void rate(r.key)}
+              >
                 <b>{r.label}</b>
-                <small>{previewInterval(current, r.key)}</small>
+                <small>{ratingCard ? 'Đang lưu…' : previewInterval(current, r.key)}</small>
               </button>
             ))}
           </div>
         )}
 
         <div className="rev-nav">
-          <button className="fc-btn fc-btn-sm" onClick={goBack} disabled={idx === 0}>
+          <button
+            className="fc-btn fc-btn-sm"
+            onClick={goBack}
+            disabled={idx === 0 || ratingCard || savingEx}
+          >
             <Icon name="left" /> Trước
           </button>
           <span className="rev-nav-pos">
             {idx + 1} / {total}
           </span>
-          <button className="fc-btn fc-btn-sm" onClick={goNext}>
+          <button
+            className="fc-btn fc-btn-sm"
+            onClick={goNext}
+            disabled={ratingCard || savingEx}
+          >
             Tiếp <Icon name="right" />
           </button>
         </div>

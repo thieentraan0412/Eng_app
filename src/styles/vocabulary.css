@@ -760,12 +760,17 @@
 
 /* ---------- Lưới thẻ từ (mockup .word-grid) ---------- */
 .vocab-word-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(324px, 1fr));
-  gap: 12px;
-  align-items: start;
+  /* Masonry: mỗi cột tự xếp thẻ theo chiều cao riêng, không bị khoảng trống
+     như CSS Grid khi một thẻ trong cùng hàng cao hơn các thẻ còn lại. */
+  column-width: 324px;
+  column-gap: 12px;
 }
 .deck-detail .vocab-word {
+  display: inline-block;
+  width: 100%;
+  margin: 0 0 12px;
+  break-inside: avoid;
+  vertical-align: top;
   padding: 15px 16px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -957,7 +962,7 @@
     grid-template-columns: 1fr;
   }
   .vocab-word-grid {
-    grid-template-columns: 1fr;
+    column-count: 1;
   }
   .deck-detail .vocab-word-tools {
     opacity: 1;

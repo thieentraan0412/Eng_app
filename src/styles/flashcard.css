@@ -249,6 +249,17 @@
 .fc-deck:active {
   transform: translateY(0.5px);
 }
+.fc-deck:disabled {
+  cursor: default;
+  opacity: 0.62;
+}
+.fc-deck:disabled:hover {
+  border-color: var(--border);
+  box-shadow: none;
+}
+.fc-deck:disabled .fc-deck-go {
+  color: var(--muted);
+}
 .fc-deck-top {
   display: flex;
   align-items: flex-start;
@@ -482,6 +493,12 @@
 .rev-ibtn:hover {
   background: var(--surface-2);
   color: var(--text);
+}
+.rev-ibtn:disabled,
+.rev-toggle:disabled {
+  cursor: default;
+  opacity: 0.45;
+  pointer-events: none;
 }
 .rev-ibtn.danger:hover {
   background: color-mix(in srgb, var(--danger) 12%, var(--surface));
@@ -890,6 +907,12 @@
   color: inherit;
   opacity: 0.75;
 }
+.rev-grade:disabled {
+  cursor: wait;
+  opacity: 0.55;
+  pointer-events: none;
+  transform: none;
+}
 .rev-g1:hover {
   background: color-mix(in srgb, var(--danger) 10%, var(--surface));
   border-color: color-mix(in srgb, var(--danger) 34%, var(--border));
@@ -925,6 +948,36 @@
   font-size: 12.5px;
   color: var(--text-soft);
   font-variant-numeric: tabular-nums;
+}
+
+.rev-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: -8px 0 14px;
+}
+.rev-error > span {
+  flex: 1 1 auto;
+}
+.rev-error > button {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+}
+.rev-error > button:hover {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+.rev-error > button .ico {
+  width: 14px;
+  height: 14px;
 }
 
 /* ---------- Chân trang phím tắt (mockup .focus-foot) ---------- */

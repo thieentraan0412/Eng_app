@@ -116,6 +116,16 @@ export default function AppLayout() {
     if (localStorage.getItem('always_on_top') === '1') {
       void window.api.setAlwaysOnTop(true)
     }
+    // Phím tắt toàn cục bật/tắt "Luôn nổi trên cùng" (mặc định Ctrl+Alt+T).
+    window.api.setAlwaysOnTopHotkey(
+      localStorage.getItem('always_on_top_hotkey') ?? 'Ctrl+Alt+T',
+    )
+    const offOnTop = window.api.onAlwaysOnTopState((on) => {
+      localStorage.setItem('always_on_top', on ? '1' : '0')
+      window.dispatchEvent(new CustomEvent('always-on-top-changed', { detail: on }))
+      setToast(on ? '📌 Luôn nổi trên cùng: BẬT' : '📌 Luôn nổi trên cùng: TẮT')
+      window.setTimeout(() => setToast(null), 2600)
+    })
     if (localStorage.getItem('desktop_translate_enabled') === '1') {
       window.api.setDesktopTranslate(true)
     }
@@ -140,6 +150,7 @@ export default function AppLayout() {
     return () => {
       off()
       offState()
+      offOnTop()
     }
   }, [])
 
@@ -163,7 +174,7 @@ export default function AppLayout() {
       case 'flashcard':
         return <FlashcardPage />
       case 'reading':
-        return <ReadingPage />
+        return <ReadingPage onSaveWord={handleSaveWord} />
       case 'settings':
         return <SettingsPage />
       case 'exercise':

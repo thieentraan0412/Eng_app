@@ -43,12 +43,17 @@ export default function SettingsPage() {
   const [hotkey, setHotkey] = useState(
     localStorage.getItem('desktop_translate_hotkey') ?? 'Ctrl+Alt+D',
   )
+  const [onTopHotkey, setOnTopHotkey] = useState(
+    localStorage.getItem('always_on_top_hotkey') ?? 'Ctrl+Alt+T',
+  )
   // Cửa sổ desktop: luôn nổi trên cùng + thu gọn kiểu hình-trong-hình.
   // alwaysOnTop được nhớ giữa các lần mở app; mini chỉ tính trong phiên đang chạy.
   const [onTop, setOnTop] = useState(localStorage.getItem('always_on_top') === '1')
   const [mini, setMini] = useState(false)
   const [recording, setRecording] = useState(false)
   const [hkErr, setHkErr] = useState<string | null>(null)
+  const [recordingOnTop, setRecordingOnTop] = useState(false)
+  const [onTopHkErr, setOnTopHkErr] = useState<string | null>(null)
   const [appVersion, setAppVersion] = useState(__APP_VERSION__)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
   // Tùy chọn phiên ôn — dùng chung khóa localStorage với trang Ôn tập
@@ -111,6 +116,13 @@ export default function SettingsPage() {
     }
   }, [])
 
+  // Đồng bộ công tắc khi phím tắt "Luôn nổi trên cùng" được nhấn.
+  useEffect(() => {
+    const h = (e: Event) => setOnTop(!!(e as CustomEvent).detail)
+    window.addEventListener('always-on-top-changed', h)
+    return () => window.removeEventListener('always-on-top-changed', h)
+  }, [])
+
   // Phím tắt toàn cục vừa bật/tắt tính năng (AppLayout bắn event) -> đồng bộ nút
   useEffect(() => {
     const h = (e: Event) => setDeskTrans(!!(e as CustomEvent).detail)
@@ -157,6 +169,19 @@ export default function SettingsPage() {
     if (accel && !ok) setHkErr('Không đăng ký được — tổ hợp có thể đã bị ứng dụng khác dùng')
   }
 
+  const applyOnTopHotkey = async (accel: string) => {
+    setOnTopHkErr(null)
+    const ok = await window.api?.setAlwaysOnTopHotkey(accel)
+    if (accel && !ok) {
+      // Main đã gỡ tổ hợp cũ trước khi thử tổ hợp mới; khôi phục nếu tổ hợp mới bị chiếm.
+      await window.api?.setAlwaysOnTopHotkey(onTopHotkey)
+      setOnTopHkErr('Không đăng ký được — tổ hợp có thể đã bị ứng dụng khác dùng')
+      return
+    }
+    setOnTopHotkey(accel)
+    localStorage.setItem('always_on_top_hotkey', accel)
+  }
+
   // Chế độ ghi phím tắt: nhấn tổ hợp để đặt, Esc hủy, Backspace/Delete gỡ phím tắt
   useEffect(() => {
     if (!recording) return
@@ -181,6 +206,30 @@ export default function SettingsPage() {
     return () => window.removeEventListener('keydown', onKey, true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recording])
+
+  useEffect(() => {
+    if (!recordingOnTop) return
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.key === 'Escape') {
+        setRecordingOnTop(false)
+        return
+      }
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        void applyOnTopHotkey('')
+        setRecordingOnTop(false)
+        return
+      }
+      const accel = accelFromEvent(e)
+      if (!accel) return
+      void applyOnTopHotkey(accel)
+      setRecordingOnTop(false)
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordingOnTop])
 
   const toggleSuggest = () => {
     const next = !suggest
@@ -291,6 +340,22 @@ export default function SettingsPage() {
                   {mini
                     ? 'Đang bật theo chế độ hình trong hình — tắt chế độ đó để đổi lại'
                     : 'Giữ EngMaster nằm trên các ứng dụng khác để vừa học vừa làm việc'}
+                </span>
+                <span className="set-hotkey">
+                  Phím tắt bật/tắt:{' '}
+                  {recordingOnTop ? (
+                    <span className="set-recording">
+                      nhấn tổ hợp phím (kèm Ctrl/Alt)… · Esc hủy · Backspace gỡ
+                    </span>
+                  ) : (
+                    <>
+                      <kbd className="set-kbd">{onTopHotkey || 'chưa đặt'}</kbd>
+                      <button className="set-btn set-btn-sm" onClick={() => setRecordingOnTop(true)}>
+                        Đổi
+                      </button>
+                    </>
+                  )}
+                  {onTopHkErr && <span className="set-hotkey-err">{onTopHkErr}</span>}
                 </span>
               </span>
               <span className="set-side">
@@ -449,8 +514,8 @@ export default function SettingsPage() {
             <Icon name="speak" />
           </span>
           <span className="set-main">
-            <span className="set-title">Tự phát âm khi lật thẻ</span>
-            <span className="set-desc">Đọc từ tiếng Anh bằng giọng hệ thống</span>
+            <span className="set-title">Tự phát âm từ tiếng Anh</span>
+            <span className="set-desc">Áp dụng khi ôn tập và làm bài tập</span>
           </span>
           <span className="set-side">
             <label className="set-switch">
