@@ -13,7 +13,7 @@
   }
 
   /* ------------------------------------------------- Màn hình chọn cách bắt đầu */
-  .start-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .start-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
   .start-card{
     display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left;width:100%;
     padding:22px;background:var(--surface);border:1px solid var(--border);
@@ -243,6 +243,14 @@
            bẫy và câu luyện. Chép về rồi sửa lại theo ý mình.</p>
         <span class="go">Xem thư viện mẫu <i data-ico="right"></i></span>
       </button>
+
+      <button class="start-card" id="goXlsx">
+        <span class="start-mark"><i data-ico="upload"></i></span>
+        <b>Nạp từ Excel</b>
+        <p>Soạn sẵn cả chủ điểm trong một sổ tính 6 sheet rồi nạp lên — đọc xong lưu thẳng,
+           không phải đi qua 4 bước.</p>
+        <span class="go">Chọn file .xlsx <i data-ico="right"></i></span>
+      </button>
     </div>
 
     <div class="panel anim anim-2" style="margin-top:14px">
@@ -285,6 +293,99 @@
       <i data-ico="search"></i>
       <b>Không có mẫu nào ở cấp độ này</b>
       <p>Chọn cấp độ khác, hoặc quay lại và tự soạn một chủ điểm mới.</p>
+    </div>
+  </section>
+
+  <!-- ========================================================= X. NẠP EXCEL -->
+  <section id="scr-xlsx" hidden>
+    <div class="page-head anim">
+      <div>
+        <h1>Nạp chủ điểm từ Excel</h1>
+        <p>Một sổ tính = một chủ điểm. App đọc file ngay trên máy bạn, không gửi đi đâu.
+           Thiếu sheet nào thì phần đó để trống, không chặn nạp.</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn" id="xBack"><i data-ico="left"></i> Quay lại</button>
+      </div>
+    </div>
+
+    <!-- ---- Cấu trúc sổ tính ---- -->
+    <div class="card anim anim-1" style="margin-bottom:14px">
+      <div class="card-head">
+        <h2><i data-ico="grid"></i> Sổ tính cần những sheet nào</h2>
+        <span class="hint">Tên sheet không phân biệt hoa thường và dấu</span>
+      </div>
+      <table class="syn">
+        <thead><tr><th>Sheet</th><th>Các cột theo thứ tự</th><th>Ghi chú</th></tr></thead>
+        <tbody>
+          <tr><td><code>ThongTin</code></td><td><code>Nhãn</code> · <code>Giá trị</code></td>
+              <td><span class="ex">Tên chủ điểm · Tên tiếng Anh · Cấp độ · Nhóm · Mô tả · Icon · Nhóm lỗi · Từ tín hiệu · Chủ điểm dễ nhầm</span></td></tr>
+          <tr><td><code>CongThuc</code></td><td><code>Dạng</code> · <code>Cấu trúc</code> · <code>Ví dụ</code></td>
+              <td><span class="ex">Khẳng định · S + have/has + V3 · She has lived here.</span></td></tr>
+          <tr><td><code>CachDung</code></td><td><code>Trường hợp</code> · <code>Câu ví dụ</code> · <code>Giải thích</code></td>
+              <td><span class="ex">Bọc phần cần tô đậm trong { }</span></td></tr>
+          <tr><td><code>DoiChieu</code></td><td><code>Tiêu chí</code> · <code>Chủ điểm kia</code> · <code>Chủ điểm này</code></td>
+              <td><span class="ex">Bỏ sheet này nếu không có cặp dễ nhầm</span></td></tr>
+          <tr><td><code>Bay</code></td><td><code>Câu sai</code> · <code>Câu đúng</code> · <code>Vì sao</code></td>
+              <td><span class="ex">Bẫy với người học Việt</span></td></tr>
+          <tr><td><code>CauLuyen</code></td><td><code>Câu</code> · <code>Giải thích</code></td>
+              <td><span class="ex">Cột “Câu” dùng cú pháp { } · [sai &gt; đúng] · &gt;&gt;</span></td></tr>
+        </tbody>
+      </table>
+      <div class="card-body" style="border-top:1px solid var(--border)">
+        <p class="t-xs muted-2">
+          Dòng đầu mỗi sheet có thể là dòng tiêu đề — app tự nhận ra và bỏ qua.
+          Dòng trống bị bỏ qua. Thứ tự sheet không quan trọng.
+        </p>
+      </div>
+    </div>
+
+    <!-- ---- Thả file ---- -->
+    <div class="drop anim anim-2" id="xdrop" role="button" tabindex="0">
+      <i data-ico="upload"></i>
+      <b>Kéo sổ tính vào đây, hoặc bấm để chọn</b>
+      <span>Nhận .xlsx — đọc trực tiếp trong trình duyệt, không cần cài thêm gì</span>
+      <input type="file" id="xfile" accept=".xlsx" hidden>
+    </div>
+    <div class="row wrapping anim anim-2" style="margin-top:12px">
+      <button class="btn btn-sm" id="xTemplate"><i data-ico="download"></i> Tải sổ tính mẫu (.xlsx)</button>
+      <span class="muted-2 t-xs">File mẫu đã điền sẵn một chủ điểm hoàn chỉnh để bạn sửa lại</span>
+    </div>
+    <p class="hint-line" id="xMsg" style="margin-top:10px"></p>
+
+    <!-- ---- Kết quả đọc ---- -->
+    <div id="xResult" hidden style="margin-top:18px">
+
+      <div class="prev-grid anim" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-head"><h2><i data-ico="eye"></i> Chủ điểm đọc được</h2></div>
+          <div class="card-body"><div class="deck" id="xDeck" style="pointer-events:none"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h2><i data-ico="check"></i> Từng sheet đọc ra gì</h2>
+            <span class="hint" id="xSheetHint">—</span>
+          </div>
+          <div id="xSheets"></div>
+        </div>
+      </div>
+
+      <div class="card anim anim-1">
+        <div class="rev-bar">
+          <span class="badge badge-ok" id="xOk"><i data-ico="check"></i> 0 câu hợp lệ</span>
+          <span class="badge badge-err" id="xBad" hidden><i data-ico="alert"></i> 0 dòng lỗi</span>
+          <span class="spacer"></span>
+          <span class="muted-2 t-xs" id="xMix">—</span>
+        </div>
+        <div id="xItems"></div>
+      </div>
+
+      <div class="wiz-foot">
+        <button class="btn" id="xAnother"><i data-ico="upload"></i> Chọn file khác</button>
+        <span class="spacer"></span>
+        <button class="btn" id="xEdit"><i data-ico="pencil"></i> Mở trong trình soạn để sửa</button>
+        <button class="btn btn-primary btn-lg" id="xSave"><i data-ico="save"></i> Lưu chủ điểm</button>
+      </div>
     </div>
   </section>
 
@@ -622,6 +723,7 @@
 </div>
 
 <script src="../app.js"></script>
+<script src="xlsx-mini.js"></script>
 <script>
 (function () {
   'use strict';
@@ -652,8 +754,9 @@
 
   var TYPE_LABEL = { cloze: 'Điền chỗ trống', mcq: 'Trắc nghiệm', correct: 'Sửa lỗi', transform: 'Viết lại câu' };
 
-  function parseLine(raw, no) {
-    var line = String(raw).trim();
+  function parseLine(src, no) {
+    var raw = String(src).trim();
+    var line = raw;
     if (!line || line.charAt(0) === '#') return null;
 
     /* tách phần giải thích  // … */
@@ -661,7 +764,7 @@
     var wi = line.indexOf('//');
     if (wi > 0) { why = line.slice(wi + 2).trim(); line = line.slice(0, wi).trim(); }
 
-    var bad = function (msg) { return { no: no, ok: false, raw: raw.trim(), msg: msg }; };
+    var bad = function (msg) { return { no: no, ok: false, raw: raw, msg: msg }; };
 
     /* --- Sửa lỗi:  [sai > đúng] --- */
     var mc = line.match(/\[([^\[\]]*?)>([^\[\]]*?)\]/);
@@ -670,7 +773,7 @@
       var w = mc[1].trim(), r = mc[2].trim();
       if (!w || !r) return bad('Thiếu vế sai hoặc vế đúng trong […>…]');
       return {
-        no: no, ok: true, type: 'correct', why: why,
+        no: no, ok: true, raw: raw, type: 'correct', why: why,
         display: esc(line.slice(0, mc.index)) + '<s>' + esc(w) + '</s> → <b>' + esc(r) + '</b>' +
                  esc(line.slice(mc.index + mc[0].length)),
         answer: r
@@ -696,7 +799,7 @@
         if (opts.length < 2) return bad('Trắc nghiệm cần ít nhất 2 phương án');
         if (opts.length > 4) return bad('Tối đa 4 phương án cho một câu trắc nghiệm');
         return {
-          no: no, ok: true, type: 'mcq', why: why, answer: opts[0], options: opts,
+          no: no, ok: true, raw: raw, type: 'mcq', why: why, answer: opts[0], options: opts,
           display: head + '<mark>' + esc(opts[0]) + '</mark>' + tail +
                    ' <span class="muted-2">· phương án: ' + esc(opts.slice(1).join(', ')) + '</span>'
         };
@@ -704,7 +807,7 @@
       var ans = inner.trim();
       if (!ans) return bad('Chỗ trống { } đang rỗng');
       return {
-        no: no, ok: true, type: 'cloze', why: why, answer: ans, hint: hint,
+        no: no, ok: true, raw: raw, type: 'cloze', why: why, answer: ans, hint: hint,
         display: head + '<mark>' + esc(ans) + '</mark>' + tail +
                  (hint ? ' <span class="muted-2">(' + esc(hint) + ')</span>' : '')
       };
@@ -717,7 +820,7 @@
       var src = p[0].trim(), dst = p[1].trim();
       if (!src || !dst) return bad('Thiếu câu gốc hoặc câu đích quanh dấu >>');
       return {
-        no: no, ok: true, type: 'transform', why: why, answer: dst,
+        no: no, ok: true, raw: raw, type: 'transform', why: why, answer: dst,
         display: esc(src) + ' → <b>' + esc(dst) + '</b>'
       };
     }
@@ -747,7 +850,7 @@
   /* =====================================================================
      3. CHUYỂN MÀN HÌNH
      ===================================================================== */
-  var SCREENS = ['scr-start', 'scr-tpl', 'scr-wiz', 'scr-done'];
+  var SCREENS = ['scr-start', 'scr-tpl', 'scr-xlsx', 'scr-wiz', 'scr-done'];
   function show(id) {
     SCREENS.forEach(function (s) { $(s).hidden = (s !== id); });
     window.scrollTo(0, 0);
@@ -755,7 +858,9 @@
 
   $('goBlank').onclick = function () { openWizard(null); };
   $('goTpl').onclick = function () { show('scr-tpl'); };
+  $('goXlsx').onclick = function () { show('scr-xlsx'); };
   $('tplBack').onclick = function () { show('scr-start'); };
+  $('xBack').onclick = function () { show('scr-start'); };
   $('wizCancel').onclick = function () { show('scr-start'); };
   $('againBtn').onclick = function () { show('scr-start'); };
 
@@ -1048,6 +1153,49 @@
     drawReview();
   }
 
+  /* Một hàng trong bảng duyệt — dùng chung cho tab dán, tab file và màn hình Excel */
+  function itemsHtml(rows, deletable) {
+    return rows.map(function (r, i) {
+      var del = deletable
+        ? '<button class="icon-btn danger" data-del="' + i + '" title="Bỏ dòng này"><i data-ico="trash"></i></button>'
+        : '<span></span>';
+      if (!r.ok) {
+        return '<div class="rev is-bad" data-i="' + i + '">' +
+          '<span class="badge badge-err"><i data-ico="alert"></i> Dòng ' + r.no + '</span>' +
+          '<span class="rev-q">' + esc(r.raw) +
+            '<span class="rev-why" style="color:var(--err)">' + esc(r.msg) + '</span></span>' + del +
+        '</div>';
+      }
+      return '<div class="rev" data-i="' + i + '">' +
+        '<span class="badge">' + TYPE_LABEL[r.type] + '</span>' +
+        '<span class="rev-q">' + r.display +
+          (r.why ? '<span class="rev-why">Vì sao: ' + esc(r.why) + '</span>' : '') + '</span>' + del +
+      '</div>';
+    }).join('');
+  }
+
+  /* Thẻ chủ điểm như sẽ hiện trong thư viện — dùng chung cho bước 4 và màn hình Excel */
+  function deckHtml(o) {
+    return '<span class="deck-top">' +
+        '<span class="topic-mark">' + window.EMIcon(o.icon || 'clock') + '</span>' +
+        '<span><span class="deck-name">' + esc(o.name || 'Chủ điểm chưa đặt tên') + '</span>' +
+          (o.nameEn ? '<span class="deck-desc">' + esc(o.nameEn) + '</span>' : '') +
+          '<span class="topic-tags"><span class="lv">' + esc(o.level || 'B1') + '</span>' +
+            ((o.tags && o.tags.length) ? '<span class="badge badge-err badge-dot">' + esc(o.tags[0]) + '</span>' : '') +
+          '</span></span>' +
+      '</span>' +
+      '<span class="bar bar-accent"><i style="width:0%"></i></span>' +
+      '<span class="topic-foot"><span>' + (o.rules || 0) + ' quy tắc · ' + (o.items || 0) + ' câu</span>' +
+        '<span>Chưa bắt đầu</span></span>';
+  }
+
+  function mixText(good) {
+    var mix = {};
+    good.forEach(function (r) { mix[r.type] = (mix[r.type] || 0) + 1; });
+    var parts = Object.keys(mix).map(function (k) { return TYPE_LABEL[k] + ' ' + mix[k]; });
+    return parts.length ? parts.join(' · ') : '—';
+  }
+
   function drawReview() {
     var rows = state.items;
     var good = rows.filter(function (r) { return r.ok; });
@@ -1057,10 +1205,7 @@
     $('revBad').hidden = bad.length === 0;
     $('revBad').innerHTML = window.EMIcon('alert') + ' ' + bad.length + ' dòng lỗi';
 
-    var mix = {};
-    good.forEach(function (r) { mix[r.type] = (mix[r.type] || 0) + 1; });
-    var parts = Object.keys(mix).map(function (k) { return TYPE_LABEL[k] + ' ' + mix[k]; });
-    $('revMix').textContent = parts.length ? parts.join(' · ') : '—';
+    $('revMix').textContent = mixText(good);
 
     if (!rows.length) {
       $('revList').innerHTML =
@@ -1070,22 +1215,7 @@
       return;
     }
 
-    $('revList').innerHTML = rows.map(function (r, i) {
-      if (!r.ok) {
-        return '<div class="rev is-bad" data-i="' + i + '">' +
-          '<span class="badge badge-err"><i data-ico="alert"></i> Dòng ' + r.no + '</span>' +
-          '<span class="rev-q">' + esc(r.raw) +
-            '<span class="rev-why" style="color:var(--err)">' + esc(r.msg) + '</span></span>' +
-          '<button class="icon-btn danger" data-del="' + i + '" title="Bỏ dòng này"><i data-ico="trash"></i></button>' +
-        '</div>';
-      }
-      return '<div class="rev" data-i="' + i + '">' +
-        '<span class="badge">' + TYPE_LABEL[r.type] + '</span>' +
-        '<span class="rev-q">' + r.display +
-          (r.why ? '<span class="rev-why">Vì sao: ' + esc(r.why) + '</span>' : '') + '</span>' +
-        '<button class="icon-btn danger" data-del="' + i + '" title="Bỏ câu này"><i data-ico="trash"></i></button>' +
-      '</div>';
-    }).join('');
+    $('revList').innerHTML = itemsHtml(rows, true);
     window.EMHydrate();
 
     $('revList').querySelectorAll('[data-del]').forEach(function (b) {
@@ -1204,18 +1334,10 @@
     collect();
     var good = state.items.filter(function (r) { return r.ok; });
 
-    $('prevDeck').innerHTML =
-      '<span class="deck-top">' +
-        '<span class="topic-mark">' + window.EMIcon(state.icon) + '</span>' +
-        '<span><span class="deck-name">' + esc(state.name || 'Chủ điểm chưa đặt tên') + '</span>' +
-          (state.nameEn ? '<span class="deck-desc">' + esc(state.nameEn) + '</span>' : '') +
-          '<span class="topic-tags"><span class="lv">' + state.level + '</span>' +
-            (state.tags.length ? '<span class="badge badge-err badge-dot">' + esc(state.tags[0]) + '</span>' : '') +
-          '</span></span>' +
-      '</span>' +
-      '<span class="bar bar-accent"><i style="width:0%"></i></span>' +
-      '<span class="topic-foot"><span>' + state.formulas.length + ' quy tắc · ' + good.length + ' câu</span>' +
-        '<span>Chưa bắt đầu</span></span>';
+    $('prevDeck').innerHTML = deckHtml({
+      icon: state.icon, name: state.name, nameEn: state.nameEn, level: state.level,
+      tags: state.tags, rules: state.formulas.length, items: good.length
+    });
 
     var first = good[0];
     $('prevItem').innerHTML = first
@@ -1378,6 +1500,342 @@
       'Chủ điểm đã nằm trong thư viện và có lịch ôn riêng.';
     show('scr-done');
   }
+
+  /* =====================================================================
+     10. NẠP TỪ EXCEL — một sổ tính = một chủ điểm
+     ===================================================================== */
+  var LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  var ICONS = ['clock', 'layers', 'type', 'shuffle', 'stack', 'repeat',
+               'trend', 'speak', 'pen', 'bulb', 'target', 'sparkle'];
+
+  /* bỏ dấu + thường hoá để tên sheet / nhãn gõ kiểu gì cũng khớp */
+  function nrm(s) {
+    return String(s == null ? '' : s)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'd')
+      .toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  var SHEET_KEYS = [
+    ['info',     ['thongtin', 'thongtinchung']],
+    ['formulas', ['congthuc', 'cautruc']],
+    ['uses',     ['cachdung', 'truonghopdung', 'truonghop']],
+    ['compare',  ['doichieu', 'sosanh']],
+    ['items',    ['cauluyen', 'cauluyentap', 'baitap', 'cauhoi']],
+    ['traps',    ['bay', 'baynguoiviet', 'loithuonggap']]
+  ];
+
+  var INFO_LABELS = [
+    [['tenchudiem', 'tenchude', 'ten', 'chudiem'], 'name'],
+    [['tentienganh', 'tienganh', 'nameen', 'ten_en'], 'nameEn'],
+    [['capdo', 'cap', 'cefr', 'trinhdo'], 'level'],
+    [['nhomloi', 'nhomloinguoiviet', 'nhanloi'], 'tags'],
+    [['nhom', 'nhomchudiem'], 'group'],
+    [['mota', 'motangan'], 'desc'],
+    [['icon', 'bieutuong'], 'icon'],
+    [['tutinhieu', 'tinhieu'], 'signals'],
+    [['chudiemdenham', 'denham', 'doichieuvoi', 'sosanhvoi'], 'cmpWith']
+  ];
+
+  function findSheet(book, keys) {
+    var names = Object.keys(book);
+    for (var i = 0; i < names.length; i++) {
+      var n = nrm(names[i]);
+      for (var k = 0; k < keys.length; k++) {
+        if (n === keys[k] || n.indexOf(keys[k]) > -1) return { name: names[i], rows: book[names[i]] || [] };
+      }
+    }
+    return null;
+  }
+  function dropHeader(rows, heads) {
+    if (!rows.length) return rows;
+    return heads.indexOf(nrm(rows[0][0])) > -1 ? rows.slice(1) : rows;
+  }
+  function splitList(s) {
+    return String(s || '').split(/[,;·]/).map(function (x) { return x.trim(); }).filter(Boolean);
+  }
+
+  /* Ánh xạ sổ tính → dữ liệu chủ điểm + báo cáo từng sheet */
+  function mapWorkbook(book) {
+    var d = {
+      name: '', nameEn: '', level: 'B1', group: 'Thì động từ', desc: '', icon: 'clock',
+      tags: [], signals: [], cmpWith: '', formulas: [], uses: [], cmpRows: [], traps: [], items: []
+    };
+    var found = {}, report = [];
+    SHEET_KEYS.forEach(function (p) { found[p[0]] = findSheet(book, p[1]); });
+
+    /* --- ThongTin --- */
+    var unknown = [];
+    if (found.info) {
+      dropHeader(found.info.rows, ['nhan', 'truong', 'muc', 'thongtin', 'thuoctinh']).forEach(function (r) {
+        var key = nrm(r[0]), val = String(r[1] || '').trim();
+        if (!key) return;
+        var hit = null;
+        INFO_LABELS.forEach(function (m) { if (!hit && m[0].indexOf(key) > -1) hit = m[1]; });
+        if (!hit) { if (val) unknown.push(r[0]); return; }
+        if (hit === 'tags' || hit === 'signals') d[hit] = splitList(val);
+        else d[hit] = val;
+      });
+    }
+
+    /* chuẩn hoá + cảnh báo giá trị lạ */
+    var warn = [];
+    if (d.level) {
+      var lv = d.level.toUpperCase().replace(/\s/g, '');
+      if (LEVELS.indexOf(lv) > -1) d.level = (lv === 'C2' ? 'C1' : lv);
+      else { warn.push('Cấp độ “' + d.level + '” không hợp lệ — dùng tạm B1'); d.level = 'B1'; }
+    } else d.level = 'B1';
+    if (d.icon && ICONS.indexOf(d.icon) === -1) {
+      warn.push('Icon “' + d.icon + '” không có trong bộ — dùng tạm clock');
+      d.icon = 'clock';
+    }
+    if (!d.icon) d.icon = 'clock';
+    if (unknown.length) warn.push('Không nhận ra nhãn: ' + unknown.slice(0, 3).join(', '));
+
+    /* --- các sheet 3 cột --- */
+    if (found.formulas) {
+      d.formulas = dropHeader(found.formulas.rows, ['dang', 'loai', 'kieu', 'the'])
+        .map(function (r) { return { k: (r[0] || '').trim(), s: (r[1] || '').trim(), e: (r[2] || '').trim() }; })
+        .filter(function (x) { return x.k || x.s || x.e; });
+    }
+    if (found.uses) {
+      d.uses = dropHeader(found.uses.rows, ['truonghop', 'ten', 'tentruonghop', 'cachdung'])
+        .map(function (r) { return { t: (r[0] || '').trim(), e: (r[1] || '').trim(), n: (r[2] || '').trim() }; })
+        .filter(function (x) { return x.t || x.e; });
+    }
+    if (found.compare) {
+      d.cmpRows = dropHeader(found.compare.rows, ['tieuchi', 'tieuchisosanh', 'muc'])
+        .map(function (r) { return { k: (r[0] || '').trim(), a: (r[1] || '').trim(), b: (r[2] || '').trim() }; })
+        .filter(function (x) { return x.k && (x.a || x.b); });
+    }
+    if (found.traps) {
+      d.traps = dropHeader(found.traps.rows, ['causai', 'sai', 'loi'])
+        .map(function (r) { return { w: (r[0] || '').trim(), r: (r[1] || '').trim(), y: (r[2] || '').trim() }; })
+        .filter(function (x) { return x.w || x.r; });
+    }
+    if (found.items) {
+      var lines = dropHeader(found.items.rows, ['cau', 'cauluyen', 'noidung', 'cauhoi'])
+        .map(function (r) {
+          var c = (r[0] || '').trim(), why = (r[1] || '').trim();
+          if (!c) return '';
+          return why && c.indexOf('//') === -1 ? c + ' // ' + why : c;
+        }).filter(Boolean);
+      d.items = parseAll(lines.join('\n'));
+    }
+
+    /* --- báo cáo --- */
+    function line(ok, label, detail) { report.push({ ok: ok, label: label, detail: detail }); }
+    line(!!d.name, found.info ? 'ThongTin — sheet “' + found.info.name + '”' : 'ThongTin — không tìm thấy',
+         d.name ? d.name + ' · ' + d.level + (d.signals.length ? ' · ' + d.signals.length + ' từ tín hiệu' : '')
+                : 'Thiếu “Tên chủ điểm” — bắt buộc phải có');
+    line(d.formulas.length > 0, 'CongThuc — ' + d.formulas.length + ' dòng',
+         found.formulas ? 'Sheet “' + found.formulas.name + '”' : 'Không tìm thấy sheet — bài học sẽ trống phần công thức');
+    line(d.uses.length > 0, 'CachDung — ' + d.uses.length + ' trường hợp',
+         found.uses ? 'Sheet “' + found.uses.name + '”' : 'Không tìm thấy sheet');
+    line(d.cmpRows.length > 0,
+         'DoiChieu — ' + d.cmpRows.length + ' tiêu chí',
+         d.cmpWith ? 'So với “' + d.cmpWith + '”' : 'Không bắt buộc — chỉ cần nếu có cặp dễ nhầm');
+    line(d.traps.length > 0, 'Bay — ' + d.traps.length + ' bẫy',
+         found.traps ? 'Sheet “' + found.traps.name + '”' : 'Không tìm thấy sheet — nên có ít nhất một bẫy');
+    var good = d.items.filter(function (x) { return x.ok; });
+    var bad = d.items.length - good.length;
+    line(good.length >= 8, 'CauLuyen — ' + good.length + ' câu hợp lệ' + (bad ? ', ' + bad + ' dòng lỗi' : ''),
+         good.length ? mixText(good) : 'Không đọc được câu nào');
+    warn.forEach(function (m) { line(false, m, 'Đã tự sửa để nạp tiếp'); });
+
+    return { data: d, report: report, ok: !!d.name };
+  }
+
+  var xData = null;
+
+  function drawXlsx(res, fname) {
+    xData = res.data;
+    var good = res.data.items.filter(function (r) { return r.ok; });
+    var bad = res.data.items.length - good.length;
+
+    $('xDeck').innerHTML = deckHtml({
+      icon: res.data.icon, name: res.data.name, nameEn: res.data.nameEn, level: res.data.level,
+      tags: res.data.tags, rules: res.data.formulas.length, items: good.length
+    });
+
+    $('xSheets').innerHTML = res.report.map(function (r) {
+      return '<div class="chk-row ' + (r.ok ? 'chk-ok' : 'chk-warn') + '">' +
+        window.EMIcon(r.ok ? 'check' : 'alert') +
+        '<div><b style="font-weight:500">' + esc(r.label) + '</b><span>' + esc(r.detail) + '</span></div>' +
+      '</div>';
+    }).join('');
+    $('xSheetHint').textContent = res.report.filter(function (r) { return r.ok; }).length +
+      ' / ' + res.report.length + ' mục đạt';
+
+    $('xOk').innerHTML = window.EMIcon('check') + ' ' + good.length + ' câu hợp lệ';
+    $('xBad').hidden = bad === 0;
+    $('xBad').innerHTML = window.EMIcon('alert') + ' ' + bad + ' dòng lỗi';
+    $('xMix').textContent = mixText(good);
+    $('xItems').innerHTML = res.data.items.length
+      ? itemsHtml(res.data.items, false)
+      : '<div class="empty" style="border:none;padding:34px 20px">' + window.EMIcon('inbox') +
+        '<b>Sheet CauLuyen trống</b><p>Chủ điểm vẫn nạp được, nhưng chưa luyện tập được cho tới khi thêm câu.</p></div>';
+
+    $('xSave').disabled = !res.ok;
+    $('xMsg').innerHTML = (res.ok ? window.EMIcon('check', 'ico-sm') : window.EMIcon('alert', 'ico-sm')) +
+      ' Đã đọc <b>' + esc(fname) + '</b> — ' + res.report.length + ' mục kiểm tra' +
+      (res.ok ? '.' : '. <b>Thiếu “Tên chủ điểm” ở sheet ThongTin</b> nên chưa lưu được.');
+    $('xMsg').style.color = res.ok ? 'var(--ok)' : 'var(--err)';
+    $('xResult').hidden = false;
+    window.EMHydrate();
+  }
+
+  async function readXlsxFile(f) {
+    if (!f) return;
+    $('xMsg').style.color = 'var(--text-4)';
+    $('xMsg').textContent = 'Đang đọc ' + f.name + '…';
+    try {
+      var buf = await f.arrayBuffer();
+      var book = await window.EMXlsx.read(buf);
+      drawXlsx(mapWorkbook(book), f.name);
+    } catch (e) {
+      $('xResult').hidden = true;
+      $('xMsg').style.color = 'var(--err)';
+      $('xMsg').innerHTML = window.EMIcon('alert', 'ico-sm') + ' ' + esc(e.message || String(e));
+    }
+  }
+
+  $('xdrop').onclick = function () { $('xfile').click(); };
+  $('xdrop').onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') $('xfile').click(); };
+  $('xfile').onchange = function () { readXlsxFile(this.files[0]); };
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    $('xdrop').addEventListener(ev, function (e) { e.preventDefault(); this.classList.add('is-over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    $('xdrop').addEventListener(ev, function (e) { e.preventDefault(); this.classList.remove('is-over'); });
+  });
+  $('xdrop').addEventListener('drop', function (e) {
+    if (e.dataTransfer && e.dataTransfer.files) readXlsxFile(e.dataTransfer.files[0]);
+  });
+  $('xAnother').onclick = function () { $('xResult').hidden = true; $('xMsg').textContent = ''; $('xfile').click(); };
+
+  /* Sổ tính mẫu — sinh tại chỗ, mở được bằng Excel khi offline */
+  var SAMPLE_BOOK = {
+    ThongTin: [
+      ['Nhãn', 'Giá trị'],
+      ['Tên chủ điểm', 'Thì quá khứ hoàn thành'],
+      ['Tên tiếng Anh', 'Past perfect'],
+      ['Cấp độ', 'B1'],
+      ['Nhóm', 'Thì động từ'],
+      ['Mô tả', 'Diễn tả việc xảy ra trước một mốc quá khứ khác. Người Việt hay bỏ qua vì tiếng Việt chỉ dùng “đã”.'],
+      ['Icon', 'clock'],
+      ['Nhóm lỗi', 'Nhầm thì'],
+      ['Từ tín hiệu', 'before, after, by the time, already, when, until'],
+      ['Chủ điểm dễ nhầm', 'Quá khứ đơn']
+    ],
+    CongThuc: [
+      ['Dạng', 'Cấu trúc', 'Ví dụ'],
+      ['Khẳng định', 'S + had + V3', 'She had left before I arrived.'],
+      ['Phủ định', 'S + had not + V3', "They hadn't finished when the bell rang."],
+      ['Nghi vấn', 'Had + S + V3 ?', 'Had you eaten before the meeting?']
+    ],
+    CachDung: [
+      ['Trường hợp', 'Câu ví dụ', 'Giải thích'],
+      ['Việc xảy ra trước một mốc quá khứ', 'When I arrived, the train {had} already {left}.', 'Tàu chạy TRƯỚC lúc tôi đến — hai việc đều trong quá khứ.'],
+      ['Nguyên nhân của một việc quá khứ', 'He could not open the door because he {had lost} his keys.', 'Mất chìa trước, không mở được cửa sau.'],
+      ['Trong câu tường thuật', 'She told me she {had finished} the report.', 'Lùi một bậc so với “has finished” của lời gốc.']
+    ],
+    DoiChieu: [
+      ['Tiêu chí', 'Quá khứ đơn', 'Quá khứ hoàn thành'],
+      ['Số mốc thời gian', 'Một mốc duy nhất', 'Hai mốc — việc này trước việc kia'],
+      ['Ví dụ', 'The train left at 6pm.', 'The train had left when I arrived.'],
+      ['Từ đi kèm', 'yesterday, last week, ago', 'before, after, by the time, when']
+    ],
+    Bay: [
+      ['Câu sai', 'Câu đúng', 'Vì sao'],
+      ['When I arrived, the train already left.', 'When I arrived, the train had already left.',
+       'Tiếng Việt chỉ có một chữ “đã” cho cả hai thì nên bước lùi về quá khứ hoàn thành bị bỏ.'],
+      ['She said she has finished the report.', 'She said she had finished the report.',
+       'Trong câu tường thuật, “has” phải lùi thành “had”.']
+    ],
+    CauLuyen: [
+      ['Câu', 'Giải thích'],
+      ['When I arrived, the train {had already left}. (already leave)', 'Việc xảy ra trước một mốc quá khứ khác.'],
+      ['By the time we got there, they {had eaten | ate | have eaten | were eating} dinner.', 'Mốc “by the time we got there” nằm trong quá khứ.'],
+      ['She told me she [have finished > had finished] the report.', 'Câu tường thuật phải lùi thì.'],
+      ['He lost his keys, so he could not open the door. >> He could not open the door because he had lost his keys.', ''],
+      ['I {had never seen} such a storm before that night. (never see)', 'Trước một mốc quá khứ xác định.'],
+      ['After she {had packed} her bags, she called a taxi. (pack)', 'After + quá khứ hoàn thành.'],
+      ['They [was > had] already gone home when we called.', 'Sau chủ ngữ số nhiều vẫn là had, không phải was.'],
+      ['We did not know that he {had moved | moved | moves | has moved} to Da Nang.', 'Việc chuyển nhà xảy ra trước lúc “không biết”.']
+    ]
+  };
+
+  $('xTemplate').onclick = function () {
+    try {
+      var bytes = window.EMXlsx.build(SAMPLE_BOOK);
+      var url = URL.createObjectURL(new Blob([bytes], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }));
+      var a = document.createElement('a');
+      a.href = url; a.download = 'mau-chu-diem-ngu-phap.xlsx';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 800);
+    } catch (e) {
+      $('xMsg').style.color = 'var(--err)';
+      $('xMsg').textContent = 'Không tạo được file mẫu: ' + (e.message || e);
+    }
+  };
+  window.EMSampleBook = SAMPLE_BOOK;          /* dùng cho kiểm thử */
+  window.EMMapWorkbook = mapWorkbook;
+
+  /* Lưu thẳng — không qua wizard */
+  $('xSave').onclick = function () {
+    if (!xData || !xData.name) return;
+    var good = xData.items.filter(function (r) { return r.ok; });
+    $('doneName').textContent = 'Đã nạp “' + xData.name + '” từ Excel';
+    $('doneSub').innerHTML = xData.level + ' · ' + xData.formulas.length + ' dòng công thức · ' +
+      xData.uses.length + ' trường hợp dùng · ' + xData.traps.length + ' bẫy · <b>' +
+      good.length + ' câu luyện tập</b>. Chủ điểm đã nằm trong thư viện và có lịch ôn riêng.';
+    show('scr-done');
+  };
+
+  /* Đổi ý: mở dữ liệu vừa đọc trong trình soạn 4 bước */
+  $('xEdit').onclick = function () {
+    if (!xData) return;
+    openWizard(null);
+    $('inName').value = xData.name;
+    $('inNameEn').value = xData.nameEn;
+    $('inDesc').value = xData.desc;
+    $('inCmp').value = xData.cmpWith;
+    state.level = xData.level; state.icon = xData.icon;
+    $('inLevel').querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('is-active', b.dataset.v === xData.level);
+    });
+    $('inIcon').querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('is-active', b.dataset.v === xData.icon);
+    });
+    state.tags = xData.tags.slice();
+    $('inTags').querySelectorAll('.chip').forEach(function (c) {
+      c.classList.toggle('is-active', xData.tags.indexOf(c.dataset.v) > -1);
+    });
+    state.signals = xData.signals.slice();
+    drawSignals();
+
+    $('formRows').innerHTML = ''; $('useRows').innerHTML = '';
+    $('cmpRows').innerHTML = ''; $('trapRows').innerHTML = '';
+    (xData.formulas.length ? xData.formulas : [{ k: '', s: '', e: '' }])
+      .forEach(function (f) { formRow(f.k, f.s, f.e); });
+    (xData.uses.length ? xData.uses : [{ t: '', e: '', n: '' }])
+      .forEach(function (u) { useRow(u.t, u.e, u.n); });
+    (xData.cmpRows.length ? xData.cmpRows : [{ k: '', a: '', b: '' }])
+      .forEach(function (c) { cmpRow(c.k, c.a, c.b); });
+    (xData.traps.length ? xData.traps : [{ w: '', r: '', y: '' }])
+      .forEach(function (t) { trapRow(t.w, t.r, t.y); });
+
+    $('pasteBox').value = xData.items.map(function (r) {
+      return r.ok ? (r.raw || '') : r.raw;
+    }).filter(Boolean).join('\n');
+    syncCmpHead();
+    refresh();
+    $('wizTitle').textContent = 'Từ Excel: ' + xData.name;
+    $('wizSub').textContent = 'Dữ liệu đã nạp từ sổ tính — sửa lại rồi lưu.';
+  };
 
   /* Khởi tạo bảng duyệt rỗng */
   drawReview();

@@ -165,24 +165,30 @@ tài sản học tập**, có vòng đời riêng giống thẻ từ vựng.
 Thư viện 16 chủ điểm là điểm khởi đầu, không phải giới hạn. Người học ôn thi có giáo trình riêng,
 giáo viên có bộ câu riêng — nên module phải cho phép **tự soạn chủ điểm**.
 
-**Hai lối vào, một đích:**
+**Ba lối vào:**
 
 ```
-        ┌─────────────────────────────┐
-        │  Thêm chủ điểm              │
-        └──────┬───────────────┬──────┘
-     tạo mới   │               │   chép mẫu
-               ▼               ▼
-        (form trống)   ┌──────────────────┐
-               │       │ Thư viện mẫu     │  8 chủ điểm chuẩn CEFR
-               │       │ (lọc theo cấp độ)│  đã kèm công thức + câu luyện
-               │       └────────┬─────────┘
-               └────────┬───────┘
-                        ▼
-        ┌───────────────────────────────────────────────┐
-        │  1 Thông tin → 2 Nội dung → 3 Câu luyện → 4 Lưu│
-        └───────────────────────────────────────────────┘
+        ┌──────────────────────────────────────────────┐
+        │              Thêm chủ điểm                   │
+        └───┬──────────────────┬──────────────────┬────┘
+   tạo mới  │        chép mẫu  │      nạp Excel   │
+            ▼                  ▼                  ▼
+     (form trống)   ┌──────────────────┐   ┌──────────────────┐
+            │       │ Thư viện mẫu     │   │ Đọc sổ tính      │
+            │       │ 8 chủ điểm CEFR  │   │ 6 sheet → duyệt  │
+            │       └────────┬─────────┘   └───┬──────────┬───┘
+            └───────┬────────┘                 │          │ lưu thẳng
+                    ▼                          │          ▼
+   ┌───────────────────────────────────────────┘     (xong)
+   ▼                    "mở trong trình soạn để sửa"
+┌───────────────────────────────────────────────┐
+│  1 Thông tin → 2 Nội dung → 3 Câu luyện → 4 Lưu│
+└───────────────────────────────────────────────┘
 ```
+
+Lối *nạp Excel* **không đi qua wizard** — đọc xong hiện bảng duyệt rồi lưu luôn, vì người đã soạn
+sẵn cả sổ tính thì không cần bấm qua 4 bước nữa. Vẫn có nút phụ *"Mở trong trình soạn để sửa"*
+đổ dữ liệu vào wizard khi cần chỉnh vài chỗ.
 
 Chép mẫu **điền sẵn toàn bộ 4 bước** rồi thả người dùng vào bước 1 — sửa được mọi phần,
 không phải là bản chỉ-đọc. Đây là lý do gộp hai lối vào chung một wizard thay vì làm hai luồng riêng.
@@ -248,6 +254,46 @@ File có cột `cau` (bắt buộc) và `giai_thich` (tùy chọn); nếu không
 
 Nội dung cột `cau` dùng **đúng cú pháp của tab dán hàng loạt** — một cú pháp duy nhất cho cả hai
 nguồn, và cả hai đổ vào cùng một bảng duyệt. Người dùng chỉ phải học một thứ.
+
+#### Nạp cả chủ điểm từ một sổ tính Excel
+
+**Một file = một chủ điểm**, gồm 6 sheet. Tên sheet và nhãn được so khớp sau khi bỏ dấu và
+thường hoá, nên `CachDung`, `Cách dùng`, `cach dung` đều nhận. Dòng tiêu đề tự nhận ra và bỏ qua.
+Thiếu sheet nào thì phần đó để trống, **không chặn nạp**.
+
+| Sheet | Các cột theo thứ tự |
+|---|---|
+| `ThongTin` | `Nhãn` · `Giá trị` — Tên chủ điểm · Tên tiếng Anh · Cấp độ · Nhóm · Mô tả · Icon · Nhóm lỗi · Từ tín hiệu · Chủ điểm dễ nhầm |
+| `CongThuc` | `Dạng` · `Cấu trúc` · `Ví dụ` |
+| `CachDung` | `Trường hợp` · `Câu ví dụ` · `Giải thích` |
+| `DoiChieu` | `Tiêu chí` · `Chủ điểm kia` · `Chủ điểm này` |
+| `Bay` | `Câu sai` · `Câu đúng` · `Vì sao` |
+| `CauLuyen` | `Câu` · `Giải thích` — cột `Câu` dùng đúng cú pháp dán hàng loạt ở trên |
+
+Ràng buộc duy nhất là **Tên chủ điểm**; thiếu thì nút Lưu bị khoá. Giá trị lạ được tự sửa và ghi
+vào báo cáo thay vì báo lỗi cứng: cấp độ ngoài A1–C1 → tạm B1, icon không có trong bộ → tạm `clock`,
+nhãn không nhận ra ở `ThongTin` → liệt kê để người dùng biết mình gõ sai chỗ nào.
+
+Màn hình duyệt hiện ba thứ cạnh nhau: **thẻ chủ điểm** như sẽ nằm trong thư viện, **báo cáo từng
+sheet** (đọc được bao nhiêu dòng, từ sheet tên gì), và **bảng câu luyện** đã phân tích với dòng lỗi
+tô đỏ. Người dùng thấy đủ để quyết định lưu hay quay lại sửa file.
+
+#### Vì sao tự viết bộ đọc `.xlsx` thay vì dùng thư viện
+
+`.xlsx` là một file ZIP chứa vài file XML. Thư viện phổ biến (SheetJS) nặng gần 1 MB và phải tải
+từ CDN — trong khi bản thiết kế này chạy bằng cách mở file HTML trực tiếp, thường là **không có mạng**.
+
+`11-ngu-phap/xlsx-mini.js` (~280 dòng, không phụ thuộc gì) làm hai việc:
+
+- **Đọc** — tự bóc chỉ mục ZIP rồi giải nén bằng `DecompressionStream('deflate-raw')`
+  (Chrome/Edge 80+, Firefox 113+, Safari 16.4+), sau đó phân tích XML bằng `DOMParser`.
+  Hỗ trợ cả `sharedStrings` (Excel và openpyxl dùng) lẫn `inlineStr`.
+- **Tạo** — đóng gói ZIP ở chế độ **STORE** (không nén) kèm CRC32 tự tính, nên không cần thuật toán
+  deflate ở chiều ngược lại. Nhờ vậy nút *Tải sổ tính mẫu* sinh file `.xlsx` thật ngay tại chỗ,
+  mở được bằng Excel / LibreOffice / Google Sheets kể cả khi offline.
+
+Nếu trình duyệt quá cũ, `supported()` trả về `false` và màn hình báo rõ *"hãy lưu file thành .csv
+rồi thử lại"* — tab **Nhập từ file** ở bước 3 vẫn nhận CSV như cũ.
 
 #### Checklist chất lượng (bước 4)
 
@@ -319,7 +365,8 @@ ErrorEntry {                        // một lỗi đã mắc
 | `chi-tiet.html` | Bài học "Hiện tại hoàn thành" — công thức, dòng thời gian, đối chiếu, bẫy người Việt |
 | `luyen-tap.html` | Phiên luyện chế độ tập trung — 4 dạng bài, chấm điểm, giải thích, màn hình kết quả |
 | `so-loi.html` | Sổ lỗi cá nhân — phân bố nhóm lỗi, lịch ôn, danh sách lỗi |
-| `them-chu-diem.html` | Thêm chủ điểm — chọn tạo mới / chép mẫu CEFR, wizard 4 bước, parser dán hàng loạt, nhập CSV |
+| `them-chu-diem.html` | Thêm chủ điểm — 3 lối vào (tạo mới / chép mẫu CEFR / nạp Excel), wizard 4 bước, parser dán hàng loạt, nhập CSV & .xlsx |
+| `xlsx-mini.js` | Đọc và tạo file `.xlsx` ngay trong trình duyệt, không phụ thuộc thư viện ngoài |
 | `style.css` | Chỉ `@import '../style.css'` — giống 10 module còn lại |
 | `kiem-thu.js` | Bộ kiểm thử DOM (76 kiểm tra) — chạy `node kiem-thu.js <thư-mục-gốc>`, cần `npm i jsdom` |
 | `THIET-KE.md` | Tài liệu này |
@@ -332,7 +379,7 @@ Thay đổi ở file dùng chung:
 
 ## 7. Đã kiểm tra
 
-`node kiem-thu.js .` — **150 / 150 kiểm tra đạt**:
+`node kiem-thu.js .` — **180 / 180 kiểm tra đạt**:
 
 - 5 trang mới: không lỗi JavaScript, 100% `<i data-ico>` được thay bằng SVG, đổi Sáng/Tối hoạt động.
 - Điều hướng: sidebar dựng đúng và mục *Ngữ pháp* sáng lên trên cả 3 trang có shell;
@@ -347,6 +394,12 @@ Thay đổi ở file dùng chung:
   và tạo mới (chặn khi thiếu tên, thêm/xóa dòng công thức, chip từ tín hiệu, thêm bẫy,
   thêm/xóa trường hợp dùng và tiêu chí đối chiếu, chèn ví dụ mẫu → 11 câu,
   thêm dòng sai → hiện lỗi rồi xóa được, checklist 9 mục, lưu xong).
+- **Đọc / tạo `.xlsx`** — kiểm hai chiều với `openpyxl`: (a) file `.xlsx` **thật** do openpyxl sinh
+  (deflate + sharedStrings, tên sheet tiếng Việt có dấu) được bộ đọc phân tích đúng cả 6 sheet;
+  (b) sổ tính mẫu do app sinh được `zipfile.testzip()` xác nhận CRC32 hợp lệ và `openpyxl` mở ra
+  đúng 6 sheet, đúng nội dung tiếng Việt; (c) nạp lại chính file mẫu đó ra đủ 8 câu luyện phủ cả 4 dạng bài.
+- **Ánh xạ sổ tính → chủ điểm** — chuẩn hoá cấp độ viết thường, tách từ tín hiệu theo dấu phẩy,
+  bỏ dòng tiêu đề, cảnh báo nhãn lạ, dòng sai cú pháp không chặn nạp, thiếu tên chủ điểm thì khoá nút Lưu.
 - Kiểm tra tĩnh toàn bộ 23 file HTML của dự án: cân bằng thẻ, không có `<button>`/`<div>` lồng trong `<a>`,
   mọi liên kết nội bộ trỏ đúng file có thật.
 
