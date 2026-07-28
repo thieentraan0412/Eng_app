@@ -277,16 +277,6 @@ export default function FlashcardPage() {
               </button>
             ))}
           </section>
-
-          <p className="fc-note">
-            <Icon name="bulb" />
-            <span>
-              Trong phiên ôn bạn có thể bật <b>Gõ từ</b> để tự kiểm tra chính tả, hoặc{' '}
-              <b>Ví dụ</b> để xem câu minh họa ở mặt sau. Lật thẻ bằng{' '}
-              <span className="fc-kbd">Tab</span>, đánh giá bằng{' '}
-              <span className="fc-kbd">1</span>–<span className="fc-kbd">4</span>.
-            </span>
-          </p>
         </>
       )}
     </div>

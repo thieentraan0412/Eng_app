@@ -770,6 +770,8 @@ function ReorderQuiz({
   const [bank, setBank] = useState<Chip[]>([]) // các từ còn trong kho
   const [checked, setChecked] = useState(false)
   const [correct, setCorrect] = useState(false)
+  const [attempted, setAttempted] = useState(false) // đã chấm ít nhất 1 lần ở câu này
+  const [edited, setEdited] = useState(false) // đã sửa lại sau lần chấm gần nhất
   const [showAnswer, setShowAnswer] = useState(false)
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dropTarget, setDropTarget] = useState<{
@@ -789,6 +791,8 @@ function ReorderQuiz({
     setPlaced([])
     setChecked(false)
     setCorrect(false)
+    setAttempted(false)
+    setEdited(false)
     setShowAnswer(false)
     setDraggingId(null)
     setDropTarget(null)
@@ -803,13 +807,18 @@ function ReorderQuiz({
     }
   }, [q, questions.length])
 
+  // Chấm ĐÚNG mới khóa câu lại; chấm sai vẫn cho sắp xếp lại rồi kiểm tra tiếp.
+  const locked = checked && correct
+
   const pick = (chip: Chip, from: number) => {
-    if (checked) return
+    if (locked) return
+    setEdited(true)
     setBank((b) => b.filter((_, i) => i !== from))
     setPlaced((p) => [...p, chip])
   }
   const unpick = (from: number) => {
-    if (checked) return
+    if (locked) return
+    setEdited(true)
     setPlaced((p) => {
       const chip = p[from]
       setBank((b) => [...b, chip])
@@ -818,9 +827,10 @@ function ReorderQuiz({
   }
 
   const moveChip = (chipId: number, area: 'placed' | 'bank', targetIndex: number) => {
-    if (checked) return
+    if (locked) return
     const chip = [...placed, ...bank].find((item) => item.id === chipId)
     if (!chip) return
+    setEdited(true)
 
     const sourceArea = placed.some((item) => item.id === chipId) ? 'placed' : 'bank'
     const source = sourceArea === 'placed' ? placed : bank
@@ -838,7 +848,7 @@ function ReorderQuiz({
   }
 
   const startDrag = (event: DragEvent<HTMLButtonElement>, chipId: number) => {
-    if (checked) {
+    if (locked) {
       event.preventDefault()
       return
     }
@@ -875,7 +885,7 @@ function ReorderQuiz({
     area: 'placed' | 'bank',
     index: number,
   ) => {
-    if (checked) return
+    if (locked) return
     event.preventDefault()
     event.stopPropagation()
     event.dataTransfer.dropEffect = 'move'
@@ -894,6 +904,11 @@ function ReorderQuiz({
     const ok = normSentence(placed) === normSentence(q.answer)
     setCorrect(ok)
     setChecked(true)
+    setEdited(false)
+    // Điểm tính theo LẦN CHẤM ĐẦU TIÊN — sửa lại cho đúng vẫn được, nhưng
+    // không tính là câu đúng để thống kê phản ánh đúng thực lực.
+    if (attempted) return
+    setAttempted(true)
     setResults((r) => {
       const next = [...r]
       next[idx] = ok
@@ -915,13 +930,14 @@ function ReorderQuiz({
       }
       if (e.key !== 'Enter') return
       e.preventDefault()
-      if (checked) next()
+      // Đã chấm và chưa sửa gì -> sang câu kế; vừa sửa lại -> chấm lại
+      if (checked && !edited) next()
       else if (q && placed.length === q.answer.length) check()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checked, placed, q])
+  }, [checked, edited, placed, q])
 
   if (questions.length === 0) {
     return (
@@ -1026,7 +1042,8 @@ function ReorderQuiz({
             <span className="ro-placeholder">Bấm hoặc kéo từ vào đây để xếp câu…</span>
           ) : (
             placed.map((c, i) => {
-              const wrong = checked && !sameChipText(c, q.answer[i])
+              // Sửa lại sau khi chấm sai -> bỏ dấu đỏ cho tới lần chấm kế
+              const wrong = checked && !edited && !sameChipText(c, q.answer[i])
               const dropBefore =
                 dropTarget?.area === 'placed' &&
                 dropTarget.index === i &&
@@ -1037,14 +1054,14 @@ function ReorderQuiz({
                   className={`ro-chip${wrong ? ' is-wrong' : ''}${
                     draggingId === c.id ? ' is-dragging' : ''
                   }${dropBefore ? ' is-drop-before' : ''}`}
-                  draggable={!checked}
-                  disabled={checked}
+                  draggable={!locked}
+                  disabled={locked}
                   onClick={() => clickWithoutDrag(() => unpick(i))}
                   onDragStart={(event) => startDrag(event, c.id)}
                   onDragEnd={finishDrag}
                   onDragOver={(event) => dragOver(event, 'placed', i)}
                   onDrop={(event) => dropChip(event, 'placed', i)}
-                  title={checked ? (wrong ? 'Từ này sai vị trí' : 'Đúng vị trí') : 'Kéo để đổi vị trí'}
+                  title={wrong ? 'Từ này sai vị trí — kéo để sửa' : 'Kéo để đổi vị trí'}
                 >
                   {c.text}
                 </button>
@@ -1060,8 +1077,8 @@ function ReorderQuiz({
           </div>
         )}
 
-        {/* Kho từ đã xáo trộn */}
-        {!checked && (
+        {/* Kho từ đã xáo trộn — còn hiện khi chưa xếp đúng để sửa tiếp */}
+        {!locked && (
           <div
             className={`ro-bank${
               dropTarget?.area === 'bank' && dropTarget.index === bank.length
@@ -1095,22 +1112,29 @@ function ReorderQuiz({
           </div>
         )}
 
-        {checked ? (
+        {checked && (
           <div className={`ex-banner ${correct ? 'ok' : 'no'}`}>
             <span className="ex-banner-ico">
               <Icon name={correct ? 'check' : 'x'} />
             </span>
             <div className="ex-banner-text">
               <strong>{correct ? 'Chính xác!' : 'Chưa đúng'}</strong>
+              {!correct && <span>Sắp xếp lại rồi bấm “Kiểm tra lại”</span>}
             </div>
-            <button className="ex-btn" onClick={() => setShowAnswer((value) => !value)}>
-              <Icon name="eye" /> {showAnswer ? 'Ẩn đáp án' : 'Xem đáp án'}
-            </button>
-            <button className="ex-btn ex-btn-primary" onClick={next}>
+            {!correct && (
+              <button className="ex-btn" onClick={() => setShowAnswer((value) => !value)}>
+                <Icon name="eye" /> {showAnswer ? 'Ẩn đáp án' : 'Xem đáp án'}
+              </button>
+            )}
+            {/* Sai: “Kiểm tra lại” ở hàng dưới mới là nút chính, nên nút này để phụ */}
+            <button className={`ex-btn${correct ? ' ex-btn-primary' : ''}`} onClick={next}>
               {idx + 1 < questions.length ? 'Tiếp tục' : 'Xem kết quả'} <Icon name="right" />
             </button>
           </div>
-        ) : (
+        )}
+
+        {/* Chưa xếp đúng thì luôn còn hàng nút để sửa và chấm lại */}
+        {!locked && (
           <div className="ex-nav">
             <button
               className="ex-btn"
@@ -1124,9 +1148,9 @@ function ReorderQuiz({
             <button
               className="ex-btn ex-btn-primary"
               onClick={check}
-              disabled={placed.length !== q.answer.length}
+              disabled={placed.length !== q.answer.length || (checked && !edited)}
             >
-              <Icon name="check" /> Kiểm tra
+              <Icon name="check" /> {attempted ? 'Kiểm tra lại' : 'Kiểm tra'}
             </button>
           </div>
         )}

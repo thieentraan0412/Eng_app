@@ -227,6 +227,109 @@ function toSentenceRow(userId: string, folderId: string, s: NewCloudSentence) {
   }
 }
 
+// ---------- Ngữ pháp ----------
+export interface CloudGrammarFormula {
+  form: string
+  structure: string
+  example: string
+}
+export interface CloudGrammarUse {
+  name: string
+  sample: string
+  note: string
+}
+export interface CloudGrammarTrap {
+  wrong: string
+  right: string
+  why: string
+}
+export interface CloudGrammarCompare {
+  with: string
+  rows: { key: string; other: string; self: string }[]
+}
+
+export interface NewCloudGrammarTopic {
+  /** slug chủ điểm dựng sẵn mà bản này thay thế · null = chủ điểm tự soạn */
+  source_key: string | null
+  name: string
+  name_en: string | null
+  level: string
+  topic_group: string | null
+  description: string | null
+  icon: string
+  tags: string[]
+  signals: string[]
+  formulas: CloudGrammarFormula[]
+  uses: CloudGrammarUse[]
+  traps: CloudGrammarTrap[]
+  compare: CloudGrammarCompare | null
+}
+
+export interface CloudGrammarTopic extends NewCloudGrammarTopic {
+  id: string
+  user_id: string
+  created_at: string
+  updated_at: string
+}
+
+export type GrammarItemKind = 'cloze' | 'mcq' | 'correct' | 'transform'
+
+export interface NewCloudGrammarItem {
+  kind: GrammarItemKind
+  prompt: string
+  answers: string[]
+  options: string[] | null
+  tokens: string[] | null
+  err_index: number | null
+  cue: string | null
+  explain: string | null
+  error_tag: string | null
+}
+
+export interface CloudGrammarItem extends NewCloudGrammarItem {
+  id: string
+  user_id: string
+  topic_id: string
+  created_at: string
+}
+
+export interface NewCloudGrammarProgress {
+  topic_key: string
+  attempts: number
+  correct: number
+  mastery: number
+  srs_interval: number
+  srs_due_date: string
+  last_studied: string | null
+}
+
+export interface CloudGrammarProgress extends NewCloudGrammarProgress {
+  id: string
+  user_id: string
+  updated_at: string
+}
+
+export interface NewCloudGrammarError {
+  topic_key: string
+  topic_name: string
+  level: string | null
+  error_tag: string
+  item_ref: string | null
+  wrong_text: string
+  right_text: string
+  hit_count: number
+  stage: number
+  status: 'active' | 'resolved'
+  due_date: string
+}
+
+export interface CloudGrammarError extends NewCloudGrammarError {
+  id: string
+  user_id: string
+  first_seen: string
+  last_seen: string
+}
+
 export const CloudApi = {
   // ---------- Auth ----------
   async signUp(email: string, password: string) {
@@ -699,6 +802,22 @@ export const CloudApi = {
     return counts
   },
 
+  // Đếm số câu chấm ĐÚNG theo từng thư mục — nhãn "n đúng" trên thẻ thư mục
+  async countCorrectByFolder(): Promise<Record<string, number>> {
+    const { data, error } = await supabase
+      .from('sentence_progress')
+      .select('sentence_id, sentences!inner(folder_id)')
+      .eq('status', 'correct')
+      .is('sentences.deleted_at', null)
+    if (error) throw error
+    const counts: Record<string, number> = {}
+    for (const row of data as unknown as { sentences: { folder_id: string } }[]) {
+      const fid = row.sentences?.folder_id
+      if (fid) counts[fid] = (counts[fid] ?? 0) + 1
+    }
+    return counts
+  },
+
   // ---------- Chép câu: bài đã làm (tab Luyện tập) ----------
   async listProgress(sentenceIds: string[]): Promise<CloudSentenceProgress[]> {
     if (sentenceIds.length === 0) return []
@@ -980,6 +1099,176 @@ export const CloudApi = {
       const a = agg.get(d.id) ?? { total: 0, learned: 0, due: 0 }
       return { deck_id: d.id, name: d.name, total: a.total, learned: a.learned, due: a.due }
     })
+  },
+
+  // ============================================================
+  // NGỮ PHÁP — chủ điểm tự soạn, câu luyện, tiến độ và sổ lỗi
+  // (16 chủ điểm chuẩn nằm trong src/data/grammar.ts, không lưu DB)
+  // ============================================================
+  async listGrammarTopics(): Promise<CloudGrammarTopic[]> {
+    const { data, error } = await supabase
+      .from('grammar_topics')
+      .select('*')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    return (data ?? []) as CloudGrammarTopic[]
+  },
+
+  async createGrammarTopic(t: NewCloudGrammarTopic): Promise<CloudGrammarTopic> {
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { data, error } = await supabase
+      .from('grammar_topics')
+      .insert({ ...t, user_id: user.id })
+      .select()
+      .single()
+    if (error) throw error
+    return data as CloudGrammarTopic
+  },
+
+  async updateGrammarTopic(id: string, t: NewCloudGrammarTopic): Promise<void> {
+    const { error } = await supabase
+      .from('grammar_topics')
+      .update({ ...t, updated_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  async deleteGrammarTopic(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('grammar_topics')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  // ---------- Ẩn / hiện lại chủ điểm dựng sẵn ----------
+  // Chủ điểm dựng sẵn nằm trong code nên không xóa được: ẩn = ghi một dòng.
+  async listHiddenGrammarTopics(): Promise<string[]> {
+    const { data, error } = await supabase.from('grammar_hidden_topics').select('topic_key')
+    if (error) throw error
+    return (data ?? []).map((r) => (r as { topic_key: string }).topic_key)
+  },
+
+  async hideGrammarTopic(topicKey: string): Promise<void> {
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { error } = await supabase
+      .from('grammar_hidden_topics')
+      .upsert({ topic_key: topicKey, user_id: user.id }, { onConflict: 'user_id,topic_key' })
+    if (error) throw error
+  },
+
+  async unhideGrammarTopic(topicKey: string): Promise<void> {
+    const { error } = await supabase
+      .from('grammar_hidden_topics')
+      .delete()
+      .eq('topic_key', topicKey)
+    if (error) throw error
+  },
+
+  async listGrammarItems(): Promise<CloudGrammarItem[]> {
+    const { data, error } = await supabase
+      .from('grammar_items')
+      .select('*')
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    return (data ?? []) as CloudGrammarItem[]
+  },
+
+  async createGrammarItems(topicId: string, rows: NewCloudGrammarItem[]): Promise<number> {
+    if (rows.length === 0) return 0
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { data, error } = await supabase
+      .from('grammar_items')
+      .insert(rows.map((r) => ({ ...r, topic_id: topicId, user_id: user.id })))
+      .select('id')
+    if (error) throw error
+    return data?.length ?? 0
+  },
+
+  async replaceGrammarItems(topicId: string, rows: NewCloudGrammarItem[]): Promise<number> {
+    const { error } = await supabase.from('grammar_items').delete().eq('topic_id', topicId)
+    if (error) throw error
+    return this.createGrammarItems(topicId, rows)
+  },
+
+  async listGrammarProgress(): Promise<CloudGrammarProgress[]> {
+    const { data, error } = await supabase.from('grammar_progress').select('*')
+    if (error) throw error
+    return (data ?? []) as CloudGrammarProgress[]
+  },
+
+  async saveGrammarProgress(p: NewCloudGrammarProgress): Promise<void> {
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { error } = await supabase.from('grammar_progress').upsert(
+      { ...p, user_id: user.id, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,topic_key' },
+    )
+    if (error) throw error
+  },
+
+  async listGrammarErrors(): Promise<CloudGrammarError[]> {
+    const { data, error } = await supabase
+      .from('grammar_errors')
+      .select('*')
+      .order('last_seen', { ascending: false })
+    if (error) throw error
+    return (data ?? []) as CloudGrammarError[]
+  },
+
+  // Ghi 1 lỗi vừa mắc: đã có thì tăng hit_count và quay về chặng đầu (tái phạm)
+  async recordGrammarError(e: NewCloudGrammarError): Promise<void> {
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { data: found, error: findErr } = await supabase
+      .from('grammar_errors')
+      .select('id, hit_count')
+      .eq('topic_key', e.topic_key)
+      .eq('wrong_text', e.wrong_text)
+      .eq('right_text', e.right_text)
+      .maybeSingle()
+    if (findErr) throw findErr
+
+    const now = new Date().toISOString()
+    if (found) {
+      const { error } = await supabase
+        .from('grammar_errors')
+        .update({
+          hit_count: (found as { hit_count: number }).hit_count + 1,
+          stage: 0,
+          status: 'active',
+          due_date: e.due_date,
+          last_seen: now,
+        })
+        .eq('id', (found as { id: string }).id)
+      if (error) throw error
+      return
+    }
+    const { error } = await supabase
+      .from('grammar_errors')
+      .insert({ ...e, user_id: user.id, first_seen: now, last_seen: now })
+    if (error) throw error
+  },
+
+  // Ôn đúng 1 lỗi -> lên chặng kế; hết chặng thì chuyển "đã khắc phục"
+  async advanceGrammarError(
+    id: string,
+    patch: { stage: number; status: 'active' | 'resolved'; due_date: string },
+  ): Promise<void> {
+    const { error } = await supabase
+      .from('grammar_errors')
+      .update({ ...patch, last_seen: new Date().toISOString() })
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  async deleteGrammarError(id: string): Promise<void> {
+    const { error } = await supabase.from('grammar_errors').delete().eq('id', id)
+    if (error) throw error
   },
 }
 

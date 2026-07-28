@@ -109,6 +109,11 @@ export async function countDoneByFolder(): Promise<Record<string, number>> {
   return CloudApi.countProgressByFolder()
 }
 
+// Số câu chấm ĐÚNG theo từng thư mục — nhãn "n đúng" trên thẻ
+export async function countCorrectByFolder(): Promise<Record<string, number>> {
+  return CloudApi.countCorrectByFolder()
+}
+
 // ---------- Câu ----------
 export async function listSentences(folderId: string): Promise<StoredSentence[]> {
   const rows = await CloudApi.listSentences(folderId)

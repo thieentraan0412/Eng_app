@@ -1,0 +1,2299 @@
+/* ============================================================
+   Trang Ngữ pháp — port từ mockup EngMaster_Redesign/11-ngu-phap
+   (index · chi-tiet · luyen-tap · so-loi · them-chu-diem)
+
+   Phong cách "Quiet Premium": viền hairline, một màu nhấn duy nhất
+   (xanh/đỏ chỉ dành cho đúng/sai), cấp độ CEFR phân biệt bằng nhãn chữ.
+   Màu mockup map sang token app (var(--...)) nên chạy cả dark mode.
+   Tiền tố: gr-
+   ============================================================ */
+
+.page.gr-page {
+  max-width: 1120px;
+}
+.page.gr-page.is-narrow {
+  max-width: 900px;
+}
+
+.gr-page .ico,
+.gr-focus .ico {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- Đầu trang ---------- */
+.gr-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.gr-head h1 {
+  margin: 0;
+  font-size: 23px;
+  line-height: 1.26;
+  font-weight: 600;
+  letter-spacing: -0.026em;
+  color: var(--text);
+}
+.gr-head p {
+  margin: 4px 0 0;
+  max-width: 68ch;
+  font-size: 13.5px;
+  color: var(--text-soft);
+}
+.gr-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* ---------- Nút ---------- */
+.gr-page .gr-btn,
+.gr-focus .gr-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.008em;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: background 0.14s, border-color 0.14s, color 0.14s, transform 0.14s;
+}
+.gr-page .gr-btn:hover,
+.gr-focus .gr-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--muted);
+}
+.gr-page .gr-btn:active,
+.gr-focus .gr-btn:active {
+  transform: translateY(0.5px);
+}
+.gr-page .gr-btn:disabled,
+.gr-focus .gr-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.gr-btn .ico {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.75;
+  color: var(--text-soft);
+}
+.gr-page .gr-btn-primary,
+.gr-focus .gr-btn-primary {
+  background: var(--primary);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: var(--shadow-primary);
+}
+.gr-page .gr-btn-primary:hover,
+.gr-focus .gr-btn-primary:hover {
+  background: var(--primary-hover);
+  border-color: transparent;
+}
+.gr-btn-primary .ico {
+  color: currentColor;
+}
+.gr-page .gr-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--text-soft);
+}
+.gr-page .gr-btn-ghost:hover {
+  background: var(--surface-2);
+  border-color: transparent;
+  color: var(--text);
+}
+.gr-page .gr-btn-danger:hover {
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--border-strong));
+  color: var(--danger);
+}
+.gr-page .gr-btn-sm,
+.gr-focus .gr-btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  gap: 5px;
+  font-size: 12.5px;
+  border-radius: 6px;
+}
+.gr-btn-sm .ico {
+  width: 13.5px;
+  height: 13.5px;
+}
+.gr-page .gr-btn-lg,
+.gr-focus .gr-btn-lg {
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14.5px;
+  border-radius: var(--r-md);
+}
+
+.gr-page .gr-ibtn,
+.gr-focus .gr-ibtn {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+.gr-page .gr-ibtn:hover,
+.gr-focus .gr-ibtn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.gr-page .gr-ibtn.danger:hover {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  color: var(--danger);
+}
+.gr-ibtn .ico {
+  width: 15px;
+  height: 15px;
+}
+
+/* ---------- Ô nhập ---------- */
+.gr-page .gr-input,
+.gr-page .gr-select,
+.gr-page .gr-textarea {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+.gr-page .gr-textarea {
+  height: auto;
+  min-height: 80px;
+  padding: 10px 12px;
+  line-height: 1.6;
+  resize: vertical;
+}
+.gr-page .gr-input::placeholder,
+.gr-page .gr-textarea::placeholder {
+  color: var(--muted);
+}
+.gr-page .gr-input:focus,
+.gr-page .gr-select:focus,
+.gr-page .gr-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+.gr-page .gr-select {
+  cursor: pointer;
+}
+.gr-spacer {
+  flex: 1 1 auto;
+}
+.gr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Nhãn ---------- */
+.gr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.gr-badge .ico {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2;
+}
+.gr-badge-ok {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 32%, var(--border));
+  color: var(--success);
+}
+.gr-badge-warn {
+  background: color-mix(in srgb, var(--warn) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--warn) 34%, var(--border));
+  color: var(--warn);
+}
+.gr-badge-err {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
+  color: var(--danger);
+}
+.gr-badge-accent {
+  background: var(--primary-tint);
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+  color: var(--primary);
+}
+.gr-badge-dot::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.85;
+}
+/* Nhãn cấp độ CEFR — chỉ chữ + viền, không thêm màu mới */
+.gr-lv {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.gr-mono {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}
+.gr-kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+}
+
+/* ---------- Thanh tiến độ ---------- */
+.gr-bar {
+  display: block;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.gr-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--primary);
+  transition: width 0.42s cubic-bezier(0.2, 0, 0.2, 1);
+}
+.gr-bar-lg {
+  height: 6px;
+}
+.gr-bar-mut > i {
+  background: var(--muted);
+}
+
+/* Vòng tròn tiến độ */
+.gr-ring {
+  --p: 0;
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(var(--primary) calc(var(--p) * 1%), var(--surface-2) 0);
+}
+.gr-ring > span {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+.gr-ring-lg {
+  width: 104px;
+  height: 104px;
+}
+.gr-ring-lg > span {
+  width: 84px;
+  height: 84px;
+  font-size: 25px;
+  letter-spacing: -0.038em;
+}
+
+/* ---------- Thẻ / panel / rỗng ---------- */
+.gr-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.gr-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.gr-card-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  color: var(--text);
+}
+.gr-card-head h2 .ico {
+  width: 16px;
+  height: 16px;
+  color: var(--text-soft);
+}
+.gr-hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+.gr-card-body {
+  padding: 16px 20px;
+}
+.gr-panel {
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.gr-panel b {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+.gr-panel p {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+.gr-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 5px;
+  padding: 52px 24px;
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+}
+.gr-empty .ico {
+  width: 26px;
+  height: 26px;
+  margin-bottom: 6px;
+  color: var(--muted);
+}
+.gr-empty b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.gr-empty p {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.gr-loading {
+  padding: 40px 0;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--text-soft);
+}
+
+/* ---------- Thẻ chỉ số ---------- */
+.gr-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.gr-stat {
+  display: flex;
+  flex-direction: column;
+  padding: 15px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.gr-stat-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.gr-stat-top .ico {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+.gr-stat-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-soft);
+}
+.gr-stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.038em;
+  font-variant-numeric: tabular-nums;
+}
+.gr-stat-value small {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.gr-stat-sub {
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--text-soft);
+}
+
+/* ---------- Tabs & chip ---------- */
+.gr-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.gr-tabs::-webkit-scrollbar {
+  display: none;
+}
+.gr-page .gr-tabs button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px 11px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: color 0.14s;
+}
+.gr-page .gr-tabs button:hover {
+  color: var(--text);
+}
+.gr-page .gr-tabs button.is-active {
+  color: var(--text);
+  font-weight: 600;
+}
+.gr-page .gr-tabs button.is-active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--text);
+}
+.gr-chipset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.gr-page .gr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 27px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-soft);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s, color 0.14s;
+}
+.gr-page .gr-chip:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+.gr-page .gr-chip.is-active {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--surface);
+  font-weight: 600;
+}
+.gr-chip .ico {
+  width: 13px;
+  height: 13px;
+}
+.gr-count {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Segmented ---------- */
+.gr-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.gr-page .gr-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s, box-shadow 0.14s;
+}
+.gr-page .gr-seg button.is-active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ============================================================
+   MÀN 1 · THƯ VIỆN CHỦ ĐIỂM
+   ============================================================ */
+.gr-page .gr-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: color 0.14s;
+}
+.gr-page .gr-crumb:hover {
+  color: var(--text);
+}
+.gr-crumb .ico {
+  width: 13px;
+  height: 13px;
+}
+
+/* Ưu tiên hôm nay */
+.gr-today {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 20px;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  font-family: inherit;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.14s;
+}
+.gr-today:last-of-type {
+  border-bottom: none;
+}
+.gr-today:hover {
+  background: var(--surface-2);
+}
+.gr-today-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.gr-today-name {
+  display: block;
+  font-size: 13.8px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+.gr-today-why {
+  display: block;
+  margin-top: 1px;
+  font-size: 12.2px;
+  color: var(--text-soft);
+}
+.gr-today-side {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 0 auto;
+}
+.gr-mini-bar {
+  width: 64px;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.gr-mini-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--muted);
+}
+.gr-mini-num {
+  min-width: 34px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+.gr-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+.gr-foot-note {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* Lưới chủ điểm */
+.gr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 12px;
+}
+.gr-topic {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 16px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.14s, box-shadow 0.14s, transform 0.14s;
+}
+.gr-topic:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+.gr-topic:active {
+  transform: translateY(0.5px);
+}
+.gr-topic-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 13px;
+}
+.gr-mark {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+}
+.gr-mark .ico {
+  width: 16px;
+  height: 16px;
+}
+.gr-topic-txt {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.gr-topic-name {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.016em;
+}
+.gr-topic-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.gr-topic-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 11.8px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+.gr-topic-tools {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.14s;
+}
+.gr-topic:hover .gr-topic-tools,
+.gr-topic:focus-within .gr-topic-tools {
+  opacity: 1;
+}
+.gr-topic-tools .gr-ibtn {
+  width: 26px;
+  height: 26px;
+  background: var(--surface);
+}
+
+.gr-new-topic {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 120px;
+  padding: 16px;
+  text-align: center;
+  font-family: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+  color: var(--text-soft);
+  transition: border-color 0.14s, color 0.14s, background 0.14s;
+}
+.gr-new-topic:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-tint);
+}
+.gr-new-topic .ico {
+  width: 19px;
+  height: 19px;
+}
+.gr-new-topic b {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.gr-new-topic span {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Khối "bẫy người Việt" (tab 3 + trang bài học) */
+.gr-trap {
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.gr-trap:last-child {
+  border-bottom: none;
+}
+.gr-trap-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 9px;
+}
+.gr-trap-no {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.gr-trap-name {
+  font-size: 13.8px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+}
+.gr-trap-freq {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gr-freq-bar {
+  width: 88px;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.gr-freq-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--muted);
+}
+.gr-sent {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.gr-sent-tag {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+.gr-sent-bad .gr-sent-tag {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--danger) 32%, var(--border));
+  color: var(--danger);
+}
+.gr-sent-good .gr-sent-tag {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--success) 32%, var(--border));
+  color: var(--success);
+}
+.gr-sent-bad em {
+  font-style: normal;
+  color: var(--danger);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.gr-sent-good em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--success);
+}
+.gr-trap-why {
+  margin: 8px 0 0;
+  padding-left: 23px;
+  font-size: 12.3px;
+  line-height: 1.55;
+  color: var(--text-soft);
+}
+
+/* ============================================================
+   MÀN 2 · BÀI HỌC CHỦ ĐIỂM
+   ============================================================ */
+.gr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.3px;
+}
+.gr-table th {
+  padding: 9px 20px;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.gr-table td {
+  padding: 11px 20px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  line-height: 1.55;
+}
+.gr-table tr:last-child td {
+  border-bottom: none;
+}
+.gr-table tbody tr:hover {
+  background: var(--surface-2);
+}
+.gr-table .gr-k {
+  width: 1%;
+  white-space: nowrap;
+  color: var(--text-soft);
+}
+.gr-form-str {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12.6px;
+  white-space: nowrap;
+}
+.gr-form-str b {
+  color: var(--primary);
+  font-weight: 600;
+}
+.gr-ex-vi {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.2px;
+  color: var(--text-soft);
+}
+.gr-hi {
+  font-weight: 600;
+}
+
+/* Dòng thời gian */
+.gr-tl-wrap {
+  padding: 8px 20px 16px;
+  overflow-x: auto;
+}
+.gr-tl {
+  display: block;
+  width: 100%;
+  height: 132px;
+  min-width: 520px;
+}
+.gr-tl-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 0 20px 16px;
+  font-size: 12.2px;
+  color: var(--text-soft);
+}
+.gr-tl-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.gr-tl-key {
+  width: 14px;
+  height: 3px;
+  flex: 0 0 auto;
+  border-radius: 2px;
+}
+
+/* Trường hợp dùng */
+.gr-uses {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.gr-use {
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.gr-use > b {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.2px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+.gr-use > b .ico {
+  width: 14px;
+  height: 14px;
+  color: var(--text-soft);
+}
+.gr-use-sample {
+  display: block;
+  margin-top: 7px;
+  padding-left: 9px;
+  border-left: 2px solid var(--border-strong);
+  font-size: 12.8px;
+  line-height: 1.55;
+  color: var(--text-soft);
+}
+.gr-use-sample u {
+  text-decoration: none;
+  font-weight: 600;
+  color: var(--primary);
+}
+.gr-use-note {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+/* Từ tín hiệu */
+.gr-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.gr-sig {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+/* Đối chiếu 2 cột */
+.gr-cmp {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.gr-cmp > div:first-child {
+  border-right: 1px solid var(--border);
+}
+.gr-cmp-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.gr-cmp-head .ico {
+  width: 14px;
+  height: 14px;
+  color: var(--text-soft);
+}
+.gr-cmp-row {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.gr-cmp-row:last-child {
+  border-bottom: none;
+}
+.gr-cmp-row b {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* CTA cuối trang bài học */
+.gr-cta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.gr-cta-txt {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.gr-cta-txt b {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+}
+.gr-cta-txt span {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-soft);
+}
+
+/* ============================================================
+   MÀN 3 · PHIÊN LUYỆN (chế độ tập trung)
+   ============================================================ */
+/* Phiên luyện nằm TRONG vùng nội dung (sidebar vẫn hiện như các phiên học
+   khác của app) — mockup là trang rời nên mới ẩn sidebar. */
+.gr-focus {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.gr-focus-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 660px; /* cùng cột với thẻ câu hỏi bên dưới */
+  margin: 0 auto;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.gr-focus-bar .gr-bar {
+  flex: 1 1 auto;
+  max-width: 420px;
+}
+.gr-focus-stage {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  max-width: 660px;
+  margin: 0 auto;
+  padding: 28px 0 40px;
+}
+.gr-focus-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.gr-focus-foot span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.gr-qnum {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.gr-qcard {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.gr-qcard-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.gr-q-topic {
+  margin-left: auto;
+  font-size: 11.8px;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.gr-qcard-body {
+  padding: 20px 18px;
+}
+.gr-q-instr {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  color: var(--text-soft);
+}
+.gr-q-sent {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.95;
+  letter-spacing: -0.014em;
+  color: var(--text);
+  word-break: break-word;
+}
+.gr-q-cue {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+/* Ô điền inline */
+.gr-focus .gr-blank {
+  display: inline-block;
+  min-width: 118px;
+  height: 34px;
+  padding: 0 10px;
+  vertical-align: baseline;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  color: var(--primary);
+  background: var(--surface);
+  border: none;
+  border-bottom: 2px solid var(--border-strong);
+  border-radius: 4px 4px 0 0;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.14s, background 0.14s;
+}
+.gr-focus .gr-blank::placeholder {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.gr-focus .gr-blank:focus {
+  border-bottom-color: var(--primary);
+  background: var(--primary-tint);
+}
+.gr-focus .gr-blank.is-right {
+  color: var(--success);
+  border-bottom-color: var(--success);
+}
+.gr-focus .gr-blank.is-wrong {
+  color: var(--danger);
+  border-bottom-color: var(--danger);
+  text-decoration: line-through;
+}
+
+/* Token bấm được (dạng sửa lỗi) */
+.gr-toks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+}
+.gr-focus .gr-tok {
+  padding: 2px 5px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  font-family: inherit;
+  font-size: 18px;
+  line-height: 1.6;
+  letter-spacing: -0.014em;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s, color 0.14s;
+}
+.gr-focus .gr-tok:hover {
+  background: var(--primary-tint);
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+  color: var(--primary);
+}
+.gr-focus .gr-tok.is-right {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 32%, var(--border));
+  color: var(--success);
+  font-weight: 600;
+}
+.gr-focus .gr-tok.is-wrong {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
+  color: var(--danger);
+  text-decoration: line-through;
+}
+.gr-focus .gr-tok:disabled {
+  pointer-events: none;
+}
+
+/* Trắc nghiệm */
+.gr-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.gr-focus .gr-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-xs);
+  font-family: inherit;
+  font-size: 14.5px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s, color 0.14s;
+}
+.gr-focus .gr-opt:hover {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+  color: var(--primary);
+}
+.gr-opt-key {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.gr-focus .gr-opt .ico {
+  margin-left: auto;
+  width: 16px;
+  height: 16px;
+  opacity: 0;
+}
+.gr-focus .gr-opt.is-right {
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+  background: color-mix(in srgb, var(--success) 10%, var(--surface));
+  color: var(--success);
+}
+.gr-focus .gr-opt.is-right .gr-opt-key {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+.gr-focus .gr-opt.is-wrong {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  color: var(--danger);
+}
+.gr-focus .gr-opt.is-wrong .gr-opt-key {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.gr-focus .gr-opt.is-right .ico,
+.gr-focus .gr-opt.is-wrong .ico {
+  opacity: 1;
+}
+.gr-focus .gr-opt:disabled {
+  pointer-events: none;
+}
+
+/* Viết lại câu */
+.gr-src {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px 15px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 15.5px;
+  line-height: 1.6;
+}
+.gr-src .ico {
+  width: 15px;
+  height: 15px;
+  margin-top: 4px;
+  color: var(--muted);
+}
+.gr-focus .gr-answer {
+  width: 100%;
+  min-height: 74px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: 14.5px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+}
+.gr-focus .gr-answer:focus {
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+.gr-tip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 7px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.gr-tip .ico {
+  width: 13px;
+  height: 13px;
+}
+
+/* Phản hồi */
+.gr-fb {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  overflow: hidden;
+}
+.gr-fb-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  border-bottom: 1px solid var(--border);
+}
+.gr-fb.is-ok .gr-fb-head {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  color: var(--success);
+  border-bottom-color: color-mix(in srgb, var(--success) 30%, var(--border));
+}
+.gr-fb.is-err .gr-fb-head {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  color: var(--danger);
+  border-bottom-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+}
+.gr-fb-body {
+  padding: 14px 18px;
+}
+.gr-fb-sent {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text);
+}
+.gr-fb-sent mark {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--primary-tint);
+  color: var(--primary);
+  font-weight: 600;
+}
+.gr-fb-yours {
+  margin: 7px 0 0;
+  font-size: 12.8px;
+  color: var(--text-soft);
+}
+.gr-fb-yours s {
+  color: var(--danger);
+  text-decoration-thickness: 1px;
+}
+.gr-fb-why {
+  margin: 11px 0 0;
+  padding-left: 11px;
+  border-left: 2px solid var(--border-strong);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+.gr-fb-why b {
+  color: var(--text);
+}
+.gr-fb-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.gr-focus .gr-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--primary);
+  cursor: pointer;
+}
+.gr-focus .gr-link:hover {
+  text-decoration: underline;
+}
+.gr-q-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* Kết quả phiên luyện */
+.gr-res {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+.gr-res-title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.026em;
+  text-align: center;
+}
+.gr-res-sub {
+  margin: 5px 0 0;
+  max-width: 44ch;
+  font-size: 13.5px;
+  color: var(--text-soft);
+  text-align: center;
+}
+.gr-res-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.gr-res-row:last-child {
+  border-bottom: none;
+}
+.gr-res-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13.2px;
+  line-height: 1.6;
+}
+.gr-res-main s {
+  color: var(--danger);
+  text-decoration-thickness: 1px;
+}
+.gr-res-main b {
+  color: var(--success);
+}
+/* Chỉ dòng chú thích chủ điểm mới xuống hàng — các <span> khác trong câu
+   (do phần tô { } sinh ra) phải giữ inline, không thì câu bị vỡ từng chữ. */
+.gr-res-main .gr-res-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.8px;
+  color: var(--muted);
+}
+
+/* ============================================================
+   MÀN 4 · SỔ LỖI
+   ============================================================ */
+.gr-dist {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.gr-dist:last-of-type {
+  border-bottom: none;
+}
+.gr-dist-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+}
+.gr-dist.is-top .gr-dist-name {
+  font-weight: 600;
+}
+.gr-dist-bar {
+  width: 180px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 99px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.gr-dist-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--muted);
+}
+.gr-dist.is-top .gr-dist-bar > i {
+  background: var(--primary);
+}
+.gr-dist-n {
+  min-width: 26px;
+  text-align: right;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.gr-err {
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.gr-err:last-child {
+  border-bottom: none;
+}
+.gr-err-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 9px;
+}
+.gr-err-topic {
+  font-size: 12.2px;
+  color: var(--text-soft);
+}
+.gr-err-act {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gr-err-foot {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 11.8px;
+  color: var(--muted);
+}
+.gr-err-foot span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.gr-err-foot .ico {
+  width: 12px;
+  height: 12px;
+}
+.gr-srs {
+  display: inline-flex;
+  gap: 3px;
+}
+.gr-srs i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+}
+.gr-srs i.on {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+/* ============================================================
+   MÀN 5 · THÊM CHỦ ĐIỂM
+   ============================================================ */
+.gr-start-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.gr-start-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 20px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  font-family: inherit;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.14s, box-shadow 0.14s, transform 0.14s;
+}
+.gr-start-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+.gr-start-card:active {
+  transform: translateY(0.5px);
+}
+.gr-start-mark {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+}
+.gr-start-card b {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.016em;
+}
+.gr-start-card p {
+  margin: 0;
+  font-size: 12.8px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+.gr-start-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--primary);
+}
+
+/* Thanh 4 bước */
+.gr-steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.gr-steps::-webkit-scrollbar {
+  display: none;
+}
+.gr-page .gr-stp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: default;
+}
+.gr-page .gr-stp.is-done {
+  cursor: pointer;
+  color: var(--text-soft);
+}
+.gr-page .gr-stp.is-now {
+  color: var(--text);
+  font-weight: 600;
+}
+.gr-stp-no {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text-soft);
+}
+.gr-stp.is-now .gr-stp-no {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.gr-stp.is-done .gr-stp-no {
+  background: color-mix(in srgb, var(--success) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 34%, var(--border));
+  color: var(--success);
+}
+.gr-stp-no .ico {
+  width: 12px;
+  height: 12px;
+}
+.gr-stp-line {
+  flex: 1 1 auto;
+  min-width: 16px;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Lưới trường nhập */
+.gr-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.gr-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.gr-field.full {
+  grid-column: 1 / -1;
+}
+.gr-field > label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-soft);
+}
+.gr-req {
+  color: var(--danger);
+}
+.gr-field-hint {
+  margin: 0;
+  font-size: 11.8px;
+  color: var(--muted);
+}
+.gr-field.is-bad .gr-input {
+  border-color: var(--danger);
+}
+.gr-err-msg {
+  margin: 0;
+  font-size: 11.8px;
+  color: var(--danger);
+}
+
+/* Bảng động (công thức / trường hợp / đối chiếu / bẫy) */
+.gr-rowset {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gr-rowset-head {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1.4fr 32px;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.gr-rs-row {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1.4fr 32px;
+  gap: 8px;
+  align-items: center;
+}
+.gr-rs-row.is-two {
+  grid-template-columns: 1fr 1fr 32px;
+}
+.gr-icon-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.gr-page .gr-icon-pick button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: border-color 0.14s, color 0.14s, background 0.14s;
+}
+.gr-page .gr-icon-pick button:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+.gr-page .gr-icon-pick button.is-active {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+  color: var(--primary);
+}
+.gr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.gr-page .gr-chip-x {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 6px 0 10px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--text-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.gr-page .gr-chip-x:hover {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--border));
+}
+.gr-chip-x .ico {
+  width: 11px;
+  height: 11px;
+}
+
+/* Bảng cú pháp */
+.gr-syn {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.8px;
+}
+.gr-syn th {
+  padding: 9px 20px;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+.gr-syn td {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.gr-syn tr:last-child td {
+  border-bottom: none;
+}
+.gr-code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.gr-ex {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+/* Ô dán hàng loạt */
+.gr-page .gr-paste {
+  width: 100%;
+  min-height: 220px;
+  padding: 12px 14px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12.8px;
+  line-height: 1.7;
+  resize: vertical;
+  outline: none;
+}
+.gr-page .gr-paste:focus {
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+
+/* Vùng thả file */
+.gr-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 34px 24px;
+  text-align: center;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.14s, color 0.14s;
+}
+.gr-drop:hover,
+.gr-drop.is-over {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+  color: var(--primary);
+}
+.gr-drop .ico {
+  width: 24px;
+  height: 24px;
+}
+.gr-drop b {
+  font-size: 13.8px;
+  font-weight: 600;
+  color: var(--text);
+}
+.gr-drop span {
+  font-size: 12.3px;
+}
+
+/* Bảng duyệt câu */
+.gr-rev-bar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding: 11px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.gr-rev-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.gr-rev-row:last-child {
+  border-bottom: none;
+}
+.gr-rev-row.is-bad {
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+}
+.gr-rev-no {
+  min-width: 22px;
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  padding-top: 2px;
+}
+.gr-rev-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  word-break: break-word;
+}
+.gr-rev-main mark {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--primary-tint);
+  color: var(--primary);
+  font-weight: 600;
+}
+.gr-rev-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.8px;
+  color: var(--muted);
+}
+.gr-rev-err {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--danger);
+}
+
+/* Checklist bước 4 */
+.gr-chk {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.gr-chk:last-child {
+  border-bottom: none;
+}
+.gr-chk .ico {
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+}
+.gr-chk.is-ok .ico {
+  color: var(--success);
+}
+.gr-chk.is-warn .ico {
+  color: var(--warn);
+}
+.gr-chk b {
+  display: block;
+  font-weight: 500;
+}
+.gr-chk span {
+  display: block;
+  margin-top: 1px;
+  font-size: 11.8px;
+  color: var(--muted);
+}
+
+.gr-prev-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.gr-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.gr-wiz-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* ============================================================
+   MOBILE  <= 920px
+   ============================================================ */
+@media (max-width: 920px) {
+  .gr-head {
+    margin-bottom: 16px;
+    gap: 12px;
+  }
+  .gr-head h1 {
+    font-size: 20px;
+  }
+  .gr-head-actions {
+    width: 100%;
+  }
+  .gr-page .gr-head-actions .gr-btn {
+    flex: 1 1 auto;
+    height: 38px;
+  }
+  .gr-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .gr-grid,
+  .gr-start-grid,
+  .gr-uses,
+  .gr-cmp,
+  .gr-prev-grid,
+  .gr-fields {
+    grid-template-columns: 1fr;
+  }
+  .gr-cmp > div:first-child {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .gr-topic-tools {
+    opacity: 1;
+  }
+  .gr-topic-tools ~ .gr-topic-top .gr-topic-name {
+    padding-right: 58px;
+  }
+  .gr-today,
+  .gr-trap,
+  .gr-err,
+  .gr-dist {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .gr-mini-bar,
+  .gr-trap-freq {
+    display: none;
+  }
+  .gr-dist-bar {
+    width: 96px;
+  }
+  .gr-table th,
+  .gr-table td,
+  .gr-syn th,
+  .gr-syn td {
+    padding: 10px 16px;
+  }
+  .gr-rowset-head {
+    display: none;
+  }
+  .gr-rs-row,
+  .gr-rs-row.is-two {
+    grid-template-columns: 1fr 32px;
+  }
+  .gr-q-sent {
+    font-size: 17px;
+    line-height: 1.9;
+  }
+  .gr-focus .gr-tok {
+    font-size: 16px;
+  }
+  .gr-focus .gr-blank {
+    min-width: 96px;
+    font-size: 15.5px;
+  }
+  .gr-qcard-body {
+    padding: 16px 15px;
+  }
+  .gr-focus-foot {
+    display: none;
+  }
+  .gr-err-act {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+@media (hover: none) {
+  .gr-topic-tools {
+    opacity: 1;
+  }
+  /* Máy cảm ứng luôn hiện 2 nút sửa/xóa — chừa chỗ để tên chủ điểm không chui xuống dưới */
+  .gr-topic-tools ~ .gr-topic-top .gr-topic-name {
+    padding-right: 58px;
+  }
+}

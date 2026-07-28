@@ -10,6 +10,7 @@ import {
   type KeyboardEvent,
   type UIEvent,
 } from 'react'
+import Icon from '../components/Icon'
 import { type SentenceItem, type CefrLevel } from '../data/sentences'
 import { gradeSentence, wrongWordSegments, type GradeResult } from '../services/sentencecheck'
 import { suggest, type Suggestion } from '../services/suggestion'
@@ -21,6 +22,7 @@ import {
   deleteFolder,
   countByFolder,
   countDoneByFolder,
+  countCorrectByFolder,
   listSentences,
   createSentence,
   createSentences,
@@ -45,6 +47,9 @@ import '../styles/sentence.css'
 
 const LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 
+// Số câu hiện lúc đầu ở tab Luyện tập — phần còn lại mở bằng nút "Hiện thêm"
+const PAGE_SIZE = 20
+
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
 }
@@ -61,7 +66,7 @@ function sanitizeEnglishInput(value: string): string {
 }
 
 // Màn hẹp (mobile) -> dùng chế độ luyện tập "tập trung" 1 câu/màn.
-// Màn rộng (desktop) -> giữ danh sách như cũ.
+// Màn rộng (desktop) -> giữ danh sách như mockup thu-muc.html.
 function useIsNarrow(maxWidth = 860): boolean {
   const [narrow, setNarrow] = useState(
     typeof window !== 'undefined'
@@ -78,14 +83,17 @@ function useIsNarrow(maxWidth = 860): boolean {
 }
 
 // ================= TRANG CHÉP CÂU =================
-// Bố cục giống Từ vựng: lưới thẻ THƯ MỤC; bấm mở 1 thư mục -> chi tiết
-// (Luyện tập / Quản lý câu bên trong). Dữ liệu lưu trên Supabase (đồng bộ đa máy).
+// Bố cục theo mockup 08-chep-cau/index.html: lưới thẻ THƯ MỤC + ô "Tạo thư
+// mục mới"; bấm mở 1 thư mục -> chi tiết (Luyện tập / Quản lý câu bên trong).
+// Dữ liệu lưu trên Supabase (đồng bộ đa máy).
 export default function SentencePage() {
   const [folders, setFolders] = useState<Folder[]>([])
   const [counts, setCounts] = useState<Record<string, number>>({})
-  // Số câu ĐÃ LÀM (đã chấm) theo thư mục — hiện "Đã làm x/y" trên thẻ
+  // Số câu ĐÃ LÀM (đã chấm) / ĐÚNG theo thư mục — hiện trên thẻ
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({})
+  const [correctCounts, setCorrectCounts] = useState<Record<string, number>>({})
   const [selected, setSelected] = useState<Folder | null>(null)
+  const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -94,14 +102,16 @@ export default function SentencePage() {
   const [editName, setEditName] = useState('')
 
   const refresh = async () => {
-    const [fs, cs, ds] = await Promise.all([
+    const [fs, cs, ds, ok] = await Promise.all([
       listFolders(),
       countByFolder(),
       countDoneByFolder().catch(() => ({})), // lỗi -> chỉ ẩn phần "đã làm"
+      countCorrectByFolder().catch(() => ({})),
     ])
     setFolders(fs)
     setCounts(cs)
     setDoneCounts(ds)
+    setCorrectCounts(ok)
   }
 
   // Nạp lần đầu: đảm bảo tài khoản có dữ liệu (migrate/seed nếu cần)
@@ -114,10 +124,15 @@ export default function SentencePage() {
         const fs = await ensureReady()
         if (!alive) return
         setFolders(fs)
-        const [cs, ds] = await Promise.all([countByFolder(), countDoneByFolder().catch(() => ({}))])
+        const [cs, ds, ok] = await Promise.all([
+          countByFolder(),
+          countDoneByFolder().catch(() => ({})),
+          countCorrectByFolder().catch(() => ({})),
+        ])
         if (!alive) return
         setCounts(cs)
         setDoneCounts(ds)
+        setCorrectCounts(ok)
       } catch (e) {
         if (alive) setError(errMsg(e))
       } finally {
@@ -129,12 +144,18 @@ export default function SentencePage() {
     }
   }, [])
 
+  const openCreate = () => {
+    setCreating(true)
+    window.setTimeout(() => document.getElementById('ccNewFolder')?.focus(), 0)
+  }
+
   const addFolder = async (e: FormEvent) => {
     e.preventDefault()
     if (!newName.trim()) return
     try {
       await createFolder(newName)
       setNewName('')
+      setCreating(false)
       await refresh()
     } catch (err) {
       alert('Không tạo được thư mục: ' + errMsg(err))
@@ -172,6 +193,9 @@ export default function SentencePage() {
     return (
       <FolderDetail
         folder={selected}
+        total={counts[selected.id] ?? 0}
+        done={doneCounts[selected.id] ?? 0}
+        correct={correctCounts[selected.id] ?? 0}
         onBack={() => {
           setSelected(null)
           refresh()
@@ -181,178 +205,228 @@ export default function SentencePage() {
   }
 
   return (
-    <div className="page">
-      <h1 className="page-title">Chép câu</h1>
-      <p className="page-sub">Tạo thư mục và quản lý các câu luyện dịch Việt → Anh · đồng bộ đám mây</p>
+    <div className="page cc-page">
+      <div className="cc-head">
+        <div>
+          <h1>Chép câu</h1>
+          <p>
+            Tạo thư mục và quản lý các câu luyện dịch Việt → Anh. Dữ liệu đồng bộ đám mây.
+          </p>
+        </div>
+        <div className="cc-head-actions">
+          <button className="cc-btn cc-btn-primary" onClick={openCreate}>
+            <Icon name="plus" /> Tạo thư mục
+          </button>
+        </div>
+      </div>
 
-      <form className="inline-form" onSubmit={addFolder}>
-        <input
-          placeholder="Tên thư mục mới (VD: Thì hiện tại hoàn thành)"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-        />
-        <button className="btn primary" type="submit">
-          + Tạo thư mục
-        </button>
-      </form>
+      {creating && (
+        <form className="cc-create" onSubmit={addFolder}>
+          <input
+            id="ccNewFolder"
+            className="cc-input"
+            placeholder="Tên thư mục mới (VD: Session 2)"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Escape' && setCreating(false)}
+          />
+          <button className="cc-btn cc-btn-primary" type="submit">
+            <Icon name="plus" /> Tạo thư mục
+          </button>
+          <button className="cc-btn cc-btn-ghost" type="button" onClick={() => setCreating(false)}>
+            Hủy
+          </button>
+        </form>
+      )}
 
       {loading ? (
-        <p className="muted">Đang tải dữ liệu…</p>
+        <p className="cc-loading">Đang tải dữ liệu…</p>
       ) : error ? (
-        <div className="empty-state">
-          <div className="empty-icon">⚠️</div>
-          <h3>Không tải được dữ liệu</h3>
-          <p className="muted">{error}</p>
+        <div className="cc-empty">
+          <Icon name="alert" />
+          <b>Không tải được dữ liệu</b>
+          <p>{error}</p>
         </div>
       ) : folders.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">✏️</div>
-          <h3>Chưa có thư mục nào</h3>
-          <p className="muted">Tạo thư mục đầu tiên ở ô phía trên để bắt đầu.</p>
+        <div className="cc-empty">
+          <Icon name="folder" />
+          <b>Chưa có thư mục nào</b>
+          <p>Tạo thư mục đầu tiên để nhóm các câu luyện dịch theo buổi học hoặc trình độ.</p>
         </div>
       ) : (
-        <div className="deck-grid">
-          {folders.map((f) => (
-            <div
-              key={f.id}
-              className="deck-card"
-              onClick={() => (editingId === f.id ? undefined : setSelected(f))}
-            >
-              <button
-                className="deck-edit"
-                title="Đổi tên thư mục"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  startRename(f)
+        <section className="cc-grid">
+          {folders.map((f) => {
+            const total = counts[f.id] ?? 0
+            const done = Math.min(doneCounts[f.id] ?? 0, total)
+            const ok = Math.min(correctCounts[f.id] ?? 0, total)
+            return (
+              <div
+                key={f.id}
+                className="cc-deck"
+                role="button"
+                tabIndex={0}
+                onClick={() => (editingId === f.id ? undefined : setSelected(f))}
+                onKeyDown={(e) => {
+                  if (editingId !== f.id && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault()
+                    setSelected(f)
+                  }
                 }}
               >
-                ✎
-              </button>
-              <button
-                className="deck-del"
-                title="Xóa thư mục"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  remove(f)
-                }}
-              >
-                ✕
-              </button>
-              <div className="deck-icon">📁</div>
-              {editingId === f.id ? (
-                <input
-                  className="deck-rename"
-                  autoFocus
-                  value={editName}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={(e) => setEditName(e.target.value)}
-                  onBlur={saveRename}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      saveRename()
-                    } else if (e.key === 'Escape') {
-                      setEditingId(null)
-                    }
-                  }}
-                />
-              ) : (
-                <div className="deck-name">{f.name}</div>
-              )}
-              <div className="deck-desc">
-                Đã làm {Math.min(doneCounts[f.id] ?? 0, counts[f.id] ?? 0)}/{counts[f.id] ?? 0} câu
+                <span className="cc-deck-tools">
+                  <button
+                    className="cc-ibtn"
+                    title="Đổi tên thư mục"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      startRename(f)
+                    }}
+                  >
+                    <Icon name="pencil" />
+                  </button>
+                  <button
+                    className="cc-ibtn danger"
+                    title="Xóa thư mục"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      remove(f)
+                    }}
+                  >
+                    <Icon name="trash" />
+                  </button>
+                </span>
+
+                <span className="cc-deck-top">
+                  <span className="cc-deck-mark">
+                    <Icon name="folder" />
+                  </span>
+                  <span className="cc-deck-txt">
+                    {editingId === f.id ? (
+                      <input
+                        className="cc-input cc-rename"
+                        autoFocus
+                        value={editName}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onBlur={saveRename}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            saveRename()
+                          } else if (e.key === 'Escape') {
+                            setEditingId(null)
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span className="cc-deck-name">{f.name}</span>
+                    )}
+                    <span className="cc-deck-desc">
+                      Đã làm {done} / {total} câu
+                    </span>
+                  </span>
+                </span>
+
+                <span className="cc-bar">
+                  <i style={{ width: `${total ? (done / total) * 100 : 0}%` }} />
+                </span>
+
+                <span className="cc-deck-meta">
+                  {ok > 0 ? (
+                    <span className="cc-badge cc-badge-ok">
+                      <Icon name="check" /> {ok} đúng
+                    </span>
+                  ) : (
+                    <span className="cc-badge">Chưa bắt đầu</span>
+                  )}
+                  <span className="cc-deck-go">
+                    Mở thư mục <Icon name="right" />
+                  </span>
+                </span>
               </div>
-              <div className="sc-deck-progress">
-                <div
-                  className="sc-deck-progress-fill"
-                  style={{
-                    width: `${
-                      counts[f.id]
-                        ? Math.round(
-                            (Math.min(doneCounts[f.id] ?? 0, counts[f.id]) / counts[f.id]) * 100,
-                          )
-                        : 0
-                    }%`,
-                  }}
-                />
-              </div>
-              <div className="deck-foot">
-                <span>Mở thư mục</span>
-                <span className="deck-arrow">→</span>
-              </div>
-            </div>
-          ))}
-        </div>
+            )
+          })}
+
+          <button className="cc-new-folder" onClick={openCreate}>
+            <Icon name="plus" />
+            <b>Tạo thư mục mới</b>
+            <span>Nhóm câu luyện dịch theo buổi học hoặc trình độ</span>
+          </button>
+        </section>
       )}
     </div>
   )
 }
 
+interface FolderStats {
+  total: number
+  done: number
+  correct: number
+}
+
 // ================= CHI TIẾT MỘT THƯ MỤC =================
-function FolderDetail({ folder, onBack }: { folder: Folder; onBack: () => void }) {
+function FolderDetail({
+  folder,
+  total,
+  done,
+  correct,
+  onBack,
+}: {
+  folder: Folder
+  total: number
+  done: number
+  correct: number
+  onBack: () => void
+}) {
   const [mode, setMode] = useState<'practice' | 'manage'>('practice')
-  // Bố cục mockup CHỈ dùng cho mobile (màn hẹp); app/web PC giữ giao diện gốc.
-  const narrow = useIsNarrow()
+  // Số liệu ở phụ đề: lấy tạm từ lưới thư mục, cập nhật theo phiên luyện tập
+  const [stats, setStats] = useState<FolderStats>({ total, done, correct })
 
   return (
-    <div className="page page-wide sentence-page">
-      {narrow ? (
-        <>
-          <div className="sp-head">
-            <button className="sp-back" onClick={onBack}>
-              ‹ Quay lại
-            </button>
-            <h1 className="sp-title">{folder.name}</h1>
-            <p className="sp-sub">Luyện dịch câu · nhiều cấp độ &amp; chủ đề</p>
-          </div>
-          <div className="sp-seg">
-            <button
-              className={mode === 'practice' ? 'on' : ''}
-              onClick={() => setMode('practice')}
-            >
-              Luyện tập
-            </button>
-            <button className={mode === 'manage' ? 'on' : ''} onClick={() => setMode('manage')}>
-              Quản lý
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          <button className="btn tiny" onClick={onBack}>
-            ← Quay lại
-          </button>
-          <div className="sentence-head">
-            <h1 className="page-title">{folder.name}</h1>
-            <div className="tabs">
-              <button
-                className={mode === 'practice' ? 'tab active' : 'tab'}
-                onClick={() => setMode('practice')}
-              >
-                Luyện tập
-              </button>
-              <button
-                className={mode === 'manage' ? 'tab active' : 'tab'}
-                onClick={() => setMode('manage')}
-              >
-                Quản lý
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+    <div className="page cc-page cc-detail">
+      <button className="cc-crumb" onClick={onBack}>
+        <Icon name="left" /> Tất cả thư mục
+      </button>
+
+      <div className="cc-head">
+        <div>
+          <h1>{folder.name}</h1>
+          <p>
+            {stats.total} câu luyện dịch Việt → Anh · đã làm {Math.min(stats.done, stats.total)} ·
+            đúng {Math.min(stats.correct, stats.total)}
+          </p>
+        </div>
+      </div>
+
+      <nav className="cc-tabs">
+        <button
+          className={mode === 'practice' ? 'is-active' : ''}
+          onClick={() => setMode('practice')}
+        >
+          Luyện tập
+        </button>
+        <button className={mode === 'manage' ? 'is-active' : ''} onClick={() => setMode('manage')}>
+          Quản lý câu
+        </button>
+      </nav>
 
       {mode === 'practice' ? (
-        <PracticeView folder={folder} />
+        <PracticeView folder={folder} onStats={setStats} />
       ) : (
-        <ManageView folder={folder} onChanged={() => {}} />
+        <ManageView folder={folder} />
       )}
     </div>
   )
 }
 
 // ================= CHẾ ĐỘ LUYỆN TẬP =================
-function PracticeView({ folder }: { folder: Folder }) {
+function PracticeView({
+  folder,
+  onStats,
+}: {
+  folder: Folder
+  onStats: (s: FolderStats) => void
+}) {
   const [items, setItems] = useState<StoredSentence[]>([])
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [results, setResults] = useState<Record<string, GradeResult>>({})
@@ -364,6 +438,8 @@ function PracticeView({ folder }: { folder: Folder }) {
   const [jumpId, setJumpId] = useState<string | null>(null)
   // Sau khi gõ Enter ĐÚNG -> id câu kế tiếp cần cuộn ra giữa + focus
   const [advanceTo, setAdvanceTo] = useState<string | null>(null)
+  // Số câu đang hiện trong danh sách (mockup: nút "Hiện thêm (… câu còn lại)")
+  const [limit, setLimit] = useState(PAGE_SIZE)
   // Chế độ NGHE-CHÉP (dictation): nghe TTS đọc câu tiếng Anh rồi gõ lại
   const [dictation, setDictation] = useState(() => localStorage.getItem('sc_dictation') === '1')
   const toggleDictation = (on: boolean) => {
@@ -432,6 +508,8 @@ function PracticeView({ folder }: { folder: Folder }) {
           if (li > 0) {
             setCur(li) // chế độ tập trung (mobile)
             setJumpId(lastSid) // chế độ danh sách (desktop): cuộn tới thẻ
+            // Mở đủ số câu để thẻ cần cuộn tới đã được render
+            setLimit(Math.max(PAGE_SIZE, Math.ceil((li + 1) / PAGE_SIZE) * PAGE_SIZE))
           }
         }
       } catch (e) {
@@ -471,19 +549,13 @@ function PracticeView({ folder }: { folder: Folder }) {
   }, [])
 
   // Danh sách sau khi lọc theo cấp độ / chủ đề — dùng cho cả 2 chế độ hiển thị
-  const levels = useMemo(
-    () => LEVELS.filter((l) => items.some((s) => s.level === l)),
-    [items],
-  )
+  const levels = useMemo(() => LEVELS.filter((l) => items.some((s) => s.level === l)), [items])
   const topics = useMemo(
     () => [...new Set(items.map((s) => s.topic).filter(Boolean))] as string[],
     [items],
   )
   const shown = useMemo(
-    () =>
-      items.filter(
-        (s) => (!levelF || s.level === levelF) && (!topicF || s.topic === topicF),
-      ),
+    () => items.filter((s) => (!levelF || s.level === levelF) && (!topicF || s.topic === topicF)),
     [items, levelF, topicF],
   )
   const shownRef = useRef(shown)
@@ -494,6 +566,15 @@ function PracticeView({ folder }: { folder: Folder }) {
     [shown, results],
   )
 
+  // Báo số liệu lên phụ đề của thư mục (đã làm / đúng)
+  useEffect(() => {
+    onStats({
+      total: items.length,
+      done: items.filter((s) => results[s.id]).length,
+      correct: items.filter((s) => results[s.id]?.status === 'correct').length,
+    })
+  }, [items, results, onStats])
+
   // Chế độ tập trung (mobile): chỉ trỏ 1 câu/màn
   const narrow = useIsNarrow()
   const narrowRef = useRef(narrow)
@@ -502,6 +583,10 @@ function PracticeView({ folder }: { folder: Folder }) {
   useEffect(() => {
     setCur((c) => Math.min(Math.max(0, c), Math.max(0, shown.length - 1)))
   }, [shown.length])
+  // Đổi bộ lọc -> danh sách hiện lại từ đầu
+  useEffect(() => {
+    setLimit(PAGE_SIZE)
+  }, [levelF, topicF])
 
   // Chuyển sang câu KẾ TIẾP (sau khi gõ Enter đúng): chế độ tập trung thì đổi
   // chỉ số câu, chế độ danh sách thì đặt id để effect cuộn ra giữa + focus.
@@ -511,6 +596,8 @@ function PracticeView({ folder }: { folder: Folder }) {
     if (i < 0 || i + 1 >= list.length) return
     const next = list[i + 1]
     if (narrowRef.current) setCur(i + 1)
+    // Câu kế tiếp có thể đang nằm ngoài phần đã hiện -> mở thêm cho đủ
+    setLimit((l) => (i + 2 > l ? Math.ceil((i + 2) / PAGE_SIZE) * PAGE_SIZE : l))
     setAdvanceTo(next.id)
   }, [])
 
@@ -518,17 +605,17 @@ function PracticeView({ folder }: { folder: Folder }) {
   // nhật (câu vừa đúng đã hiện khối kết quả) nên căn giữa mới chính xác.
   useEffect(() => {
     if (!advanceTo) return
-    const card = document.getElementById(`sc-${advanceTo}`)
+    const card = document.getElementById(`cc-${advanceTo}`)
     setAdvanceTo(null)
     if (!card) return
     card.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    card.querySelector<HTMLTextAreaElement>('.sc-input')?.focus({ preventScroll: true })
+    card.querySelector<HTMLTextAreaElement>('.cc-answer')?.focus({ preventScroll: true })
   }, [advanceTo])
 
   // Cuộn tới thẻ của câu làm gần nhất sau khi nạp xong (chế độ danh sách)
   useEffect(() => {
     if (loading || !jumpId) return
-    document.getElementById(`sc-${jumpId}`)?.scrollIntoView({ block: 'center' })
+    document.getElementById(`cc-${jumpId}`)?.scrollIntoView({ block: 'center' })
     setJumpId(null)
   }, [loading, jumpId])
 
@@ -591,7 +678,9 @@ function PracticeView({ folder }: { folder: Folder }) {
         },
       })
     }
-    setResults(next)
+    // Gộp thay vì thay cả map: kết quả của câu đang bị bộ lọc ẩn (hoặc câu chưa
+    // gõ gì) không bị mất khi bấm "Kiểm tra tất cả".
+    setResults((m) => ({ ...m, ...next }))
     toSave.forEach(({ id, rec }) => persist(id, rec))
   }
 
@@ -624,107 +713,59 @@ function PracticeView({ folder }: { folder: Folder }) {
 
   const pct = shown.length ? Math.round((correctCount / shown.length) * 100) : 0
 
-  if (loading) return <p className="muted">Đang tải bài luyện tập…</p>
-  if (error) return <p className="muted">⚠️ {error}</p>
+  if (loading) return <p className="cc-loading">Đang tải bài luyện tập…</p>
+  if (error) {
+    return (
+      <div className="cc-empty">
+        <Icon name="alert" />
+        <b>Không tải được bài luyện tập</b>
+        <p>{error}</p>
+      </div>
+    )
+  }
   if (items.length === 0) {
     return (
-      <p className="muted">
-        Thư mục này chưa có câu nào. Chuyển sang tab <strong>Quản lý</strong> để thêm câu.
-      </p>
+      <div className="cc-empty">
+        <Icon name="file" />
+        <b>Thư mục này chưa có câu nào</b>
+        <p>Chuyển sang tab “Quản lý câu” để thêm câu hoặc nhập từ file Excel.</p>
+      </div>
     )
   }
 
-  // Hàng chọn chế độ luyện + lọc theo cấp độ / chủ đề (dùng chung 2 bố cục)
-  // MOBILE (mockup): mode chips + filter chips tách hàng.
-  // DESKTOP (gốc): thanh lọc gộp một hàng như cũ.
-  const filterRow = narrow ? (
-    <div className="sp-controls">
+  // Hàng lọc: kiểu luyện (Dịch / Nghe–chép) · chip cấp độ · chọn chủ đề
+  const filterRow = (
+    <div className="cc-filters">
       {ttsSupported && (
-        <div className="sp-modes">
+        <div className="cc-seg">
           <button
-            className={!dictation ? 'sp-mode on' : 'sp-mode'}
+            className={!dictation ? 'is-active' : ''}
             onClick={() => toggleDictation(false)}
             title="Nhìn câu tiếng Việt, dịch sang tiếng Anh"
           >
-            ✍️ Dịch
+            <Icon name="pen" /> Dịch
           </button>
           <button
-            className={dictation ? 'sp-mode on' : 'sp-mode'}
+            className={dictation ? 'is-active' : ''}
             onClick={() => toggleDictation(true)}
             title="Nghe máy đọc câu tiếng Anh rồi gõ lại (dictation)"
           >
-            🎧 Nghe-chép
-          </button>
-        </div>
-      )}
-      {(levels.length > 0 || topics.length > 1) && (
-        <div className="sp-filters">
-          {levels.length > 0 && (
-            <>
-              <button
-                className={levelF === '' ? 'sp-chip on' : 'sp-chip'}
-                onClick={() => setLevelF('')}
-              >
-                Tất cả
-              </button>
-              {levels.map((l) => (
-                <button
-                  key={l}
-                  className={levelF === l ? 'sp-chip on' : 'sp-chip'}
-                  onClick={() => setLevelF(l)}
-                >
-                  {l}
-                </button>
-              ))}
-            </>
-          )}
-          {topics.length > 1 && (
-            <select
-              className="sp-topic"
-              value={topicF}
-              onChange={(e) => setTopicF(e.target.value)}
-              title="Lọc theo chủ đề"
-            >
-              <option value="">Mọi chủ đề</option>
-              {topics.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
-    </div>
-  ) : (
-    <div className="sp-filter">
-      {ttsSupported && (
-        <div className="tabs">
-          <button
-            className={!dictation ? 'tab active' : 'tab'}
-            onClick={() => toggleDictation(false)}
-            title="Nhìn câu tiếng Việt, dịch sang tiếng Anh"
-          >
-            ✍️ Dịch
-          </button>
-          <button
-            className={dictation ? 'tab active' : 'tab'}
-            onClick={() => toggleDictation(true)}
-            title="Nghe máy đọc câu tiếng Anh rồi gõ lại (dictation)"
-          >
-            🎧 Nghe-chép
+            <Icon name="headphone" /> Nghe–chép
           </button>
         </div>
       )}
       {levels.length > 0 && (
-        <div className="sp-chipset">
-          <button className={levelF === '' ? 'tab active' : 'tab'} onClick={() => setLevelF('')}>
+        <div className="cc-chipset">
+          <button
+            className={levelF === '' ? 'cc-chip is-active' : 'cc-chip'}
+            onClick={() => setLevelF('')}
+          >
             Tất cả
           </button>
           {levels.map((l) => (
             <button
               key={l}
-              className={levelF === l ? 'tab active' : 'tab'}
+              className={levelF === l ? 'cc-chip is-active' : 'cc-chip'}
               onClick={() => setLevelF(l)}
             >
               {l}
@@ -732,9 +773,10 @@ function PracticeView({ folder }: { folder: Folder }) {
           ))}
         </div>
       )}
+      <div className="cc-spacer" />
       {topics.length > 1 && (
         <select
-          className="level-select"
+          className="cc-select"
           value={topicF}
           onChange={(e) => setTopicF(e.target.value)}
           title="Lọc theo chủ đề"
@@ -754,7 +796,11 @@ function PracticeView({ folder }: { folder: Folder }) {
     return (
       <>
         {filterRow}
-        <p className="muted">Không có câu nào khớp bộ lọc. Chọn cấp độ/chủ đề khác nhé.</p>
+        <div className="cc-empty">
+          <Icon name="search" />
+          <b>Không có câu nào khớp bộ lọc</b>
+          <p>Chọn cấp độ hoặc chủ đề khác nhé.</p>
+        </div>
       </>
     )
   }
@@ -763,28 +809,20 @@ function PracticeView({ folder }: { folder: Folder }) {
   if (narrow) {
     const idx = Math.min(cur, shown.length - 1)
     const item = shown[idx]
-    const done = results[item.id] // đã chấm câu này chưa
     return (
-      <div className="practice-focus">
+      <div className="cc-focus">
         {filterRow}
-        <div className="pf-progress">
-          <div className="pf-top">
-            <span className="pf-count">
-              Câu <strong>{idx + 1}</strong>
-              <span className="pf-count-total">/ {shown.length}</span>
-            </span>
-            <span className="pf-correct">
-              <span className="pf-correct-ico">✓</span>
-              <strong>{correctCount}</strong> đúng
-              {saving && <span className="muted sp-saving"> · đang lưu…</span>}
-            </span>
-          </div>
-          <div className="pf-bar">
-            <div
-              className="pf-bar-fill"
-              style={{ width: `${((idx + 1) / shown.length) * 100}%` }}
-            />
-          </div>
+        <div className="cc-progress">
+          <span className="cc-pb-num">
+            Câu <b>{idx + 1}</b> / {shown.length}
+          </span>
+          <span className="cc-bar cc-bar-ok cc-bar-lg">
+            <i style={{ width: `${((idx + 1) / shown.length) * 100}%` }} />
+          </span>
+          <span className="cc-pb-num">
+            <b>{correctCount}</b> đúng
+          </span>
+          {saving && <span className="cc-saving">đang lưu…</span>}
         </div>
 
         <SentenceCard
@@ -795,58 +833,68 @@ function PracticeView({ folder }: { folder: Folder }) {
           result={results[item.id]}
           revealed={!!revealed[item.id]}
           dictation={dictation}
-          focus
           onChange={setInput}
           onCheck={checkOne}
           onReveal={reveal}
         />
 
-        <div className="pf-nav">
-          <button className="btn" disabled={idx === 0} onClick={() => setCur(idx - 1)}>
-            ‹ Trước
+        <div className="cc-focus-nav">
+          <button className="cc-btn" disabled={idx === 0} onClick={() => setCur(idx - 1)}>
+            <Icon name="left" /> Trước
           </button>
           <button
-            className={done ? 'btn primary' : 'btn'}
+            className="cc-btn"
             disabled={idx >= shown.length - 1}
             onClick={() => setCur(idx + 1)}
           >
-            Tiếp ›
+            Tiếp <Icon name="right" />
           </button>
         </div>
 
-        <div className="pf-tools">
-          <button className="btn tiny" onClick={checkAll}>
-            Kiểm tra tất cả
+        <div className="cc-focus-tools">
+          <button className="cc-btn cc-btn-sm" onClick={checkAll}>
+            <Icon name="check" /> Kiểm tra tất cả
           </button>
-          <button className="btn tiny" onClick={resetProgress} title="Xóa bài đã làm">
-            Làm lại
+          <button
+            className="cc-btn cc-btn-sm"
+            onClick={resetProgress}
+            title="Xóa bài đã làm của thư mục này"
+          >
+            <Icon name="refresh" /> Làm lại
           </button>
         </div>
       </div>
     )
   }
 
+  const rest = shown.length - Math.min(limit, shown.length)
+
   return (
     <>
       {filterRow}
-      <div className="practice-bar">
-        <span className="sp-count">
-          Đúng <strong>{correctCount}</strong> / {shown.length}
+
+      <div className="cc-progress">
+        <span className="cc-pb-num">
+          <b>{correctCount}</b> đúng / {shown.length}
         </span>
-        <div className="sp-bar">
-          <div className="sp-bar-fill" style={{ width: `${pct}%` }} />
-        </div>
-        {saving && <span className="muted sp-saving">đang lưu…</span>}
-        <button className="btn primary" onClick={checkAll}>
-          Kiểm tra tất cả
+        <span className="cc-bar cc-bar-ok cc-bar-lg">
+          <i style={{ width: `${pct}%` }} />
+        </span>
+        {saving && <span className="cc-saving">đang lưu…</span>}
+        <button className="cc-btn cc-btn-primary cc-btn-sm" onClick={checkAll}>
+          <Icon name="check" /> Kiểm tra tất cả
         </button>
-        <button className="btn tiny" onClick={resetProgress} title="Xóa bài đã làm và bắt đầu lại">
-          Làm lại
+        <button
+          className="cc-btn cc-btn-sm"
+          onClick={resetProgress}
+          title="Xóa bài đã làm và bắt đầu lại"
+        >
+          <Icon name="refresh" /> Làm lại
         </button>
       </div>
 
-      <div className="sentence-list">
-        {shown.map((item, idx) => (
+      <section>
+        {shown.slice(0, limit).map((item, idx) => (
           <SentenceCard
             key={item.id}
             index={idx + 1}
@@ -860,7 +908,15 @@ function PracticeView({ folder }: { folder: Folder }) {
             onReveal={reveal}
           />
         ))}
-      </div>
+      </section>
+
+      {rest > 0 && (
+        <div className="cc-more">
+          <button className="cc-btn" onClick={() => setLimit((l) => l + PAGE_SIZE)}>
+            <Icon name="down" /> Hiện thêm ({rest} câu còn lại)
+          </button>
+        </div>
+      )}
     </>
   )
 }
@@ -872,9 +928,14 @@ const SUGGEST_ICON: Record<Suggestion['type'], string> = {
   synonym: '≈',
 }
 const STATUS_TEXT: Record<GradeResult['status'], string> = {
-  correct: '✅ Đúng',
-  close: '🟡 Gần đúng',
-  wrong: '❌ Chưa đúng',
+  correct: 'Đúng',
+  close: 'Gần đúng',
+  wrong: 'Chưa đúng',
+}
+const STATUS_BADGE: Record<GradeResult['status'], string> = {
+  correct: 'cc-badge cc-badge-ok',
+  close: 'cc-badge cc-badge-warn',
+  wrong: 'cc-badge cc-badge-err',
 }
 
 // ================= THẺ MỘT CÂU (luyện tập) =================
@@ -886,7 +947,6 @@ const SentenceCard = memo(function SentenceCard({
   result,
   revealed,
   dictation = false,
-  focus = false,
   onChange,
   onCheck,
   onReveal,
@@ -897,7 +957,6 @@ const SentenceCard = memo(function SentenceCard({
   result?: GradeResult
   revealed: boolean
   dictation?: boolean // nghe-chép: nghe TTS đọc câu tiếng Anh rồi gõ lại
-  focus?: boolean // true = bố cục MOBILE (mockup); false = bố cục DESKTOP gốc
   onChange: (id: string, v: string) => void
   onCheck: (id: string, advance?: boolean) => void
   onReveal: (id: string) => void
@@ -972,9 +1031,7 @@ const SentenceCard = memo(function SentenceCard({
 
   // Chuyển focus sang ô nhập của câu kế tiếp (dir=1) hoặc trước đó (dir=-1)
   const focusSibling = (dir: 1 | -1) => {
-    const inputs = Array.from(
-      document.querySelectorAll<HTMLTextAreaElement>('.sc-input')
-    )
+    const inputs = Array.from(document.querySelectorAll<HTMLTextAreaElement>('.cc-answer'))
     const cur = taRef.current ? inputs.indexOf(taRef.current) : -1
     const next = inputs[cur + dir]
     if (next) next.focus()
@@ -1015,107 +1072,53 @@ const SentenceCard = memo(function SentenceCard({
     }
   }
 
-  const statusClass = result ? `is-${result.status}` : ''
+  const statusClass = result ? ` is-${result.status}` : ''
   // Nghe-chép chỉ dùng được khi câu CÓ đáp án tiếng Anh để máy đọc
   const dict = dictation && !!item.en
   // Đề tiếng Việt bị GIẤU khi nghe-chép, chỉ lộ sau khi chấm / xem đáp án
   const hidePrompt = dict && !result && !revealed
 
   return (
-    <div id={`sc-${item.id}`} className={`sentence-card ${statusClass}`}>
-      {focus ? (
-        /* ===== Bố cục MOBILE (mockup): badge → đề → tag → nhãn ===== */
-        <>
-          <div className="sc-top">
-            <span className="sc-qnum">{index}</span>
-            <span className="sc-badge-lang">{dict ? '🎧 NGHE' : '🇻🇳 VN'}</span>
-            {dict && (
-              <span className="sc-listen">
-                <button type="button" className="btn tiny" onClick={() => speak(item.en)}>
-                  🔊 Nghe
-                </button>
-                <button
-                  type="button"
-                  className="btn tiny"
-                  title="Đọc chậm"
-                  onClick={() => speak(item.en, 0.65)}
-                >
-                  🐢 Chậm
-                </button>
-              </span>
-            )}
-            {item.level && <span className="sc-level">{item.level}</span>}
-          </div>
+    <article id={`cc-${item.id}`} className={`cc-sent${statusClass}`}>
+      <div className="cc-sent-vi">
+        <span className="cc-sent-i">{index}</span>
+        <span className={hidePrompt ? 'cc-sent-txt is-hidden' : 'cc-sent-txt'}>
+          {hidePrompt ? 'Nghe máy đọc rồi gõ lại câu tiếng Anh…' : item.vi}
+        </span>
+        {dict && (
+          <span className="cc-listen">
+            <button type="button" className="cc-btn cc-btn-sm" onClick={() => speak(item.en)}>
+              <Icon name="speak" /> Nghe
+            </button>
+            <button
+              type="button"
+              className="cc-btn cc-btn-sm"
+              title="Đọc chậm"
+              onClick={() => speak(item.en, 0.65)}
+            >
+              <Icon name="clock" /> Chậm
+            </button>
+          </span>
+        )}
+        {item.level && <span className="cc-badge">{item.level}</span>}
+      </div>
 
-          {hidePrompt ? (
-            <p className="sc-prompt is-muted">Nghe máy đọc rồi gõ lại câu tiếng Anh…</p>
-          ) : (
-            <p className="sc-prompt">{item.vi}</p>
-          )}
-
-          {item.hints && item.hints.length > 0 && !hidePrompt && (
-            <div className="sc-tags">
-              {item.hints.map((h, i) => (
-                <span key={h} className={`sc-tag ${i % 2 ? 'v' : 'g'}`}>
-                  <span className="sc-tag-dot" />
-                  {h}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="sc-ans-label">
-            <span className="sc-ans-ico">✎</span>
-            {dict ? 'Câu bạn nghe được' : 'Bản dịch của bạn'}
-          </div>
-        </>
-      ) : (
-        /* ===== Bố cục DESKTOP (gốc): đề + gợi ý trên cùng một khối ===== */
-        <>
-          <div className="sc-vi">
-            <span className="sc-index">{index}</span>
-            <span className="sc-flag">{dict ? '🎧' : '🇻🇳'}</span>
-            {hidePrompt ? (
-              <span className="sc-vi-text muted">Nghe máy đọc rồi gõ lại câu tiếng Anh…</span>
-            ) : (
-              <span className="sc-vi-text">{item.vi}</span>
-            )}
-            {dict && (
-              <span className="sc-listen">
-                <button type="button" className="btn tiny" onClick={() => speak(item.en)}>
-                  🔊 Nghe
-                </button>
-                <button
-                  type="button"
-                  className="btn tiny"
-                  title="Đọc chậm"
-                  onClick={() => speak(item.en, 0.65)}
-                >
-                  🐢 Chậm
-                </button>
-              </span>
-            )}
-            {item.level && <span className="sc-level">{item.level}</span>}
-          </div>
-
-          {item.hints && item.hints.length > 0 && !hidePrompt && (
-            <div className="sc-hints">
-              {item.hints.map((h) => (
-                <span key={h} className="sc-hint">
-                  💡 {h}
-                </span>
-              ))}
-            </div>
-          )}
-        </>
+      {item.hints && item.hints.length > 0 && !hidePrompt && (
+        <div className="cc-hints">
+          {item.hints.map((h) => (
+            <span key={h} className="cc-hint">
+              <Icon name="bulb" /> {h}
+            </span>
+          ))}
+        </div>
       )}
 
-      <div className="sc-input-wrap">
+      <div className="cc-input-wrap">
         {showOverlay && wrongSegs && (
-          <div className="sc-backdrop" ref={backdropRef} aria-hidden="true">
+          <div className="cc-backdrop" ref={backdropRef} aria-hidden="true">
             {wrongSegs.map((s, i) =>
               s.wrong ? (
-                <mark className="sc-wrong" key={i}>
+                <mark className="cc-wrong" key={i}>
                   {s.text}
                 </mark>
               ) : (
@@ -1127,7 +1130,7 @@ const SentenceCard = memo(function SentenceCard({
         )}
         <textarea
           ref={taRef}
-          className={`sc-input${showOverlay ? ' has-overlay' : ''}`}
+          className={`cc-answer${showOverlay ? ' has-overlay' : ''}`}
           placeholder={
             dict
               ? 'Gõ lại câu bạn nghe được… (Enter để kiểm tra)'
@@ -1139,7 +1142,7 @@ const SentenceCard = memo(function SentenceCard({
           autoCapitalize="off"
           data-lpignore="true"
           data-form-type="other"
-          name="sc-translation"
+          name="cc-translation"
           rows={2}
           value={value}
           onChange={(e) => {
@@ -1158,20 +1161,20 @@ const SentenceCard = memo(function SentenceCard({
           }}
         />
         {suggestEnabled && open && suggestions.length > 0 && (
-          <ul className="sc-suggest" role="listbox">
+          <ul className="cc-suggest" role="listbox">
             {suggestions.map((s, i) => (
               <li
                 key={s.text + i}
                 role="option"
                 aria-selected={i === active}
-                className={`sc-suggest-item ${s.type} ${i === active ? 'active' : ''}`}
+                className={`cc-suggest-item ${s.type} ${i === active ? 'active' : ''}`}
                 onMouseDown={(e) => {
                   e.preventDefault()
                   accept(s)
                 }}
                 onMouseEnter={() => setActive(i)}
               >
-                <span className="sc-suggest-icon">{SUGGEST_ICON[s.type]}</span>
+                <span className="cc-suggest-icon">{SUGGEST_ICON[s.type]}</span>
                 {s.text}
               </li>
             ))}
@@ -1179,30 +1182,36 @@ const SentenceCard = memo(function SentenceCard({
         )}
       </div>
 
-      <div className="sc-actions">
-        <button type="button" className="btn tiny" onClick={() => onReveal(item.id)}>
-          Xem đáp án
+      <div className="cc-sent-actions">
+        <button
+          type="button"
+          className="cc-btn cc-btn-primary cc-btn-sm"
+          onClick={() => onCheck(item.id, true)}
+        >
+          <Icon name="check" /> Kiểm tra
         </button>
-        <button type="button" className="btn primary" onClick={() => onCheck(item.id, true)}>
-          Kiểm tra
+        <button type="button" className="cc-btn cc-btn-sm" onClick={() => onReveal(item.id)}>
+          <Icon name="eye" /> Xem đáp án
         </button>
       </div>
 
       {revealed && !result && (
-        <div className="sc-answer">
-          Đáp án: <strong>{item.en}</strong>
+        <div className="cc-result">
+          <span className="cc-note cc-reveal">
+            Đáp án: <strong>{item.en}</strong>
+          </span>
         </div>
       )}
 
-      {result && <ResultBox item={item} result={result} revealed={revealed} />}
-    </div>
+      {result && <ResultRow item={item} result={result} revealed={revealed} />}
+    </article>
   )
 })
 
-// ---------- Khối kết quả sau khi chấm ----------
+// ---------- Hàng kết quả sau khi chấm (mockup .sent-result) ----------
 // Chỉ gợi ý MỘT từ kế tiếp — người học tự nghĩ ra phần còn lại.
 // Cả câu chỉ hiện khi người dùng chủ động bấm "Xem đáp án".
-function ResultBox({
+function ResultRow({
   item,
   result,
   revealed,
@@ -1213,68 +1222,75 @@ function ResultBox({
 }) {
   const hint = result.nextWord
   return (
-    <div className={`sc-result is-${result.status}`}>
-      <div className="sc-status">
-        {STATUS_TEXT[result.status]}
-        <span className="sc-score">{Math.round(result.score * 100)}%</span>
-      </div>
+    <div className="cc-result">
+      <span className={STATUS_BADGE[result.status]}>
+        {result.status === 'correct' && <Icon name="check" />}
+        {STATUS_TEXT[result.status]} · {Math.round(result.score * 100)}%
+      </span>
 
       {result.status !== 'correct' && (
-        <div className="sc-compare">
-          <span className="sc-compare-label">Gợi ý:</span>
-          <span className="sc-next-word">
-            {!hint ? (
-              'Câu của bạn đủ ý nhưng đang thừa từ — hãy bỏ bớt.'
-            ) : hint.okCount > 0 ? (
-              <>
-                Đúng {hint.okCount} từ đầu · từ tiếp theo là <strong>{hint.word}</strong>
-              </>
-            ) : (
-              <>
-                Câu bắt đầu bằng <strong>{hint.word}</strong>
-              </>
-            )}
-          </span>
-        </div>
+        <span className="cc-note cc-next-word">
+          <span className="cc-note-key">Gợi ý:</span>{' '}
+          {!hint ? (
+            'câu của bạn đủ ý nhưng đang thừa từ — hãy bỏ bớt.'
+          ) : hint.okCount > 0 ? (
+            <>
+              đúng {hint.okCount} từ đầu · từ tiếp theo là <strong>{hint.word}</strong>
+            </>
+          ) : (
+            <>
+              câu bắt đầu bằng <strong>{hint.word}</strong>
+            </>
+          )}
+        </span>
       )}
 
       {revealed && (
-        <div className="sc-answer">
+        <span className="cc-note cc-reveal">
           Đáp án: <strong>{item.en}</strong>
-        </div>
+        </span>
       )}
 
       {result.spell.length > 0 && (
-        <div className="sc-notes">
-          <span className="sc-notes-label">Chính tả:</span>
-          {result.spell.map((s) => (
-            <span key={s.word} className="sc-note">
-              {s.word}
+        <span className="cc-note">
+          <span className="cc-note-key">Chính tả:</span>{' '}
+          {result.spell.map((s, i) => (
+            <span key={s.word}>
+              {i > 0 && ', '}
+              <b>{s.word}</b>
               {s.suggestions.length > 0 && <em> → {s.suggestions.join(', ')}</em>}
             </span>
           ))}
-        </div>
+        </span>
       )}
 
       {result.grammar.length > 0 && (
-        <div className="sc-notes">
-          <span className="sc-notes-label">Ngữ pháp:</span>
+        <span className="cc-note">
+          <span className="cc-note-key">Ngữ pháp:</span>{' '}
           {result.grammar.map((g, i) => (
-            <span key={i} className="sc-note" title={g.message}>
-              {g.errorText || '⚠'}
+            <span key={i} title={g.message}>
+              {i > 0 && ', '}
+              <b>{g.errorText || '⚠'}</b>
               {g.replacements.length > 0 && <em> → {g.replacements[0]}</em>}
             </span>
           ))}
-        </div>
+        </span>
       )}
     </div>
   )
 }
 
 // ================= CHẾ ĐỘ QUẢN LÝ =================
-const EMPTY_FORM: SentenceInput = { vi: '', en: '', altAnswers: [], hints: [], level: undefined, topic: '' }
+const EMPTY_FORM: SentenceInput = {
+  vi: '',
+  en: '',
+  altAnswers: [],
+  hints: [],
+  level: undefined,
+  topic: '',
+}
 
-function ManageView({ folder, onChanged }: { folder: Folder; onChanged: () => void }) {
+function ManageView({ folder }: { folder: Folder }) {
   const [items, setItems] = useState<StoredSentence[]>([])
   const [editingId, setEditingId] = useState<string | 'new' | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -1305,7 +1321,6 @@ function ManageView({ folder, onChanged }: { folder: Folder; onChanged: () => vo
 
   const afterMutate = async () => {
     await load()
-    onChanged()
     setEditingId(null)
     setSelected(new Set())
   }
@@ -1434,7 +1449,7 @@ function ManageView({ folder, onChanged }: { folder: Folder; onChanged: () => vo
   }
 
   return (
-    <div className="manage-view">
+    <div>
       <input
         ref={fileRef}
         type="file"
@@ -1442,11 +1457,12 @@ function ManageView({ folder, onChanged }: { folder: Folder; onChanged: () => vo
         style={{ display: 'none' }}
         onChange={onPickFile}
       />
-      <div className="manage-head">
-        <h2 className="manage-title">
-          Quản lý câu · <span className="muted">{folder.name}</span> ({items.length})
+
+      <div className="cc-manage-head">
+        <h2 className="cc-manage-title">
+          Quản lý câu <span>· {items.length} câu</span>
         </h2>
-        <div className="manage-head-actions">
+        <div className="cc-manage-actions">
           <ExcelMenu
             disabled={importing}
             canExport={items.length > 0}
@@ -1455,25 +1471,28 @@ function ManageView({ folder, onChanged }: { folder: Folder; onChanged: () => vo
             onExport={() => exportFolderExcel(folder.name, items)}
           />
           {editingId !== 'new' && (
-            <button className="btn primary" onClick={() => setEditingId('new')} disabled={importing}>
-              + Thêm câu
+            <button
+              className="cc-btn cc-btn-primary"
+              onClick={() => setEditingId('new')}
+              disabled={importing}
+            >
+              <Icon name="plus" /> Thêm câu
             </button>
           )}
         </div>
       </div>
 
       {importing && (
-        <div className="import-progress">
-          Đang dịch &amp; nhập… {progress.done}/{progress.total}
-          <div className="sp-bar">
-            <div
-              className="sp-bar-fill"
-              style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }}
-            />
-          </div>
+        <div className="cc-import">
+          <span>
+            Đang dịch &amp; nhập… {progress.done}/{progress.total}
+          </span>
+          <span className="cc-bar cc-bar-lg">
+            <i style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }} />
+          </span>
         </div>
       )}
-      {importMsg && !importing && <div className="import-msg">{importMsg}</div>}
+      {importMsg && !importing && <div className="cc-import-msg">{importMsg}</div>}
 
       {editingId === 'new' && (
         <SentenceForm
@@ -1485,30 +1504,39 @@ function ManageView({ folder, onChanged }: { folder: Folder; onChanged: () => vo
       )}
 
       {loading ? (
-        <p className="muted">Đang tải câu…</p>
+        <p className="cc-loading">Đang tải câu…</p>
       ) : error ? (
-        <p className="muted">⚠️ {error}</p>
+        <div className="cc-empty">
+          <Icon name="alert" />
+          <b>Không tải được danh sách câu</b>
+          <p>{error}</p>
+        </div>
       ) : items.length === 0 && editingId !== 'new' ? (
-        <p className="muted">Chưa có câu nào. Bấm “+ Thêm câu”.</p>
+        <div className="cc-empty">
+          <Icon name="file" />
+          <b>Chưa có câu nào</b>
+          <p>Bấm “Thêm câu” để nhập tay, hoặc dùng menu Excel để nhập hàng loạt.</p>
+        </div>
       ) : (
         <>
           {items.length > 0 && (
-            <div className="manage-toolbar">
-              <label className="select-all">
+            <div className="cc-manage-toolbar">
+              <label className="cc-check">
                 <input type="checkbox" checked={allSelected} onChange={toggleAll} />
                 Chọn tất cả
               </label>
               {selected.size > 0 && (
                 <>
-                  <span className="sel-count">{selected.size} đã chọn</span>
-                  <button className="btn tiny danger" onClick={deleteSelected}>
-                    🗑 Xóa đã chọn ({selected.size})
+                  <span>{selected.size} đã chọn</span>
+                  <button className="cc-btn cc-btn-sm cc-btn-danger" onClick={deleteSelected}>
+                    <Icon name="trash" /> Xóa đã chọn ({selected.size})
                   </button>
                 </>
               )}
             </div>
           )}
-          <div className="manage-list">
+
+          <div className="cc-list">
             {items.map((s, i) =>
               editingId === s.id ? (
                 <SentenceForm
@@ -1518,34 +1546,34 @@ function ManageView({ folder, onChanged }: { folder: Folder; onChanged: () => vo
                   onCancel={() => setEditingId(null)}
                 />
               ) : (
-                <div
-                  key={s.id}
-                  className={`manage-row ${selected.has(s.id) ? 'selected' : ''}`}
-                >
-                  <input
-                    type="checkbox"
-                    className="mr-check"
-                    checked={selected.has(s.id)}
-                    onChange={() => toggleOne(s.id)}
-                  />
-                  <div className="mr-num">{i + 1}</div>
-                  <div className="mr-body">
-                    <div className="mr-vi">{s.vi}</div>
-                    <div className="mr-en">{s.en || <em className="mr-empty">(chưa có đáp án)</em>}</div>
-                    <div className="mr-meta">
-                      {s.level && <span className="mr-tag">{s.level}</span>}
-                      {s.topic && <span className="mr-tag">{s.topic}</span>}
-                      {s.altAnswers && s.altAnswers.length > 0 && (
-                        <span className="mr-tag">+{s.altAnswers.length} cách khác</span>
-                      )}
-                    </div>
+                <div key={s.id} className={`cc-row${selected.has(s.id) ? ' is-selected' : ''}`}>
+                  <label className="cc-check">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(s.id)}
+                      onChange={() => toggleOne(s.id)}
+                    />
+                  </label>
+                  <div className="cc-row-num">{i + 1}</div>
+                  <div className="cc-row-body">
+                    <div className="cc-row-vi">{s.vi}</div>
+                    <div className="cc-row-en">{s.en || <em>(chưa có đáp án)</em>}</div>
+                    {(s.level || s.topic || (s.altAnswers && s.altAnswers.length > 0)) && (
+                      <div className="cc-row-meta">
+                        {s.level && <span className="cc-badge">{s.level}</span>}
+                        {s.topic && <span className="cc-badge">{s.topic}</span>}
+                        {s.altAnswers && s.altAnswers.length > 0 && (
+                          <span className="cc-badge">+{s.altAnswers.length} cách khác</span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div className="mr-actions">
-                    <button className="btn tiny" onClick={() => setEditingId(s.id)}>
-                      Sửa
+                  <div className="cc-row-side">
+                    <button className="cc-ibtn" title="Sửa câu" onClick={() => setEditingId(s.id)}>
+                      <Icon name="pencil" />
                     </button>
-                    <button className="btn tiny danger" onClick={() => remove(s)}>
-                      Xóa
+                    <button className="cc-ibtn danger" title="Xóa câu" onClick={() => remove(s)}>
+                      <Icon name="trash" />
                     </button>
                   </div>
                 </div>
@@ -1590,30 +1618,26 @@ function ExcelMenu({
   }
 
   return (
-    <div className="dropdown" ref={ref}>
+    <div className="cc-menu" ref={ref}>
       <button
-        className="btn"
+        className="cc-btn"
         onClick={() => setOpen((o) => !o)}
         disabled={disabled}
         title="Thao tác Excel"
       >
-        📊 Excel ▾
+        <Icon name="grid" /> Excel <Icon name="down" />
       </button>
       {open && (
-        <div className="dropdown-menu">
-          <button className="dropdown-item" onClick={() => pick(onImport)}>
-            ⬆ Nhập từ Excel
+        <div className="cc-menu-list">
+          <button className="cc-menu-item" onClick={() => pick(onImport)}>
+            <Icon name="save" /> Nhập từ Excel
           </button>
-          <button
-            className="dropdown-item"
-            onClick={() => pick(onExport)}
-            disabled={!canExport}
-          >
-            ⬇ Xuất ra Excel
+          <button className="cc-menu-item" onClick={() => pick(onExport)} disabled={!canExport}>
+            <Icon name="down" /> Xuất ra Excel
           </button>
-          <div className="dropdown-sep" />
-          <button className="dropdown-item" onClick={() => pick(onSample)}>
-            ↓ Tải file mẫu
+          <div className="cc-menu-sep" />
+          <button className="cc-menu-item" onClick={() => pick(onSample)}>
+            <Icon name="file" /> Tải file mẫu
           </button>
         </div>
       )}
@@ -1662,29 +1686,43 @@ function SentenceForm({
   }
 
   return (
-    <form className="sentence-form" onSubmit={submit}>
-      <label className="sf-field">
+    <form className="cc-form" onSubmit={submit}>
+      <label className="cc-field">
         <span>Câu tiếng Việt *</span>
-        <input value={vi} onChange={(e) => setVi(e.target.value)} placeholder="VD: Cô ấy sống ở Hà Nội." />
+        <input
+          className="cc-input"
+          value={vi}
+          onChange={(e) => setVi(e.target.value)}
+          placeholder="VD: Cô ấy sống ở Hà Nội."
+        />
       </label>
-      <label className="sf-field">
+      <label className="cc-field">
         <span>Đáp án tiếng Anh *</span>
-        <input value={en} onChange={(e) => setEn(e.target.value)} placeholder="VD: She lives in Hanoi." />
+        <input
+          className="cc-input"
+          value={en}
+          onChange={(e) => setEn(e.target.value)}
+          placeholder="VD: She lives in Hanoi."
+        />
       </label>
-      <div className="sf-row">
-        <label className="sf-field">
+      <div className="cc-form-row">
+        <label className="cc-field">
           <span>Đáp án khác (mỗi dòng 1 câu)</span>
           <textarea rows={2} value={alt} onChange={(e) => setAlt(e.target.value)} />
         </label>
-        <label className="sf-field">
+        <label className="cc-field">
           <span>Gợi ý (mỗi dòng 1 ý)</span>
           <textarea rows={2} value={hints} onChange={(e) => setHints(e.target.value)} />
         </label>
       </div>
-      <div className="sf-row">
-        <label className="sf-field sf-narrow">
+      <div className="cc-form-row">
+        <label className="cc-field is-narrow">
           <span>Cấp độ</span>
-          <select value={level} onChange={(e) => setLevel(e.target.value as CefrLevel | '')}>
+          <select
+            className="cc-select"
+            value={level}
+            onChange={(e) => setLevel(e.target.value as CefrLevel | '')}
+          >
             <option value="">—</option>
             {LEVELS.map((l) => (
               <option key={l} value={l}>
@@ -1693,17 +1731,22 @@ function SentenceForm({
             ))}
           </select>
         </label>
-        <label className="sf-field">
+        <label className="cc-field">
           <span>Chủ đề</span>
-          <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="VD: Du lịch" />
+          <input
+            className="cc-input"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="VD: Du lịch"
+          />
         </label>
       </div>
-      <div className="sf-actions">
-        <button type="button" className="btn tiny" onClick={onCancel}>
+      <div className="cc-form-actions">
+        <button type="button" className="cc-btn cc-btn-ghost" onClick={onCancel}>
           Hủy
         </button>
-        <button type="submit" className="btn primary">
-          Lưu câu
+        <button type="submit" className="cc-btn cc-btn-primary">
+          <Icon name="save" /> Lưu câu
         </button>
       </div>
     </form>

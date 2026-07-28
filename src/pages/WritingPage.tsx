@@ -8,6 +8,7 @@ import {
   type ReactNode,
   type UIEvent,
 } from 'react'
+import Icon, { type IconName } from '../components/Icon'
 import { CloudApi, type Writing } from '../services/cloud/CloudApiClient'
 import { suggest, type Suggestion } from '../services/suggestion'
 import { ignoreWord, isMisspelled, suggestFix, tokenizeWords } from '../services/spellcheck'
@@ -33,8 +34,14 @@ interface SpellItem {
   suggestions: string[]
 }
 
+// Đề bài điền sẵn khi mở bài mới (từ nút 🎲 hoặc thẻ chủ đề)
+interface PromptDraft {
+  title: string
+  topic: string
+}
+
 // Kho gợi ý ĐỀ BÀI luyện viết — bấm 🎲 lấy ngẫu nhiên (điền chủ đề + tiêu đề)
-const WRITING_PROMPTS: { topic: string; title: string }[] = [
+const WRITING_PROMPTS: PromptDraft[] = [
   { topic: 'Daily life', title: 'Describe your typical morning routine' },
   { topic: 'Daily life', title: 'What did you do last weekend?' },
   { topic: 'Travel', title: 'Describe a place you want to visit and why' },
@@ -55,6 +62,50 @@ const WRITING_PROMPTS: { topic: string; title: string }[] = [
   { topic: 'Culture', title: 'Describe a Vietnamese festival to a foreign friend' },
 ]
 
+// Chủ đề gợi ý ở cuối trang danh sách — bấm là mở bài mới với đề tương ứng
+const TOPIC_CARDS: (PromptDraft & { icon: IconName; label: string })[] = [
+  {
+    icon: 'pen',
+    label: 'Giới thiệu bản thân',
+    topic: 'Personal',
+    title: 'Introduce yourself: who you are and what you do',
+  },
+  {
+    icon: 'clock',
+    label: 'Thói quen hằng ngày',
+    topic: 'Daily life',
+    title: 'Describe your typical morning routine',
+  },
+  {
+    icon: 'book',
+    label: 'Một cuốn sách bạn thích',
+    topic: 'Culture',
+    title: 'Write about a book you love and why',
+  },
+  {
+    icon: 'trend',
+    label: 'Mạng xã hội & giới trẻ',
+    topic: 'Technology',
+    title: 'Do social networks bring people closer together?',
+  },
+  {
+    icon: 'cloud',
+    label: 'Biến đổi khí hậu',
+    topic: 'Environment',
+    title: 'What can individuals do to slow down climate change?',
+  },
+  {
+    icon: 'target',
+    label: 'Mục tiêu 5 năm tới',
+    topic: 'Work & Study',
+    title: 'Where do you see yourself in five years?',
+  },
+]
+
+const TOPIC_OPTIONS = [
+  ...new Set([...WRITING_PROMPTS, ...TOPIC_CARDS].map((p) => p.topic)),
+].sort()
+
 function countWords(text: string): number {
   const t = text.trim()
   return t ? t.split(/\s+/).length : 0
@@ -65,23 +116,65 @@ function escapeRegExp(s: string): string {
 function preserveCase(sample: string, word: string): string {
   return sample[0] === sample[0]?.toUpperCase() ? word[0].toUpperCase() + word.slice(1) : word
 }
+// Dòng đầu của bài, cắt gọn để làm mô tả trong danh sách
+function previewOf(content: string | null): string {
+  const line = (content ?? '').trim().split(/\r?\n/).find((l) => l.trim()) ?? ''
+  return line.length > 120 ? `${line.slice(0, 120)}…` : line
+}
+function randomPrompt(exceptTitle?: string): PromptDraft {
+  const pool = WRITING_PROMPTS.filter((p) => p.title !== exceptTitle)
+  return pool[Math.floor(Math.random() * pool.length)]
+}
 
 // ================= TRANG DANH SÁCH BÀI VIẾT =================
 export default function WritingPage() {
   const [writings, setWritings] = useState<Writing[]>([])
   const [sel, setSel] = useState<string | 'new' | null>(null)
+  const [draft, setDraft] = useState<PromptDraft | null>(null) // đề điền sẵn cho bài mới
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  // Số lỗi chính tả từng bài — tính trễ sau khi danh sách đã hiện (nặng)
+  const [spellCounts, setSpellCounts] = useState<Record<string, number>>({})
 
   const load = async () => {
     try {
       setWritings(await CloudApi.listWritings())
     } catch (e) {
       setError((e as Error).message)
+    } finally {
+      setLoading(false)
     }
   }
   useEffect(() => {
     load()
   }, [])
+
+  // Đếm lỗi chính tả cho badge. Từ điển nspell dựng lần đầu khá tốn thời gian
+  // nên hoãn lại để danh sách hiện ra trước.
+  useEffect(() => {
+    if (localStorage.getItem('spell_enabled') === '0' || writings.length === 0) {
+      setSpellCounts({})
+      return
+    }
+    let cancelled = false
+    const handle = setTimeout(() => {
+      const out: Record<string, number> = {}
+      for (const w of writings) {
+        const uniq = [...new Set(tokenizeWords((w.content ?? '').slice(0, 4000)))]
+        out[w.id] = uniq.filter((t) => isMisspelled(t)).length
+      }
+      if (!cancelled) setSpellCounts(out)
+    }, 250)
+    return () => {
+      cancelled = true
+      clearTimeout(handle)
+    }
+  }, [writings])
+
+  const openNew = (prompt: PromptDraft | null) => {
+    setDraft(prompt)
+    setSel('new')
+  }
 
   const remove = async (id: string) => {
     if (!confirm('Xóa bài viết này?')) return
@@ -97,8 +190,10 @@ export default function WritingPage() {
       <Editor
         key={sel}
         writing={current}
+        initial={sel === 'new' ? draft : null}
         onBack={() => {
           setSel(null)
+          setDraft(null)
           load()
         }}
         onDelete={current ? () => remove(current.id) : undefined}
@@ -108,51 +203,97 @@ export default function WritingPage() {
 
   // Trang danh sách
   return (
-    <div className="page">
+    <div className="page write-page">
       <div className="write-head">
-        <div>
-          <h1 className="page-title">Bài viết</h1>
-          <p className="write-sub">
-            Luyện viết tiếng Anh với gợi ý từ, kiểm tra chính tả &amp; ngữ pháp.
+        <div className="write-head-text">
+          <h1>Bài viết</h1>
+          <p>
+            Luyện viết tiếng Anh với gợi ý từ, kiểm tra chính tả &amp; ngữ pháp theo thời gian
+            thực.
           </p>
         </div>
-        <button className="btn primary" onClick={() => setSel('new')}>
-          + Bài viết mới
-        </button>
+        <div className="write-head-actions">
+          <button className="write-btn" onClick={() => openNew(randomPrompt())}>
+            <Icon name="shuffle" /> Gợi ý đề bài
+          </button>
+          <button className="write-btn write-btn-primary" onClick={() => openNew(null)}>
+            <Icon name="plus" /> Bài viết mới
+          </button>
+        </div>
       </div>
-      {error && <div className="alert error">{error}</div>}
 
-      {writings.length === 0 ? (
+      {error && <div className="write-alert">{error}</div>}
+
+      {loading ? (
+        <p className="write-loading">Đang tải bài viết…</p>
+      ) : writings.length === 0 ? (
         <div className="write-empty">
-          <div className="write-empty-ico">✍️</div>
-          <h2>Chưa có bài viết</h2>
-          <p className="muted">Bấm “Bài viết mới” để bắt đầu luyện viết.</p>
+          <span className="write-empty-ico">
+            <Icon name="pen" />
+          </span>
+          <h2>Chưa có bài viết nào</h2>
+          <p>Bấm “Bài viết mới” hoặc chọn một chủ đề bên dưới để bắt đầu.</p>
         </div>
       ) : (
-        <div className="write-list">
-          {writings.map((w) => (
-            <div key={w.id} className="write-row" onClick={() => setSel(w.id)}>
-              <div className="write-row-ico">✍️</div>
-              <div className="write-row-main">
-                <div className="write-row-title">
-                  {w.title || '(chưa có tiêu đề)'}
-                  {w.topic && <span className="write-row-topic">{w.topic}</span>}
-                </div>
-                <div className="write-row-sub">{w.word_count} từ</div>
-              </div>
-              <button
-                className="btn tiny danger"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  remove(w.id)
+        <section className="write-list">
+          {writings.map((w) => {
+            const bad = spellCounts[w.id] ?? 0
+            return (
+              <div
+                key={w.id}
+                className="write-row"
+                role="button"
+                tabIndex={0}
+                onClick={() => setSel(w.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setSel(w.id)
+                  }
                 }}
               >
-                Xóa
-              </button>
-            </div>
-          ))}
-        </div>
+                <span className="write-row-mark">
+                  <Icon name="pen" />
+                </span>
+                <span className="write-row-main">
+                  <span className="write-row-title">{w.title || '(chưa có tiêu đề)'}</span>
+                  <span className="write-row-sub">
+                    {previewOf(w.content) || 'Bài viết trống'}
+                  </span>
+                </span>
+                <span className="write-row-side">
+                  {w.topic && <span className="write-badge write-badge-accent">{w.topic}</span>}
+                  <span className="write-badge">{w.word_count} từ</span>
+                  {bad > 0 && (
+                    <span className="write-badge write-badge-warn">
+                      <Icon name="alert" /> {bad} lỗi chính tả
+                    </span>
+                  )}
+                  <button
+                    className="write-ibtn danger"
+                    title="Xóa bài viết"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      remove(w.id)
+                    }}
+                  >
+                    <Icon name="trash" />
+                  </button>
+                </span>
+              </div>
+            )
+          })}
+        </section>
       )}
+
+      <h2 className="write-label">Chủ đề gợi ý</h2>
+      <section className="write-topics">
+        {TOPIC_CARDS.map((t) => (
+          <button key={t.label} className="write-topic" onClick={() => openNew(t)}>
+            <Icon name={t.icon} /> {t.label}
+          </button>
+        ))}
+      </section>
     </div>
   )
 }
@@ -160,16 +301,18 @@ export default function WritingPage() {
 // ================= TRANG SOẠN THẢO =================
 function Editor({
   writing,
+  initial,
   onBack,
   onDelete,
 }: {
   writing: Writing | null
+  initial?: PromptDraft | null
   onBack: () => void
   onDelete?: () => void
 }) {
   const [id, setId] = useState<string | null>(writing?.id ?? null)
-  const [title, setTitle] = useState(writing?.title ?? '')
-  const [topic, setTopic] = useState(writing?.topic ?? '')
+  const [title, setTitle] = useState(writing?.title ?? initial?.title ?? '')
+  const [topic, setTopic] = useState(writing?.topic ?? initial?.topic ?? '')
   const [content, setContent] = useState(writing?.content ?? '')
   const [caret, setCaret] = useState(0)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
@@ -232,6 +375,16 @@ function Editor({
     }, 1500)
     return () => clearTimeout(handle)
   }, [content, grammarEnabled])
+
+  // Bấm "Kiểm tra ngay" — không đợi hết debounce
+  const runGrammarNow = async () => {
+    if (!content.trim() || grammarChecking) return
+    setGrammarChecking(true)
+    const local = checkLocalGrammar(content)
+    const remote = await checkGrammar(content)
+    setGrammar(mergeGrammar(local, remote))
+    setGrammarChecking(false)
+  }
 
   const highlighted = useMemo<ReactNode[]>(() => {
     if (!spellEnabled || badSet.size === 0) return [content]
@@ -372,8 +525,7 @@ function Editor({
 
   // Chọn ngẫu nhiên 1 đề bài (khác đề đang hiện) -> điền chủ đề + tiêu đề
   const rollPrompt = () => {
-    const pool = WRITING_PROMPTS.filter((p) => p.title !== title)
-    const p = pool[Math.floor(Math.random() * pool.length)]
+    const p = randomPrompt(title)
     setTitle(p.title)
     setTopic(p.topic)
   }
@@ -386,26 +538,37 @@ function Editor({
 
   return (
     <form className="page write-editor" onSubmit={save}>
+      <button type="button" className="write-crumb" onClick={onBack}>
+        <Icon name="left" /> Danh sách bài viết
+      </button>
+
       <div className="write-ehead">
-        <button type="button" className="btn tiny write-back" onClick={onBack} title="Quay lại">
-          ←
-        </button>
         <input
           className="write-title"
-          placeholder="Tiêu đề bài viết"
+          placeholder="Tiêu đề bài viết…"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
         <span className="write-count">
           {countWords(content)} từ · {content.length} ký tự
-          {savedAt && ` · Đã lưu ${savedAt}`}
+          {savedAt && ` · đã lưu ${savedAt}`}
         </span>
-        <button className="btn primary" type="submit" disabled={saving} title="Lưu (Ctrl+S)">
-          {saving ? 'Đang lưu…' : '💾 Lưu'}
+        <button
+          className="write-btn write-btn-primary"
+          type="submit"
+          disabled={saving}
+          title="Lưu (Ctrl+S)"
+        >
+          <Icon name="save" /> {saving ? 'Đang lưu…' : 'Lưu'}
         </button>
         {onDelete && (
-          <button type="button" className="btn tiny danger" onClick={onDelete}>
-            Xóa
+          <button
+            type="button"
+            className="write-btn write-btn-icon write-btn-danger"
+            onClick={onDelete}
+            title="Xóa bài viết"
+          >
+            <Icon name="trash" />
           </button>
         )}
       </div>
@@ -413,23 +576,28 @@ function Editor({
       {/* Chủ đề bài viết + gợi ý đề ngẫu nhiên */}
       <div className="write-meta">
         <input
-          className="write-topic"
-          placeholder="Chủ đề (VD: Travel, Daily life…)"
+          className="write-input"
+          placeholder="Chủ đề (tùy chọn)…"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
           list="writing-topics"
         />
         <datalist id="writing-topics">
-          {[...new Set(WRITING_PROMPTS.map((p) => p.topic))].map((t) => (
+          {TOPIC_OPTIONS.map((t) => (
             <option key={t} value={t} />
           ))}
         </datalist>
-        <button type="button" className="btn small" onClick={rollPrompt} title="Lấy đề bài ngẫu nhiên">
-          🎲 Gợi ý đề bài
+        <button
+          type="button"
+          className="write-btn write-btn-sm"
+          onClick={rollPrompt}
+          title="Lấy đề bài ngẫu nhiên"
+        >
+          <Icon name="shuffle" /> Gợi ý đề bài
         </button>
       </div>
 
-      {error && <div className="alert error">{error}</div>}
+      {error && <div className="write-alert">{error}</div>}
 
       <div className="write-ta-wrap">
         <div className="write-backdrop" ref={backdropRef} aria-hidden="true">
@@ -459,70 +627,34 @@ function Editor({
         />
       </div>
 
-      <div className="write-bottom">
-        {grammarEnabled && (grammar.length > 0 || grammarChecking) && (
-          <div className="write-gbar">
-            <span className="write-glabel">Kiểm tra câu</span>
-            {fixableCount > 1 && (
-              <button type="button" className="write-gfixall" onClick={fixAllGrammar}>
-                ✓ Sửa cả câu ({fixableCount})
-              </button>
-            )}
-            {grammar.length === 0 && grammarChecking ? (
-              <span className="write-sghint">Đang kiểm tra…</span>
-            ) : (
-              grammar.map((m, idx) => (
-                <span className="write-gitem" key={idx}>
-                  <span className="write-gerr" title={m.message}>
-                    {m.errorText || '⚠'}
-                  </span>
-                  <span className="write-arrow">→</span>
-                  {m.replacements.length > 0 ? (
-                    m.replacements.map((rep) => (
-                      <button
-                        type="button"
-                        key={rep}
-                        className="write-gfix"
-                        title={m.message}
-                        onClick={() => applyGrammar(m, rep)}
-                      >
-                        {rep}
-                      </button>
-                    ))
-                  ) : (
-                    <span className="write-ginfo" title={m.message}>
-                      ⓘ
-                    </span>
-                  )}
-                </span>
-              ))
-            )}
-          </div>
-        )}
+      {/* ---------- Thanh trợ lý ---------- */}
+      <div className="write-assist">
         {spellEnabled && spellList.length > 0 && (
-          <div className="write-spbar">
-            <span className="write-splabel">Chính tả</span>
+          <div className="write-arow">
+            <span className="write-alabel">
+              <Icon name="type" /> Chính tả
+            </span>
             {spellList.map((item) => (
-              <span className="write-spitem" key={item.word}>
-                <span className="write-spword">{item.word}</span>
-                <span className="write-arrow">→</span>
+              <span className="write-aitem" key={item.word}>
+                <span className="write-bad">{item.word}</span>
+                <Icon name="right" />
                 {item.suggestions.length > 0 ? (
                   item.suggestions.map((sug) => (
                     <button
                       type="button"
                       key={sug}
-                      className="write-spfix"
+                      className="write-fix"
                       onClick={() => fixWord(item.word, sug)}
                     >
                       {sug}
                     </button>
                   ))
                 ) : (
-                  <span className="muted">(không có gợi ý)</span>
+                  <span className="write-ahint">(không có gợi ý)</span>
                 )}
                 <button
                   type="button"
-                  className="write-spignore"
+                  className="write-btn write-btn-sm write-btn-ghost"
                   title="Bỏ qua từ này (thêm vào từ điển cá nhân)"
                   onClick={() => ignore(item.word)}
                 >
@@ -532,14 +664,17 @@ function Editor({
             ))}
           </div>
         )}
-        <div className="write-sgbar">
-          <span className="write-sglabel">Gợi ý</span>
+
+        <div className="write-arow">
+          <span className="write-alabel">
+            <Icon name="sparkle" /> Gợi ý
+          </span>
           {suggestEnabled && suggestions.length > 0 ? (
             suggestions.map((s, i) => (
               <button
                 type="button"
                 key={s.text + i}
-                className={`write-sgchip ${s.type}`}
+                className={`write-chip ${s.type}`}
                 onClick={() => accept(s)}
               >
                 {s.text}
@@ -547,9 +682,68 @@ function Editor({
               </button>
             ))
           ) : (
-            <span className="write-sghint">
-              {suggestEnabled ? 'Gõ tiếng Anh để nhận gợi ý…' : 'Đã tắt gợi ý (bật lại ở Cài đặt)'}
+            <span className="write-ahint">
+              {suggestEnabled
+                ? 'Gõ tiếng Anh để nhận gợi ý từ tiếp theo…'
+                : 'Đã tắt gợi ý (bật lại ở Cài đặt)'}
             </span>
+          )}
+        </div>
+
+        <div className="write-arow">
+          <span className="write-alabel">
+            <Icon name="target" /> Kiểm tra câu
+          </span>
+          {!grammarEnabled ? (
+            <span className="write-ahint">Đã tắt kiểm tra câu (bật lại ở Cài đặt)</span>
+          ) : grammar.length === 0 ? (
+            <span className="write-ahint">
+              {grammarChecking ? 'Đang kiểm tra…' : 'Ngữ pháp, văn phong, dùng từ, collocation'}
+            </span>
+          ) : (
+            grammar.map((m, idx) => (
+              <span className="write-aitem" key={idx}>
+                <span className="write-gerr" title={m.message}>
+                  {m.errorText || '⚠'}
+                </span>
+                <Icon name="right" />
+                {m.replacements.length > 0 ? (
+                  m.replacements.map((rep) => (
+                    <button
+                      type="button"
+                      key={rep}
+                      className="write-fix"
+                      title={m.message}
+                      onClick={() => applyGrammar(m, rep)}
+                    >
+                      {rep}
+                    </button>
+                  ))
+                ) : (
+                  <span className="write-ginfo" title={m.message}>
+                    ⓘ
+                  </span>
+                )}
+              </span>
+            ))
+          )}
+          {grammarEnabled && (
+            <>
+              <div className="write-spacer" />
+              {fixableCount > 1 && (
+                <button type="button" className="write-btn write-btn-sm" onClick={fixAllGrammar}>
+                  <Icon name="check" /> Sửa tất cả ({fixableCount})
+                </button>
+              )}
+              <button
+                type="button"
+                className="write-btn write-btn-sm"
+                onClick={runGrammarNow}
+                disabled={grammarChecking || !content.trim()}
+              >
+                <Icon name="refresh" /> {grammarChecking ? 'Đang kiểm tra…' : 'Kiểm tra ngay'}
+              </button>
+            </>
           )}
         </div>
       </div>

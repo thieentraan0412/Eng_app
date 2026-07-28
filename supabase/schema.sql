@@ -191,9 +191,107 @@ create table if not exists public.review_progress (
   unique (user_id, deck_id)
 );
 
+-- ---------- 15. GRAMMAR_TOPICS (chủ điểm ngữ pháp người dùng tự soạn) ----------
+-- 16 chủ điểm chuẩn nằm sẵn trong code (src/data/grammar.ts). Bảng này chỉ giữ
+-- chủ điểm do người dùng thêm: soạn tay, chép từ mẫu, hoặc nạp từ sổ tính Excel.
+-- Phần lý thuyết lưu jsonb vì cấu trúc mỗi khối khác nhau và chỉ đọc nguyên khối.
+-- source_key khác null = bản chỉnh sửa riêng của một chủ điểm dựng sẵn: bản này
+-- thay chỗ bản gốc trong thư viện và dùng chung tiến độ (topic_key = slug gốc).
+create table if not exists public.grammar_topics (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  source_key  text,                                -- slug chủ điểm dựng sẵn bản này thay thế
+  name        text not null,
+  name_en     text,
+  level       text not null default 'B1' check (level in ('A1','A2','B1','B2','C1','C2')),
+  topic_group text,                                -- 'Thì động từ' | 'Danh từ & mạo từ' …
+  description text,
+  icon        text not null default 'clock',
+  tags        jsonb not null default '[]'::jsonb,  -- nhóm lỗi người Việt liên quan
+  signals     jsonb not null default '[]'::jsonb,  -- từ tín hiệu
+  formulas    jsonb not null default '[]'::jsonb,  -- [{form, structure, example}]
+  uses        jsonb not null default '[]'::jsonb,  -- [{name, sample, note}]
+  traps       jsonb not null default '[]'::jsonb,  -- [{wrong, right, why}]
+  compare     jsonb,                               -- {with, rows:[{key, other, self}]}
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  deleted_at  timestamptz
+);
+
+-- ---------- 16. GRAMMAR_ITEMS (câu luyện của chủ điểm tự soạn) ----------
+create table if not exists public.grammar_items (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  topic_id   uuid not null references public.grammar_topics (id) on delete cascade,
+  kind       text not null check (kind in ('cloze','mcq','correct','transform')),
+  prompt     text not null,                        -- câu có ___ / câu gốc
+  answers    jsonb not null default '[]'::jsonb,   -- các đáp án chấp nhận được
+  options    jsonb,                                -- chỉ cho mcq
+  tokens     jsonb,                                -- chỉ cho correct (mảng từ)
+  err_index  integer,                              -- chỉ cho correct (vị trí từ sai)
+  cue        text,                                 -- gợi ý "(live)" của dạng điền
+  explain    text,                                 -- phần "Vì sao"
+  error_tag  text,                                 -- 1 trong 7 nhóm lỗi người Việt
+  created_at timestamptz not null default now()
+);
+
+-- ---------- 17. GRAMMAR_PROGRESS (mức nắm vững + lịch ôn từng chủ điểm) ----------
+-- topic_key = slug của chủ điểm dựng sẵn, hoặc id (uuid dạng text) của chủ điểm tự soạn.
+create table if not exists public.grammar_progress (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null references auth.users (id) on delete cascade,
+  topic_key    text not null,
+  attempts     integer not null default 0,         -- tổng số câu đã trả lời
+  correct      integer not null default 0,         -- số câu đúng
+  mastery      integer not null default 0,         -- 0..100, suy ra từ lịch sử
+  srs_interval integer not null default 0,         -- số ngày tới lần ôn kế
+  srs_due_date date    not null default current_date,
+  last_studied timestamptz,
+  updated_at   timestamptz not null default now(),
+  unique (user_id, topic_key)
+);
+
+-- ---------- 18. GRAMMAR_ERRORS (sổ lỗi cá nhân, có lịch ôn riêng) ----------
+-- Vòng đời: mắc lỗi → 1 ngày → 3 → 7 → 21 ngày rồi chuyển 'resolved'.
+-- Tái phạm bất kỳ chặng nào thì quay về chặng 0 và hit_count tăng.
+create table if not exists public.grammar_errors (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null references auth.users (id) on delete cascade,
+  topic_key    text not null,
+  topic_name   text not null default '',
+  level        text,
+  error_tag    text not null default '',           -- nhãn nhóm lỗi người Việt
+  item_ref     text,                               -- id câu luyện đã sinh ra lỗi
+  wrong_text   text not null default '',           -- câu/câu trả lời sai
+  right_text   text not null default '',           -- dạng đúng
+  hit_count    integer not null default 1,
+  stage        integer not null default 0,         -- 0..3 (chặng ôn)
+  status       text not null default 'active' check (status in ('active','resolved')),
+  due_date     date not null default current_date,
+  first_seen   timestamptz not null default now(),
+  last_seen    timestamptz not null default now(),
+  unique (user_id, topic_key, wrong_text, right_text)
+);
+
+-- ---------- 19. GRAMMAR_HIDDEN_TOPICS (chủ điểm dựng sẵn bị ẩn) ----------
+-- Chủ điểm dựng sẵn nằm trong code nên không xóa được: "xóa" = ghi một dòng ở
+-- đây, bỏ dòng đi là chủ điểm hiện lại cùng tiến độ cũ.
+create table if not exists public.grammar_hidden_topics (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  topic_key  text not null,                        -- slug chủ điểm dựng sẵn
+  created_at timestamptz not null default now(),
+  unique (user_id, topic_key)
+);
+
 -- ============================================================
 -- CHỈ MỤC (index) cho truy vấn thường dùng
 -- ============================================================
+create index if not exists idx_gtopics_user     on public.grammar_topics (user_id);
+create index if not exists idx_ghidden_user     on public.grammar_hidden_topics (user_id);
+create index if not exists idx_gitems_topic     on public.grammar_items (topic_id);
+create index if not exists idx_gprogress_user   on public.grammar_progress (user_id);
+create index if not exists idx_gerrors_user_due on public.grammar_errors (user_id, due_date);
 create index if not exists idx_exprogress_user   on public.exercise_progress (user_id);
 create index if not exists idx_exprogress_deck   on public.exercise_progress (deck_id);
 create index if not exists idx_rvprogress_user   on public.review_progress (user_id);
@@ -220,7 +318,9 @@ declare
     'decks','cards','review_logs','lessons','questions',
     'readings','writings','study_stats','settings',
     'sentence_folders','sentences','sentence_progress',
-    'exercise_progress','review_progress'
+    'exercise_progress','review_progress',
+    'grammar_topics','grammar_items','grammar_progress','grammar_errors',
+    'grammar_hidden_topics'
   ];
 begin
   foreach t in array tables loop
@@ -297,6 +397,9 @@ as $$
         union all select 'lessons',           count(*) from public.lessons           where deleted_at is null
         union all select 'questions',         count(*) from public.questions
         union all select 'review_logs',       count(*) from public.review_logs
+        union all select 'grammar_topics',    count(*) from public.grammar_topics    where deleted_at is null
+        union all select 'grammar_items',     count(*) from public.grammar_items
+        union all select 'grammar_errors',    count(*) from public.grammar_errors
       ) s
     )
   );
