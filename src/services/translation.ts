@@ -75,8 +75,8 @@ export function glossPhrase(text: string): WordGloss[] {
 // Ưu tiên Google Translate (đáng tin cả với từ đơn), dự phòng MyMemory.
 // Trả null nếu lỗi/không dịch được (kể cả khi API trả lại đúng từ gốc tiếng Anh).
 export async function translateOnline(text: string): Promise<string | null> {
-  const [google, memory] = await Promise.all([googleTranslate(text), myMemoryTranslate(text)])
-  return google ?? memory
+  const google = await googleTranslate(text)
+  return google ?? myMemoryTranslate(text)
 }
 
 // Tra ĐA NGHĨA online — dùng chế độ từ điển của Google (dt=bd):
@@ -88,7 +88,8 @@ export interface OnlineSense {
 
 // Động từ bất quy tắc: dạng chia -> nguyên mẫu (để tra nghĩa verb của "paid", "wound"…)
 const IRREGULAR: Record<string, string> = {
-  was: 'be', were: 'be', been: 'be', began: 'begin', begun: 'begin', bent: 'bend',
+  am: 'be', is: 'be', are: 'be', was: 'be', were: 'be', been: 'be', being: 'be',
+  does: 'do', has: 'have', goes: 'go', began: 'begin', begun: 'begin', bent: 'bend',
   bit: 'bite', bitten: 'bite', blew: 'blow', blown: 'blow', broke: 'break', broken: 'break',
   brought: 'bring', built: 'build', bought: 'buy', caught: 'catch', chose: 'choose',
   chosen: 'choose', came: 'come', cost: 'cost', cut: 'cut', did: 'do', done: 'do',
@@ -152,6 +153,10 @@ export async function translateSenses(word: string): Promise<OnlineSense[]> {
   // Từ đang tra là DẠNG CHIA (paid, cocoons, landed…) -> Google thường thiếu
   // từ loại gốc. Bổ sung nghĩa của TỪ GỐC cho các từ loại còn thiếu.
   const have = new Set(senses.filter((s) => s.pos).map((s) => shortPos(s.pos!)))
+  // Khi API đã nhận diện được dạng đang tra, không suy thêm POS từ hậu tố. Một từ
+  // hoàn chỉnh như does/news/morning vẫn có thể trông giống dạng chia và dẫn tới
+  // lemma sai; phần chi tiết sẽ dùng mục từ chính xác từ Dictionary API.
+  if (have.size > 0) return senses
   for (const c of lemmaCandidates(word).slice(0, 2)) {
     const missing = c.pos.filter((p) => !have.has(p))
     if (missing.length === 0) continue
@@ -182,9 +187,12 @@ async function fetchSensesRaw(word: string): Promise<OnlineSense[]> {
         const terms: unknown[] = Array.isArray(block?.[1]) ? block[1] : []
         for (const t of terms) {
           if (typeof t !== 'string') continue
-          const vi = t.trim()
-          if (!vi || seen.has(vi.toLowerCase())) continue
-          seen.add(vi.toLowerCase())
+          const vi = t.trim().normalize('NFC')
+          // Một nghĩa có thể hợp lệ ở nhiều từ loại (ví dụ vừa là noun vừa là verb).
+          // Chỉ khử trùng lặp bên trong cùng nhóm POS để không làm mất nhóm phía sau.
+          const key = `${pos ? shortPos(pos) : ''}:${vi.toLowerCase()}`
+          if (!vi || seen.has(key)) continue
+          seen.add(key)
           senses.push({ vi, pos })
         }
       }

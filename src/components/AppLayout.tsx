@@ -59,7 +59,14 @@ export default function AppLayout() {
   // Lưu từ đang bôi dịch vào bộ đã chọn (hoặc bộ gần nhất),
   // LÀM GIÀU đầy đủ giống thêm thủ công: nghĩa + từ loại + collocation + pattern + ví dụ.
   const handleSaveWord = async (
-    entry: { word: string; meaning: string; phonetic?: string; pos?: string },
+    entry: {
+      word: string
+      meaning: string
+      phonetic?: string
+      pos?: string
+      example?: string
+      inferPos?: boolean
+    },
     deckId?: string,
   ) => {
     const word = entry.word.trim()
@@ -80,17 +87,26 @@ export default function AppLayout() {
 
     // Từ loại: ưu tiên loại người dùng chọn trong popup, rồi mới đoán tự động
     const offPos = translate(lw).pos
-    const pos = entry.pos ?? data.pos[0] ?? (offPos ? shortPos(offPos) : '')
+    // Ở trang Đọc, nếu UI chưa chọn POS thì không âm thầm gắn một nhãn khác với
+    // tab/nghĩa người dùng đang thấy. Các popup cũ không có câu ngữ cảnh vẫn được tự đoán.
+    const inferredPos = entry.inferPos === false
+      ? ''
+      : data.pos[0] ?? (offPos && !/[\/,;]/.test(offPos) ? shortPos(offPos) : '')
+    const pos = entry.pos ?? inferredPos
     const collocations = data.collocations.slice(0, 4)
     const patterns = data.patterns.slice(0, 3)
 
-    // Ví dụ: ưu tiên câu ĐÚNG TỪ LOẠI đã chọn (VD chọn "v" -> chỉ lấy ví dụ động từ)
+    // Ví dụ: ưu tiên chính câu người dùng đang đọc, sau đó mới tìm theo từ loại.
     const byPos: Record<string, string[]> = data.examplesByPos
-    let examples = (pos ? (byPos[pos] ?? []) : []).slice(0, 2)
+    const readingExample = entry.example?.replace(/\s+/g, ' ').trim()
+    let examples = readingExample
+      ? [readingExample]
+      : (pos ? (byPos[pos] ?? []) : []).slice(0, 2)
     // Người dùng KHÔNG chỉ định từ loại -> mới được dùng ví dụ chung (mọi loại)
-    if (examples.length === 0 && !entry.pos) examples = data.examples.slice(0, 2)
+    if (examples.length === 0 && !entry.pos && entry.inferPos !== false)
+      examples = data.examples.slice(0, 2)
     // Vẫn trống -> tìm câu thật (Tatoeba); với động từ tìm "to <từ>" cho đúng cách dùng
-    if (isSingleWord && examples.length === 0) {
+    if (isSingleWord && examples.length === 0 && (entry.inferPos !== false || Boolean(pos))) {
       examples = await searchSentences(pos === 'v' ? `to ${lw}` : lw, 2)
       // "to <từ>" không ra câu nào (từ đã chia: paid, went…) -> tìm theo chính từ đó
       if (examples.length === 0) examples = await searchSentences(lw, 2)

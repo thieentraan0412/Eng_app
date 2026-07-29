@@ -7,6 +7,14 @@ import {
 } from '../services/cloud/CloudApiClient'
 import { bestEnglishVoice, speak, ttsSupported } from '../services/tts'
 import { isSingleWord, translate, translateOnline } from '../services/translation'
+import {
+  lookupWordDetails,
+  posDescriptionVi,
+  posLabelVi,
+  type DictionaryPosGroup,
+  type WordDetails,
+} from '../services/dictionaryDetails'
+import { shortPos } from '../services/enrich'
 import Icon from '../components/Icon'
 import '../styles/reading.css'
 
@@ -105,19 +113,66 @@ interface SaveWordEntry {
   meaning: string
   phonetic?: string
   pos?: string
+  example?: string
+  inferPos?: boolean
 }
 
-interface SavedReadingWord extends SaveWordEntry {
-  example?: string
-}
+type SavedReadingWord = SaveWordEntry
 
 interface LookupState {
   word: string
   meaning: string | null
+  contextMeaning: string | null
   phonetic?: string
   pos?: string
   example: string
+  contextTranslation?: string | null
+  contextStatus: 'idle' | 'loading' | 'ready' | 'error'
+  details?: WordDetails
+  detailsStatus: 'idle' | 'loading' | 'ready' | 'error'
+  activePos?: string
+  meaningSource: 'context' | 'dictionary'
   status: 'loading' | 'ready' | 'error'
+}
+
+function firstShortPos(pos?: string): string | undefined {
+  const parts = pos
+    ?.split(/[\/,;]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+  // "noun/verb" là hai cách dùng khác nhau; không tự gắn toàn bộ nghĩa ghép vào noun.
+  return parts?.length === 1 ? shortPos(parts[0]) : undefined
+}
+
+function preferredGroupMeaning(group: DictionaryPosGroup): string | null {
+  return group.meanings[0] ?? group.usages[0]?.definitionVi ?? null
+}
+
+function wordsInPhrase(value: string): string[] {
+  const matches = value.match(/[A-Za-z]+(?:['-][A-Za-z]+)*/g) ?? []
+  return [...new Set(matches.map((word) => word.toLowerCase()))].slice(0, 8)
+}
+
+function PosLegend() {
+  return (
+    <details className="read-pos-legend">
+      <summary>Ký hiệu từ loại có nghĩa gì?</summary>
+      <div className="read-pos-key-list">
+        <span>
+          <b>n</b> Danh từ
+        </span>
+        <span>
+          <b>v</b> Động từ
+        </span>
+        <span>
+          <b>adj</b> Tính từ
+        </span>
+        <span>
+          <b>adv</b> Trạng từ
+        </span>
+      </div>
+    </details>
+  )
 }
 
 interface ViewerProps {
@@ -131,7 +186,9 @@ interface ViewerProps {
 // bấm vào vùng đã bôi -> thêm/sửa ghi chú; nghe đọc cả bài bằng TTS.
 function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: ViewerProps) {
   const contentRef = useRef<HTMLDivElement>(null)
+  const lookupCardRef = useRef<HTMLDivElement>(null)
   const lookupRequestRef = useRef(0)
+  const translationCacheRef = useRef(new Map<string, Promise<string | null>>())
   const text = reading.content ?? ''
   const storageKey = `reading_hl_${reading.id}`
   const savedWordsKey = `reading_saved_words_${reading.id}`
@@ -176,6 +233,50 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
     return READ_SIZES.some((s) => s.v === v) ? v : 17
   })
   const [focus, setFocus] = useState(false)
+
+  useEffect(() => {
+    if (!lookup) return
+    document.body.classList.add('read-lookup-open')
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      lookupRequestRef.current += 1
+      setLookup(null)
+      setSaveError(null)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      window.removeEventListener('keydown', closeOnEscape)
+      document.body.classList.remove('read-lookup-open')
+    }
+  }, [Boolean(lookup)])
+
+  useEffect(() => {
+    const card = lookupCardRef.current
+    if (!card) return
+    const scrollHost = card.closest('.content')
+    let resizeFrame = 0
+
+    const updateLookupHeight = () => {
+      const top = Math.max(14, card.getBoundingClientRect().top)
+      const viewportBottom = scrollHost?.getBoundingClientRect().bottom ?? window.innerHeight
+      const availableHeight = Math.max(280, Math.floor(viewportBottom - top - 14))
+      card.style.setProperty('--read-lookup-height', `${availableHeight}px`)
+    }
+    const scheduleLookupHeight = () => {
+      cancelAnimationFrame(resizeFrame)
+      resizeFrame = requestAnimationFrame(updateLookupHeight)
+    }
+
+    updateLookupHeight()
+    window.addEventListener('resize', scheduleLookupHeight)
+    scrollHost?.addEventListener('scroll', scheduleLookupHeight, { passive: true })
+    return () => {
+      cancelAnimationFrame(resizeFrame)
+      window.removeEventListener('resize', scheduleLookupHeight)
+      scrollHost?.removeEventListener('scroll', scheduleLookupHeight)
+    }
+  }, [])
+
   const [progress, setProgress] = useState(0)
 
   const applyFontSize = (v: number) => {
@@ -222,49 +323,176 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
 
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length
 
-  const lookupText = (selectedText: string, example: string) => {
+  const translateCached = (value: string): Promise<string | null> => {
+    const key = value.replace(/\s+/g, ' ').trim().toLowerCase()
+    const cached = translationCacheRef.current.get(key)
+    if (cached) return cached
+
+    const request = translateOnline(value).then((meaning) => {
+      if (!meaning) translationCacheRef.current.delete(key)
+      return meaning
+    })
+    translationCacheRef.current.set(key, request)
+    if (translationCacheRef.current.size > 80) {
+      const oldest = translationCacheRef.current.keys().next().value
+      if (typeof oldest === 'string') translationCacheRef.current.delete(oldest)
+    }
+    return request
+  }
+
+  const lookupText = (selectedText: string, example: string, saved?: SavedReadingWord) => {
     const source = selectedText.replace(/\s+/g, ' ').trim()
     if (!source || source.length > 200 || !/[A-Za-z]/.test(source)) return
 
     const requestId = ++lookupRequestRef.current
-    const offline = isSingleWord(source) ? translate(source) : null
+    const singleWord = isSingleWord(source)
+    const offline = singleWord ? translate(source) : null
+    const initialMeaning = saved?.meaning ?? offline?.vi ?? null
+    const initialPos = firstShortPos(saved?.pos ?? offline?.pos)
+    const word = saved?.word ?? offline?.word ?? source
+    const sameAsContext = example.trim() === source
     setSaveError(null)
 
-    if (offline?.vi) {
-      setLookup({
-        word: offline.word,
-        meaning: offline.vi,
-        phonetic: offline.phonetic,
-        pos: offline.pos,
-        example,
-        status: 'ready',
+    setLookup({
+      word,
+      meaning: initialMeaning,
+      contextMeaning: initialMeaning,
+      phonetic: saved?.phonetic ?? offline?.phonetic,
+      pos: initialPos,
+      example,
+      contextTranslation: sameAsContext ? initialMeaning : null,
+      contextStatus: !example
+        ? 'idle'
+        : sameAsContext && initialMeaning
+          ? 'ready'
+          : 'loading',
+      detailsStatus: singleWord ? 'loading' : 'idle',
+      activePos: initialPos,
+      meaningSource: saved && !saved.example ? 'dictionary' : 'context',
+      status: initialMeaning ? 'ready' : 'loading',
+    })
+
+    if (!initialMeaning) {
+      void translateCached(source).then((meaning) => {
+        if (lookupRequestRef.current !== requestId) return
+        setLookup((current) => {
+          if (!current) return current
+          const activeGroup = current.details?.groups.find(
+            (group) => group.pos === current.activePos,
+          )
+          const fallbackMeaning = activeGroup ? preferredGroupMeaning(activeGroup) : null
+          const resolvedContext = meaning ?? current.contextMeaning ?? fallbackMeaning
+          const usedDictionaryFallback =
+            !meaning && !current.contextMeaning && Boolean(fallbackMeaning)
+          return {
+            ...current,
+            meaning: current.meaning ?? resolvedContext,
+            meaningSource:
+              current.meaning
+                ? current.meaningSource
+                : usedDictionaryFallback
+                  ? 'dictionary'
+                  : 'context',
+            contextMeaning: resolvedContext,
+            pos:
+              current.pos ??
+              (usedDictionaryFallback ? activeGroup?.pos : undefined),
+            contextTranslation: sameAsContext ? meaning : current.contextTranslation,
+            contextStatus: sameAsContext ? (meaning ? 'ready' : 'error') : current.contextStatus,
+            status: resolvedContext ? 'ready' : 'error',
+          }
+        })
       })
-      return
     }
 
-    setLookup({ word: source, meaning: null, example, status: 'loading' })
-    void translateOnline(source).then((meaning) => {
-      if (lookupRequestRef.current !== requestId) return
-      setLookup({
-        word: source,
-        meaning,
-        example,
-        status: meaning ? 'ready' : 'error',
+    if (example && !sameAsContext) {
+      void translateCached(example).then((translatedExample) => {
+        if (lookupRequestRef.current !== requestId) return
+        setLookup((current) =>
+          current
+            ? {
+                ...current,
+                contextTranslation: translatedExample,
+                contextStatus: translatedExample ? 'ready' : 'error',
+              }
+            : current,
+        )
       })
-    })
+    }
+
+    if (singleWord) {
+      void lookupWordDetails(source)
+        .then((details) => {
+          if (lookupRequestRef.current !== requestId) return
+          setLookup((current) => {
+            if (!current) return current
+            const activePos =
+              (current.activePos &&
+                details.groups.some((group) => group.pos === current.activePos) &&
+                current.activePos) ||
+              details.groups[0]?.pos
+            const activeGroup = details.groups.find((group) => group.pos === activePos)
+            const fallbackMeaning = activeGroup ? preferredGroupMeaning(activeGroup) : null
+            const canUseFallback =
+              current.status === 'error' && !current.contextMeaning && Boolean(fallbackMeaning)
+            return {
+              ...current,
+              details,
+              detailsStatus: details.groups.length ? 'ready' : 'error',
+              phonetic: current.phonetic ?? details.phonetic,
+              activePos,
+              pos: canUseFallback ? activePos : current.pos,
+              meaning: current.meaning ?? (canUseFallback ? fallbackMeaning : null),
+              meaningSource: canUseFallback ? 'dictionary' : current.meaningSource,
+              contextMeaning: canUseFallback ? fallbackMeaning : current.contextMeaning,
+              status: canUseFallback ? 'ready' : current.status,
+            }
+          })
+        })
+        .catch(() => {
+          if (lookupRequestRef.current !== requestId) return
+          setLookup((current) =>
+            current ? { ...current, detailsStatus: 'error' } : current,
+          )
+        })
+    }
   }
 
-  const persistSavedWords = (next: SavedReadingWord[]) => {
-    setSavedInReading(next)
+  const selectLookupPos = (group: DictionaryPosGroup) => {
+    setLookup((current) =>
+      current ? { ...current, activePos: group.pos } : current,
+    )
+  }
+
+  const selectLookupMeaning = (group: DictionaryPosGroup, meaning: string) => {
+    setLookup((current) =>
+      current
+        ? {
+            ...current,
+            activePos: group.pos,
+            pos: group.pos,
+            meaning,
+            meaningSource: 'dictionary',
+          }
+        : current,
+    )
+  }
+
+  useEffect(() => {
     try {
-      localStorage.setItem(savedWordsKey, JSON.stringify(next))
+      localStorage.setItem(savedWordsKey, JSON.stringify(savedInReading))
     } catch {
       /* localStorage đầy: vẫn giữ trạng thái trong phiên hiện tại */
     }
-  }
+  }, [savedInReading, savedWordsKey])
+
+  const persistSavedWords = (
+    update: (current: SavedReadingWord[]) => SavedReadingWord[],
+  ) => setSavedInReading(update)
 
   const saveLookupWord = async () => {
     if (!lookup?.meaning || lookup.status !== 'ready' || savingWord) return
+    const lookupId = lookupRequestRef.current
     setSavingWord(true)
     setSaveError(null)
     const entry: SavedReadingWord = {
@@ -272,25 +500,27 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
       meaning: lookup.meaning,
       phonetic: lookup.phonetic,
       pos: lookup.pos,
-      example: lookup.example,
+      inferPos: false,
+      // Nếu đã chọn nghĩa/POS khác, không gắn nhầm câu ngữ cảnh cũ vào card mới.
+      example:
+        lookup.meaningSource === 'context' &&
+        (!isSingleWord(lookup.word) || lookup.pos)
+          ? lookup.example
+          : undefined,
     }
     try {
       await onSaveWord(entry, deckId || undefined)
       const key = entry.word.trim().toLowerCase()
-      persistSavedWords([
+      persistSavedWords((current) => [
         entry,
-        ...savedInReading.filter((item) => item.word.trim().toLowerCase() !== key),
+        ...current.filter((item) => item.word.trim().toLowerCase() !== key),
       ])
     } catch {
-      setSaveError('Không thể lưu từ. Vui lòng kiểm tra kết nối rồi thử lại.')
+      if (lookupRequestRef.current === lookupId)
+        setSaveError('Không thể lưu từ. Vui lòng kiểm tra kết nối rồi thử lại.')
     } finally {
       setSavingWord(false)
     }
-  }
-
-  const removeSavedWord = (word: string) => {
-    const key = word.trim().toLowerCase()
-    persistSavedWords(savedInReading.filter((item) => item.word.trim().toLowerCase() !== key))
   }
 
   useEffect(
@@ -459,6 +689,10 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
   }
   if (pos < text.length) parts.push(text.slice(pos))
 
+  const activeDetailsGroup = lookup?.details?.groups.find(
+    (group) => group.pos === lookup.activePos,
+  )
+
   return (
     <div className="page page-wide read-page">
       <button className="read-crumb" onClick={onBack}>
@@ -544,12 +778,38 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
         </div>
 
         {/* ------------------------------------------- Cột bên phải */}
-        <aside className="read-aside">
-          <div className="read-card-box read-lookup-card">
+        {lookup && (
+          <button
+            type="button"
+            className="read-lookup-backdrop"
+            aria-label="Đóng khung tra từ"
+            onClick={() => {
+              lookupRequestRef.current += 1
+              setLookup(null)
+              setSaveError(null)
+            }}
+          />
+        )}
+        <aside className={lookup ? 'read-aside has-lookup' : 'read-aside'}>
+          <div className="read-card-box read-lookup-card" ref={lookupCardRef}>
             <div className="read-card-head">
               <h2>
                 <Icon name="search" /> Tra từ
               </h2>
+              {lookup && (
+                <button
+                  type="button"
+                  className="read-lookup-close"
+                  aria-label="Đóng khung tra từ"
+                  onClick={() => {
+                    lookupRequestRef.current += 1
+                    setLookup(null)
+                    setSaveError(null)
+                  }}
+                >
+                  <Icon name="x" />
+                </button>
+              )}
             </div>
             {!lookup ? (
               <p className="read-lookup-empty">
@@ -557,139 +817,371 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
                 của bạn.
               </p>
             ) : (
-              <div className="read-lookup-body">
-                <div className="read-lookup-word">
-                  <span>{lookup.word}</span>
-                  {ttsSupported && (
-                    <button
-                      className="read-ibtn"
-                      type="button"
-                      title="Phát âm"
-                      aria-label={`Phát âm ${lookup.word}`}
-                      onClick={() => speak(lookup.word)}
-                    >
-                      <Icon name="speak" />
-                    </button>
+              <>
+                <div className="read-lookup-summary">
+                  <div className="read-lookup-word">
+                    <span title={lookup.word}>{lookup.word}</span>
+                    {ttsSupported && (
+                      <button
+                        className="read-ibtn"
+                        type="button"
+                        title="Phát âm"
+                        aria-label={`Phát âm ${lookup.word}`}
+                        onClick={() => speak(lookup.word)}
+                      >
+                        <Icon name="speak" />
+                      </button>
+                    )}
+                  </div>
+                  {(lookup.phonetic ||
+                    (lookup.details?.lemma &&
+                      lookup.details.lemma.toLowerCase() !== lookup.word.toLowerCase())) && (
+                    <p className="read-lookup-phonetic">
+                      {lookup.phonetic && <span>{lookup.phonetic}</span>}
+                      {lookup.details?.lemma &&
+                        lookup.details.lemma.toLowerCase() !== lookup.word.toLowerCase() && (
+                          <span>
+                            Dạng gốc: <b>{lookup.details.lemma}</b>
+                          </span>
+                        )}
+                    </p>
                   )}
                 </div>
+                <div className="read-lookup-body">
+                  <div
+                    className="read-lookup-scroll"
+                    role="region"
+                    aria-label={`Chi tiết nghĩa của ${lookup.word}`}
+                    tabIndex={0}
+                  >
 
                 {lookup.status === 'loading' ? (
-                  <p className="read-lookup-loading">Đang tra nghĩa…</p>
-                ) : lookup.status === 'error' || !lookup.meaning ? (
+                  <p className="read-lookup-loading" role="status">Đang tra nghĩa…</p>
+                ) : lookup.status === 'error' || !lookup.contextMeaning ? (
                   <>
                     <p className="read-lookup-unavailable">Chưa tìm thấy nghĩa phù hợp</p>
                     <p className="read-lookup-example">
-                      Không thể kết nối dịch trực tuyến. Vui lòng kiểm tra mạng rồi bôi lại từ.
+                      Không thể kết nối dịch trực tuyến. Các thông tin từ điển tải được vẫn sẽ
+                      hiển thị bên dưới.
                     </p>
                   </>
                 ) : (
-                  <>
-                    <p className="read-lookup-meaning">{lookup.meaning}</p>
-                    {lookup.example && <p className="read-lookup-example">{lookup.example}</p>}
-                  </>
+                  <section className="read-context-block" aria-label="Nghĩa trong ngữ cảnh">
+                    <span className="read-context-label">Nghĩa trong câu đang đọc</span>
+                    <p className="read-context-meaning">{lookup.contextMeaning}</p>
+                    {lookup.example && (
+                      <div className="read-context-lines">
+                        <div className="read-context-line is-translation">
+                          <span className="read-language-tag">VI</span>
+                          {lookup.contextStatus === 'loading' ? (
+                            <p className="read-context-translation">Đang dịch câu ngữ cảnh…</p>
+                          ) : lookup.contextTranslation ? (
+                            <p className="read-context-translation">
+                              {lookup.contextTranslation}
+                            </p>
+                          ) : (
+                            <p className="read-context-translation">
+                              Chưa có bản dịch cả câu; bạn vẫn có thể xem các cách dùng bên dưới.
+                            </p>
+                          )}
+                        </div>
+                        <details className="read-context-original">
+                          <summary>Xem câu tiếng Anh</summary>
+                          <div className="read-context-line">
+                            <span className="read-language-tag">EN</span>
+                            <p className="read-context-sentence">{lookup.example}</p>
+                          </div>
+                        </details>
+                      </div>
+                    )}
+                  </section>
                 )}
 
-                {saveError && <p className="read-lookup-error">{saveError}</p>}
-                {lookup.status === 'ready' && lookup.meaning && (
-                  <>
-                    <label className="read-deck-picker">
-                      <span>Chọn bộ từ để lưu</span>
-                      <select
-                        value={deckId}
-                        onChange={(event) => setDeckId(event.target.value)}
-                        disabled={savingWord || decks.length === 0}
-                      >
-                        {decks.length === 0 ? (
-                          <option value="">Bộ từ mặc định</option>
-                        ) : (
-                          decks.map((deck) => (
-                            <option key={deck.id} value={deck.id}>
-                              {deck.name}
-                            </option>
-                          ))
+                {lookup.detailsStatus === 'loading' && (
+                  <section className="read-details">
+                    <div className="read-details-head">
+                      <b className="read-details-title">Nghĩa theo từng từ loại</b>
+                    </div>
+                    <p className="read-details-loading" role="status">
+                      Đang tải các cách dùng và ví dụ…
+                    </p>
+                  </section>
+                )}
+
+                {lookup.detailsStatus === 'error' && (
+                  <section className="read-details">
+                    <div className="read-details-head">
+                      <b className="read-details-title">Nghĩa theo từng từ loại</b>
+                    </div>
+                    <p className="read-details-empty">
+                      Chưa tải được phần giải thích mở rộng. Nghĩa chính ở trên vẫn có thể lưu.
+                    </p>
+                    <PosLegend />
+                  </section>
+                )}
+
+                {lookup.detailsStatus === 'idle' && !isSingleWord(lookup.word) && (
+                  <section className="read-details">
+                    <p className="read-details-empty">
+                      Đây là một cụm từ nên nghĩa ở trên được dịch theo cả cụm. Chọn một từ bên
+                      dưới để xem riêng từ loại và từng trường hợp sử dụng.
+                    </p>
+                    <div className="read-lookup-chips" aria-label="Xem chi tiết từng từ">
+                      {wordsInPhrase(lookup.word).map((word) => (
+                        <button
+                          key={word}
+                          type="button"
+                          className="read-tok"
+                          onClick={() => lookupText(word, lookup.example)}
+                        >
+                          {word}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {lookup.detailsStatus === 'ready' && lookup.details?.groups.length && (
+                  <section className="read-details">
+                    <div className="read-details-head">
+                      <div>
+                        <b className="read-details-title">Các nghĩa của “{lookup.word}”</b>
+                        <span className="read-details-subtitle">
+                          Chọn từ loại, sau đó chọn đúng cách dùng
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="read-pos-tabs" role="group" aria-label="Chọn từ loại">
+                      {lookup.details.groups.map((group) => (
+                        <button
+                          key={group.pos}
+                          type="button"
+                          aria-pressed={group.pos === lookup.activePos}
+                          className={
+                            group.pos === lookup.activePos
+                              ? 'read-pos-tab is-active'
+                              : 'read-pos-tab'
+                          }
+                          onClick={() => selectLookupPos(group)}
+                        >
+                          <span className="read-pos-code">{group.pos}</span>
+                          <span className="read-pos-label">{posLabelVi(group.pos)}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {activeDetailsGroup && (
+                      <div>
+                        <div className="read-pos-description">
+                          <span className="read-pos-summary-code">
+                            {activeDetailsGroup.pos}
+                          </span>
+                          <div>
+                            <b>{posLabelVi(activeDetailsGroup.pos)}</b>
+                            <p>{posDescriptionVi(activeDetailsGroup.pos)}</p>
+                          </div>
+                        </div>
+
+                        {activeDetailsGroup.meanings.length > 0 && (
+                          <div className="read-common-meanings">
+                            <span className="read-common-title">Nghĩa phổ biến</span>
+                            <div className="read-common-list">
+                              {activeDetailsGroup.meanings.map((meaning) => (
+                                <button
+                                  key={meaning}
+                                  type="button"
+                                  className={
+                                    lookup.pos === activeDetailsGroup.pos &&
+                                    lookup.meaning === meaning
+                                      ? 'read-common-meaning is-selected'
+                                      : 'read-common-meaning'
+                                  }
+                                  aria-pressed={
+                                    lookup.pos === activeDetailsGroup.pos &&
+                                    lookup.meaning === meaning
+                                  }
+                                  title="Chọn nghĩa này để lưu vào bộ từ"
+                                  onClick={() =>
+                                    selectLookupMeaning(activeDetailsGroup, meaning)
+                                  }
+                                >
+                                  <span className="read-meaning-check" aria-hidden="true">
+                                    {lookup.pos === activeDetailsGroup.pos &&
+                                    lookup.meaning === meaning
+                                      ? '✓'
+                                      : ''}
+                                  </span>
+                                  {meaning}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         )}
-                      </select>
-                    </label>
-                    <button
-                      type="button"
-                      className="read-btn read-btn-sm read-btn-primary read-lookup-save"
-                      disabled={
-                        savingWord ||
-                        savedInReading.some(
+
+                        {activeDetailsGroup.usages.length > 0 && (
+                          <div className="read-usage-list">
+                            <span className="read-common-title">Dùng trong trường hợp nào?</span>
+                            {activeDetailsGroup.usages.map((usage, index) => (
+                              <article
+                                className={
+                                  lookup.pos === activeDetailsGroup.pos &&
+                                  lookup.meaning === usage.definitionVi
+                                    ? 'read-usage-item is-selected'
+                                    : 'read-usage-item'
+                                }
+                                key={`${usage.definition}-${index}`}
+                              >
+                                <div className="read-usage-heading">
+                                  <span className="read-usage-index">{index + 1}</span>
+                                  <p className="read-usage-definition">
+                                    {usage.definitionVi ?? usage.definition}
+                                  </p>
+                                </div>
+                                {usage.definitionVi && (
+                                  <div className="read-usage-original">
+                                    <span className="read-language-tag">EN</span>
+                                    <p>{usage.definition}</p>
+                                  </div>
+                                )}
+                                {usage.example && (
+                                  <div className="read-usage-example">
+                                    <span className="read-example-title">Ví dụ trong câu</span>
+                                    <div className="read-example-line">
+                                      <span className="read-language-tag">EN</span>
+                                      <p>{usage.example}</p>
+                                    </div>
+                                    {usage.exampleVi && (
+                                      <div className="read-example-line is-translation">
+                                        <span className="read-language-tag">VI</span>
+                                        <p className="read-usage-example-vi">
+                                          {usage.exampleVi}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                {usage.definitionVi && (
+                                  <button
+                                    type="button"
+                                    className={
+                                      lookup.pos === activeDetailsGroup.pos &&
+                                      lookup.meaning === usage.definitionVi
+                                        ? 'read-usage-select is-selected'
+                                        : 'read-usage-select'
+                                    }
+                                    aria-pressed={
+                                      lookup.pos === activeDetailsGroup.pos &&
+                                      lookup.meaning === usage.definitionVi
+                                    }
+                                    onClick={() =>
+                                      selectLookupMeaning(
+                                        activeDetailsGroup,
+                                        usage.definitionVi!,
+                                      )
+                                    }
+                                  >
+                                    {lookup.pos === activeDetailsGroup.pos &&
+                                    lookup.meaning === usage.definitionVi
+                                      ? '✓ Đã chọn nghĩa này'
+                                      : 'Chọn nghĩa này để lưu'}
+                                  </button>
+                                )}
+                              </article>
+                            ))}
+                            {activeDetailsGroup.totalUsages >
+                              activeDetailsGroup.usages.length && (
+                              <p className="read-usage-more">
+                                Nguồn từ điển còn{' '}
+                                {activeDetailsGroup.totalUsages -
+                                  activeDetailsGroup.usages.length}{' '}
+                                định nghĩa khác.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <PosLegend />
+                  </section>
+                )}
+
+                  {saveError && (
+                    <p className="read-lookup-error" role="alert">
+                      {saveError}
+                    </p>
+                  )}
+                </div>
+                {lookup.status === 'ready' && lookup.meaning && (
+                  <div className="read-save-panel">
+                    <div className="read-save-preview">
+                      <div className="read-save-preview-copy">
+                        <span>Đang chọn để lưu</span>
+                        <b title={lookup.meaning}>{lookup.meaning}</b>
+                        {!lookup.pos && isSingleWord(lookup.word) && (
+                          <small>Chọn một nghĩa phía trên để xác định từ loại</small>
+                        )}
+                      </div>
+                      {lookup.pos && (
+                        <span className="read-save-pos">
+                          {lookup.pos} · {posLabelVi(lookup.pos)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="read-save-actions">
+                      <label className="read-deck-picker">
+                        <span>Chọn bộ từ để lưu</span>
+                        <select
+                          value={deckId}
+                          aria-label="Chọn bộ từ để lưu"
+                          onChange={(event) => setDeckId(event.target.value)}
+                          disabled={savingWord || decks.length === 0}
+                        >
+                          {decks.length === 0 ? (
+                            <option value="">Bộ từ mặc định</option>
+                          ) : (
+                            decks.map((deck) => (
+                              <option key={deck.id} value={deck.id}>
+                                {deck.name}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        className="read-btn read-btn-sm read-btn-primary read-lookup-save"
+                        disabled={
+                          savingWord ||
+                          savedInReading.some(
+                            (item) =>
+                              item.word.trim().toLowerCase() === lookup.word.trim().toLowerCase(),
+                          )
+                        }
+                        onClick={saveLookupWord}
+                      >
+                        {savedInReading.some(
                           (item) =>
                             item.word.trim().toLowerCase() === lookup.word.trim().toLowerCase(),
-                        )
-                      }
-                      onClick={saveLookupWord}
-                    >
-                      {savedInReading.some(
-                        (item) =>
-                          item.word.trim().toLowerCase() === lookup.word.trim().toLowerCase(),
-                      ) ? (
-                        <>
-                          <Icon name="check" /> Đã lưu vào bộ từ
-                        </>
-                      ) : (
-                        <>
-                          <Icon name="plus" /> {savingWord ? 'Đang lưu…' : 'Lưu vào bộ từ'}
-                        </>
-                      )}
-                    </button>
-                  </>
+                        ) ? (
+                          <>
+                            <Icon name="check" /> Đã lưu
+                          </>
+                        ) : (
+                          <>
+                            <Icon name="plus" /> {savingWord ? 'Đang lưu…' : 'Lưu vào bộ từ'}
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
+              </>
             )}
           </div>
 
-          <div className="read-card-box">
-            <div className="read-card-head">
-              <h2>
-                <Icon name="bulb" /> Đã lưu trong bài
-              </h2>
-              <span className="read-card-hint">{savedInReading.length}</span>
-            </div>
-            {savedInReading.length === 0 ? (
-              <p className="read-saved-empty">
-                Chưa lưu từ nào. Bôi một từ trong bài rồi bấm <b>Lưu vào bộ từ</b>.
-              </p>
-            ) : (
-              <div className="read-vocab-list">
-                {savedInReading.map((item) => (
-                  <div className="read-vocab-row" key={item.word.toLowerCase()}>
-                    <button
-                      type="button"
-                      className="read-vocab-main"
-                      title="Xem lại nghĩa"
-                      onClick={() => {
-                        lookupRequestRef.current += 1
-                        setSaveError(null)
-                        setLookup({
-                          word: item.word,
-                          meaning: item.meaning,
-                          phonetic: item.phonetic,
-                          pos: item.pos,
-                          example: item.example ?? '',
-                          status: 'ready',
-                        })
-                      }}
-                    >
-                      <b>{item.word}</b>
-                      <span>{item.meaning || '—'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="read-ibtn danger"
-                      title="Bỏ khỏi danh sách trong bài"
-                      aria-label={`Bỏ ${item.word} khỏi danh sách trong bài`}
-                      onClick={() => removeSavedWord(item.word)}
-                    >
-                      <Icon name="trash" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </aside>
       </div>
 
