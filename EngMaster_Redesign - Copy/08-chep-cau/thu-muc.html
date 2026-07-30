@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session 1 · Chép câu · EngMaster</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+
+  /* Thanh tiến độ dính */
+  .progress-bar{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:11px 16px;margin-bottom:16px;position:sticky;top:0;z-index:12;
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);
+  }
+  .progress-bar .bar{flex:1 1 160px;min-width:110px}
+  .pb-num{font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .pb-num b{font-weight:700}
+
+  /* Thẻ câu */
+  .sent{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+    padding:15px 17px;margin-bottom:10px;transition:border-color var(--t-fast);
+  }
+  .sent:hover{border-color:var(--border-2)}
+  .sent.ok{border-left:2.5px solid var(--ok)}
+  .sent.bad{border-left:2.5px solid var(--err)}
+  .sent-vi{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+  .sent-i{font-size:11.5px;font-weight:600;color:var(--text-4);font-variant-numeric:tabular-nums;
+    min-width:20px}
+  .sent-txt{font-size:15px;font-weight:500;letter-spacing:-.014em;flex:1 1 240px}
+  .sent-hints{display:flex;gap:6px;flex-wrap:wrap;margin:9px 0 10px}
+  .hint-chip{
+    display:inline-flex;align-items:center;gap:5px;font-size:11.8px;color:var(--text-3);
+    background:var(--surface-2);border:1px solid var(--border);padding:2px 8px;border-radius:var(--r-full);
+  }
+  .hint-chip .ico{width:11px;height:11px;color:var(--text-4)}
+  .sent .textarea{min-height:60px;font-size:14px}
+  .sent-actions{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
+  .sent-result{
+    display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:11px;padding-top:11px;
+    border-top:1px solid var(--border);font-size:12.5px;
+  }
+  .note{color:var(--text-3)}
+  .note em{font-style:normal;font-weight:600;color:var(--ok)}
+  @media (max-width:920px){ .progress-bar .btn{flex:1 1 auto} }
+</style>
+</head>
+<body class="app" data-page="chep-cau" data-depth="1" data-title="Session 1">
+
+<div class="main">
+<div class="wrap">
+
+  <a class="crumb" href="index.html"><i data-ico="left"></i> Tất cả thư mục</a>
+
+  <div class="page-head anim" style="margin-bottom:14px">
+    <div>
+      <h1>Session 1</h1>
+      <p>100 câu luyện dịch Việt → Anh · đã làm 95 · đúng 93</p>
+    </div>
+  </div>
+
+  <nav class="tabs anim">
+    <button class="is-active">Luyện tập</button>
+    <button>Quản lý câu</button>
+  </nav>
+
+  <!-- ------------------------------------------------------------ Bộ lọc -->
+  <div class="filters anim anim-1">
+    <div class="segmented">
+      <button class="is-active"><i data-ico="pen"></i> Dịch</button>
+      <button><i data-ico="headphone"></i> Nghe–chép</button>
+    </div>
+    <div class="chipset">
+      <button class="chip is-active">Tất cả</button>
+      <button class="chip">A1</button>
+      <button class="chip">A2</button>
+      <button class="chip">B1</button>
+      <button class="chip">B2</button>
+    </div>
+    <div class="spacer"></div>
+    <select class="select" style="width:auto;min-width:150px">
+      <option>Mọi chủ đề</option><option>Học tập</option><option>Đời sống</option>
+      <option>Du lịch</option><option>Thói quen</option><option>Sở thích</option>
+      <option>Giao tiếp</option><option>Thời tiết</option><option>Công việc</option>
+      <option>Gia đình</option><option>Ẩm thực</option><option>Thể thao</option>
+      <option>Mua sắm</option><option>Giải trí</option><option>Sức khỏe</option>
+      <option>Công nghệ</option><option>Môi trường</option><option>Xã hội</option>
+    </select>
+  </div>
+
+  <!-- --------------------------------------------------- Thanh tiến độ -->
+  <div class="progress-bar anim anim-1">
+    <span class="pb-num"><b>93</b> <span class="muted-2">đúng / 100</span></span>
+    <span class="bar bar-ok bar-lg"><i style="width:93%"></i></span>
+    <button class="btn btn-primary btn-sm"><i data-ico="check"></i> Kiểm tra tất cả</button>
+    <button class="btn btn-sm"><i data-ico="refresh"></i> Làm lại</button>
+  </div>
+
+  <!-- ------------------------------------------------------ Danh sách câu -->
+  <section class="anim anim-2">
+
+    <article class="sent ok">
+      <div class="sent-vi">
+        <span class="sent-i">1</span>
+        <span class="sent-txt">Tôi đã học tiếng Anh được ba năm.</span>
+        <span class="badge">B1</span>
+      </div>
+      <div class="sent-hints">
+        <span class="hint-chip"><i data-ico="bulb"></i> thì hiện tại hoàn thành</span>
+        <span class="hint-chip"><i data-ico="bulb"></i> for + khoảng thời gian</span>
+      </div>
+      <textarea class="textarea">i have learned english for three years</textarea>
+      <div class="sent-actions">
+        <button class="btn btn-primary btn-sm"><i data-ico="check"></i> Kiểm tra</button>
+        <button class="btn btn-sm"><i data-ico="eye"></i> Xem đáp án</button>
+      </div>
+      <div class="sent-result">
+        <span class="badge badge-ok"><i data-ico="check"></i> Đúng · 100%</span>
+        <span class="note">Chính tả: <b>english</b> <em>→ English</em></span>
+      </div>
+    </article>
+
+    <article class="sent ok">
+      <div class="sent-vi">
+        <span class="sent-i">2</span>
+        <span class="sent-txt">Cô ấy sống ở Hà Nội.</span>
+        <span class="badge">A1</span>
+      </div>
+      <div class="sent-hints">
+        <span class="hint-chip"><i data-ico="bulb"></i> thì hiện tại đơn</span>
+        <span class="hint-chip"><i data-ico="bulb"></i> live in + nơi chốn</span>
+      </div>
+      <textarea class="textarea">She lives in hanoi</textarea>
+      <div class="sent-actions">
+        <button class="btn btn-primary btn-sm"><i data-ico="check"></i> Kiểm tra</button>
+        <button class="btn btn-sm"><i data-ico="eye"></i> Xem đáp án</button>
+      </div>
+      <div class="sent-result">
+        <span class="badge badge-ok"><i data-ico="check"></i> Đúng · 100%</span>
+        <span class="note">Chính tả: <b>hanoi</b> <em>→ Hanoi</em></span>
+      </div>
+    </article>
+
+    <article class="sent ok">
+      <div class="sent-vi">
+        <span class="sent-i">3</span>
+        <span class="sent-txt">Chúng tôi sẽ đi du lịch Đà Nẵng vào tuần tới.</span>
+        <span class="badge">A2</span>
+      </div>
+      <div class="sent-hints">
+        <span class="hint-chip"><i data-ico="bulb"></i> thì tương lai</span>
+        <span class="hint-chip"><i data-ico="bulb"></i> next week</span>
+      </div>
+      <textarea class="textarea">We will travel to da nang next week</textarea>
+      <div class="sent-actions">
+        <button class="btn btn-primary btn-sm"><i data-ico="check"></i> Kiểm tra</button>
+        <button class="btn btn-sm"><i data-ico="eye"></i> Xem đáp án</button>
+      </div>
+      <div class="sent-result">
+        <span class="badge badge-ok"><i data-ico="check"></i> Đúng · 100%</span>
+        <span class="note">Chính tả: <b>da nang</b> <em>→ Da Nang</em></span>
+      </div>
+    </article>
+
+    <article class="sent">
+      <div class="sent-vi">
+        <span class="sent-i">4</span>
+        <span class="sent-txt">Anh ấy thường thức dậy lúc sáu giờ sáng.</span>
+        <span class="badge">A2</span>
+      </div>
+      <div class="sent-hints">
+        <span class="hint-chip"><i data-ico="bulb"></i> trạng từ tần suất</span>
+        <span class="hint-chip"><i data-ico="bulb"></i> wake up / get up</span>
+      </div>
+      <textarea class="textarea">He usually wakes up at six in the morning</textarea>
+      <div class="sent-actions">
+        <button class="btn btn-primary btn-sm"><i data-ico="check"></i> Kiểm tra</button>
+        <button class="btn btn-sm"><i data-ico="eye"></i> Xem đáp án</button>
+      </div>
+    </article>
+
+    <article class="sent">
+      <div class="sent-vi">
+        <span class="sent-i">5</span>
+        <span class="sent-txt">Bạn có thể giúp tôi mở cửa sổ được không?</span>
+        <span class="badge">B1</span>
+      </div>
+      <div class="sent-hints">
+        <span class="hint-chip"><i data-ico="bulb"></i> câu yêu cầu lịch sự</span>
+        <span class="hint-chip"><i data-ico="bulb"></i> Could you…?</span>
+      </div>
+      <textarea class="textarea" placeholder="Nhập câu tiếng Anh của bạn…"></textarea>
+      <div class="sent-actions">
+        <button class="btn btn-primary btn-sm"><i data-ico="check"></i> Kiểm tra</button>
+        <button class="btn btn-sm"><i data-ico="eye"></i> Xem đáp án</button>
+      </div>
+    </article>
+
+  </section>
+
+  <div class="row" style="justify-content:center;margin-top:16px">
+    <button class="btn"><i data-ico="down"></i> Hiện thêm (95 câu còn lại)</button>
+  </div>
+
+</div>
+</div>
+
+<script src="../app.js"></script>
+</body>
+</html>

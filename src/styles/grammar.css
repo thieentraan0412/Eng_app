@@ -824,6 +824,86 @@
   background: var(--surface);
 }
 
+/* ---------- Chọn nhiều chủ điểm để xóa ---------- */
+.gr-topic.is-selecting {
+  padding-right: 44px;
+}
+.gr-topic.is-picked {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary) inset;
+}
+.gr-tick {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border: 1.6px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: #fff;
+}
+.gr-tick.is-on {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+.gr-tick .ico {
+  width: 14px;
+  height: 14px;
+  stroke-width: 3;
+}
+
+/* Thanh thao tác khi đang chọn nhiều */
+.gr-selbar {
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--primary);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+}
+.gr-selbar b {
+  font-size: 13.6px;
+  letter-spacing: -0.012em;
+}
+.gr-selbar .gr-spacer {
+  flex: 1 1 auto;
+}
+/* Nút xóa hàng loạt tô đỏ đặc — thao tác không hoàn tác được */
+.gr-page .gr-selbar .gr-btn-danger,
+.gr-page .gr-selbar .gr-btn-danger:hover {
+  background: var(--danger);
+  border-color: transparent;
+  color: #fff;
+}
+.gr-page .gr-selbar .gr-btn-danger:hover {
+  background: #d92d20;
+}
+.gr-selbar .gr-btn-danger .ico {
+  color: currentColor;
+}
+.gr-page .gr-selbar .gr-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.gr-page .gr-btn.is-active {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+  color: var(--primary);
+}
+.gr-page .gr-btn.is-active .ico {
+  color: currentColor;
+}
+
 .gr-new-topic {
   display: flex;
   flex-direction: column;

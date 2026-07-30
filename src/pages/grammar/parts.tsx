@@ -106,21 +106,28 @@ export function TopicStatus({ p }: { p: TopicProgress | undefined }) {
 export function TopicCard({
   topic,
   progress,
+  selecting = false,
+  selected = false,
   onOpen,
   onEdit,
   onDelete,
 }: {
   topic: GrammarTopic
   progress: TopicProgress | undefined
+  /** đang ở chế độ chọn nhiều: bấm thẻ = tick chọn, không mở bài học */
+  selecting?: boolean
+  selected?: boolean
   onOpen: () => void
   onEdit?: () => void
   onDelete?: () => void
 }) {
   const mastery = progress?.mastery ?? 0
+  const cls = `gr-topic${selecting ? ' is-selecting' : ''}${selected ? ' is-picked' : ''}`
   return (
     <div
-      className="gr-topic"
-      role="button"
+      className={cls}
+      role={selecting ? 'checkbox' : 'button'}
+      aria-checked={selecting ? selected : undefined}
       tabIndex={0}
       onClick={onOpen}
       onKeyDown={(e) => {
@@ -130,7 +137,12 @@ export function TopicCard({
         }
       }}
     >
-      {(onEdit || onDelete) && (
+      {selecting && (
+        <span className={selected ? 'gr-tick is-on' : 'gr-tick'} aria-hidden="true">
+          {selected && <Icon name="check" />}
+        </span>
+      )}
+      {!selecting && (onEdit || onDelete) && (
         <span className="gr-topic-tools">
           {onEdit && (
             <button

@@ -7,6 +7,7 @@ import {
   type DueBucket,
   type DeckStat,
 } from '../services/cloud/CloudApiClient'
+import { errText } from '../services/cloud/cloudError'
 import { getUsageStats, resetRequestStats, type UsageStats } from '../services/usageStats'
 import Heatmap from '../components/Heatmap'
 import Icon from '../components/Icon'
@@ -34,17 +35,6 @@ const TABLE_LABEL: Record<string, string> = {
   review_logs: 'Lịch sử ôn',
 }
 
-// Lỗi Supabase (PostgrestError) là object thường {message, details, hint, code}
-// -> lấy đúng message thay vì in ra "[object Object]".
-function errText(e: unknown): string {
-  if (e instanceof Error) return e.message
-  if (e && typeof e === 'object') {
-    const o = e as Record<string, unknown>
-    const parts = [o.message, o.details, o.hint].filter(Boolean).map(String)
-    if (parts.length) return parts.join(' · ')
-  }
-  return String(e)
-}
 
 function fmtBytes(n: number): string {
   if (n < 1024) return `${n} B`

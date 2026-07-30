@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import ConfirmDialog from '../components/ConfirmDialog'
 import Icon from '../components/Icon'
+import { errText } from '../services/cloud/cloudError'
 import {
   deleteError,
   loadGrammar,
@@ -27,8 +29,15 @@ const PER_TOPIC = 6
 // Số câu tối đa của một phiên luyện một chủ điểm
 const PER_SESSION = 18
 
-function errMsg(e: unknown): string {
-  return e instanceof Error ? e.message : String(e)
+const errMsg = errText
+
+// Một việc nguy hiểm đang chờ xác nhận trong hộp thoại
+interface Ask {
+  title: string
+  body: string
+  items?: string[]
+  confirmLabel: string
+  run: () => Promise<void>
 }
 
 // Trộn xen kẽ các chủ điểm để một phiên không dồn cục theo chủ điểm
@@ -54,6 +63,9 @@ export default function GrammarPage() {
   const [openKey, setOpenKey] = useState<string | null>(null)
   // Chủ điểm đang mở trong màn sửa (null = đang thêm mới)
   const [editing, setEditing] = useState<GrammarTopic | null>(null)
+  // Việc đang chờ người dùng xác nhận (xóa / ẩn / bỏ bản sửa)
+  const [ask, setAsk] = useState<Ask | null>(null)
+  const [asking, setAsking] = useState(false)
   // Phiên luyện đang chạy (null = không có)
   const [session, setSession] = useState<{
     cards: SessionCard[]
@@ -168,24 +180,56 @@ export default function GrammarPage() {
   }
 
   // ---------- Xóa / ẩn ----------
-  const discardTopic = async (t: GrammarTopic) => {
-    // Chủ điểm dựng sẵn nằm trong code nên chỉ ẩn được — và ẩn thì hoàn tác được
-    const msg = t.builtin
-      ? `Ẩn chủ điểm “${t.name}” khỏi thư viện? Tiến độ được giữ lại, bạn có thể hiện lại bất cứ lúc nào.`
-      : t.sourceKey
-        ? `Xóa chủ điểm “${t.name}”? Bản chỉnh sửa của bạn bị bỏ và chủ điểm gốc cũng được ẩn khỏi thư viện.`
-        : `Xóa chủ điểm “${t.name}” và toàn bộ câu luyện bên trong?`
-    if (!confirm(msg)) return
-    try {
-      await removeTopic(t)
-      if (openKey === t.key) {
-        setOpenKey(null)
-        setView('library')
-      }
-      await refresh()
-    } catch (e) {
-      setError(errMsg(e))
-    }
+  // Chủ điểm dựng sẵn nằm trong code nên chỉ ẩn được — ẩn thì hoàn tác được;
+  // chủ điểm tự soạn xóa là mất hẳn cả câu luyện bên trong.
+  const discardTopic = (t: GrammarTopic) =>
+    setAsk({
+      title: t.builtin ? `Ẩn “${t.name}”?` : `Xóa “${t.name}”?`,
+      body: t.builtin
+        ? 'Chủ điểm dựng sẵn không xóa khỏi app được nên sẽ được ẩn khỏi thư viện. Tiến độ và sổ lỗi giữ nguyên, bạn hiện lại được bất cứ lúc nào ở cuối trang.'
+        : t.sourceKey
+          ? 'Bản chỉnh sửa của bạn bị bỏ và chủ điểm gốc cũng được ẩn khỏi thư viện. Muốn giữ lại bản gốc thì chọn “Về bản gốc” trong trang bài học.'
+          : `Xóa hẳn chủ điểm cùng ${t.formulas.length} quy tắc và ${t.items.length} câu luyện bên trong. Thao tác này không hoàn tác được.`,
+      confirmLabel: t.builtin ? 'Ẩn chủ điểm' : 'Xóa chủ điểm',
+      run: async () => {
+        await removeTopic(t)
+        if (openKey === t.key) {
+          setOpenKey(null)
+          setView('library')
+        }
+      },
+    })
+
+  // Xóa nhiều chủ điểm đã tick trong thư viện
+  const discardTopics = (list: GrammarTopic[]) => {
+    if (list.length === 0) return
+    const hideCount = list.filter((t) => t.builtin).length
+    const dropCount = list.length - hideCount
+    const parts: string[] = []
+    if (dropCount > 0) parts.push(`xóa hẳn ${dropCount} chủ điểm tự soạn (mất cả câu luyện bên trong)`)
+    if (hideCount > 0) parts.push(`ẩn ${hideCount} chủ điểm dựng sẵn khỏi thư viện`)
+    setAsk({
+      title: `Xóa ${list.length} chủ điểm đã chọn?`,
+      body: `Sẽ ${parts.join(' và ')}. Chủ điểm dựng sẵn hiện lại được, chủ điểm tự soạn thì không.`,
+      items: list.map((t) => `${t.name} · ${t.level}${t.builtin ? ' · dựng sẵn' : ''}`),
+      confirmLabel: `Xóa ${list.length} chủ điểm`,
+      run: async () => {
+        const failed: string[] = []
+        for (const t of list) {
+          try {
+            await removeTopic(t)
+          } catch (e) {
+            failed.push(`${t.name}: ${errMsg(e)}`)
+          }
+        }
+        if (openKey && list.some((t) => t.key === openKey)) {
+          setOpenKey(null)
+          setView('library')
+        }
+        // Xóa được bao nhiêu hay bấy nhiêu, chỉ báo lại phần hỏng
+        if (failed.length > 0) throw new Error(`Không xóa được ${failed.length} chủ điểm — ${failed[0]}`)
+      },
+    })
   }
 
   const unhideTopic = async (key: string) => {
@@ -198,25 +242,53 @@ export default function GrammarPage() {
   }
 
   // Bỏ bản chỉnh sửa của một chủ điểm dựng sẵn, quay lại nội dung gốc
-  const backToBuiltin = async (t: GrammarTopic) => {
-    if (!confirm(`Bỏ bản chỉnh sửa của “${t.name}” và dùng lại nội dung dựng sẵn?`)) return
+  const backToBuiltin = (t: GrammarTopic) =>
+    setAsk({
+      title: `Về bản gốc của “${t.name}”?`,
+      body: 'Bản chỉnh sửa của bạn (kể cả câu luyện đã soạn) sẽ bị bỏ, thư viện dùng lại nội dung dựng sẵn. Tiến độ học vẫn giữ nguyên.',
+      confirmLabel: 'Dùng lại bản gốc',
+      run: () => revertTopic(t),
+    })
+
+  const removeError = (e: ErrorEntry) =>
+    setAsk({
+      title: 'Xóa lỗi này khỏi sổ?',
+      body: `“${e.errorTag}” của chủ điểm ${e.topicName} sẽ không còn trong lịch ôn lỗi nữa.`,
+      confirmLabel: 'Xóa khỏi sổ lỗi',
+      run: () => deleteError(e.id),
+    })
+
+  // Chạy việc đã được xác nhận trong hộp thoại
+  const runAsk = async () => {
+    if (!ask) return
+    setAsking(true)
+    setError(null)
     try {
-      await revertTopic(t)
+      await ask.run()
+      setAsk(null)
       await refresh()
     } catch (e) {
+      setAsk(null)
       setError(errMsg(e))
+      await refresh()
+    } finally {
+      setAsking(false)
     }
   }
 
-  const removeError = async (e: ErrorEntry) => {
-    if (!confirm('Xóa lỗi này khỏi sổ?')) return
-    try {
-      await deleteError(e.id)
-      await refresh()
-    } catch (err) {
-      setError(errMsg(err))
-    }
-  }
+  const confirmUi = (
+    <ConfirmDialog
+      open={!!ask}
+      danger
+      busy={asking}
+      title={ask?.title ?? ''}
+      body={ask?.body}
+      items={ask?.items}
+      confirmLabel={ask?.confirmLabel ?? 'Xóa'}
+      onConfirm={runAsk}
+      onCancel={() => !asking && setAsk(null)}
+    />
+  )
 
   // ============================================================
   if (session) {
@@ -275,28 +347,34 @@ export default function GrammarPage() {
 
   if (view === 'errors') {
     return (
-      <ErrorBook
-        errors={data.errors}
-        onBack={() => setView('library')}
-        onReview={startErrorReview}
-        onDelete={removeError}
-      />
+      <>
+        <ErrorBook
+          errors={data.errors}
+          onBack={() => setView('library')}
+          onReview={startErrorReview}
+          onDelete={removeError}
+        />
+        {confirmUi}
+      </>
     )
   }
 
   if (view === 'lesson' && openTopic) {
     return (
-      <TopicLesson
-        topic={openTopic}
-        progress={data.progress[openTopic.key]}
-        errors={data.errors}
-        onBack={() => setView('library')}
-        onPractice={() => startPractice([openTopic.key])}
-        onOpenErrors={() => setView('errors')}
-        onEdit={() => editTopic(openTopic)}
-        onDelete={() => discardTopic(openTopic)}
-        onRevert={() => backToBuiltin(openTopic)}
-      />
+      <>
+        <TopicLesson
+          topic={openTopic}
+          progress={data.progress[openTopic.key]}
+          errors={data.errors}
+          onBack={() => setView('library')}
+          onPractice={() => startPractice([openTopic.key])}
+          onOpenErrors={() => setView('errors')}
+          onEdit={() => editTopic(openTopic)}
+          onDelete={() => discardTopic(openTopic)}
+          onRevert={() => backToBuiltin(openTopic)}
+        />
+        {confirmUi}
+      </>
     )
   }
 
@@ -323,8 +401,10 @@ export default function GrammarPage() {
         onNewTopic={() => setView('new')}
         onEditTopic={editTopic}
         onDeleteTopic={discardTopic}
+        onDeleteTopics={discardTopics}
         onRestoreTopic={unhideTopic}
       />
+      {confirmUi}
     </>
   )
 }

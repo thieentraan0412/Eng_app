@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sổ lỗi · Ngữ pháp · EngMaster</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* ---- Phân bố nhóm lỗi ---- */
+  .dist-row{
+    display:flex;align-items:center;gap:12px;
+    padding:9px 20px;border-bottom:1px solid var(--border);
+  }
+  .dist-row:last-child{border-bottom:none}
+  .dist-name{flex:1 1 auto;min-width:0;font-size:13px;color:var(--text-2);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dist-bar{flex:0 0 auto;width:150px;height:5px;border-radius:99px;
+    background:var(--surface-3);overflow:hidden}
+  .dist-bar i{display:block;height:100%;border-radius:99px;background:var(--text-4)}
+  .dist-row.is-top .dist-bar i{background:var(--accent)}
+  .dist-row.is-top .dist-name{color:var(--text);font-weight:500}
+  .dist-n{flex:0 0 auto;width:26px;text-align:right;font-size:12.5px;color:var(--text-3);
+    font-variant-numeric:tabular-nums}
+
+  /* ---- Một lỗi ---- */
+  .err{
+    padding:14px 20px;border-bottom:1px solid var(--border);
+    transition:background var(--t-fast);
+  }
+  .err:last-child{border-bottom:none}
+  .err:hover{background:var(--surface-2)}
+  .err-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+  .err-topic{font-size:12px;color:var(--text-4);white-space:nowrap}
+  .err-act{margin-left:auto;display:flex;align-items:center;gap:6px;flex:0 0 auto}
+  .sent{display:flex;align-items:baseline;gap:8px;font-size:13.4px;line-height:1.6;margin-top:2px}
+  .sent-tag{
+    flex:0 0 auto;width:15px;height:15px;border-radius:4px;display:grid;place-items:center;
+    font-size:10px;font-weight:700;line-height:1;
+  }
+  .sent-bad  .sent-tag{background:var(--err-soft);border:1px solid var(--err-border);color:var(--err)}
+  .sent-good .sent-tag{background:var(--ok-soft); border:1px solid var(--ok-border); color:var(--ok)}
+  .sent-bad  em{font-style:normal;color:var(--err);text-decoration:line-through;
+    text-decoration-thickness:1px;text-underline-offset:2px}
+  .sent-good em{font-style:normal;color:var(--ok);font-weight:600}
+  .err-foot{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    margin-top:9px;padding-left:23px;font-size:11.8px;color:var(--text-4);
+    font-variant-numeric:tabular-nums;
+  }
+  .err-foot span{display:inline-flex;align-items:center;gap:5px}
+  .err-foot .ico{width:12.5px;height:12.5px}
+
+  /* Thang SRS 4 chặng */
+  .srs{display:inline-flex;gap:3px;align-items:center}
+  .srs i{width:13px;height:4px;border-radius:99px;background:var(--surface-3);display:block}
+  .srs i.on{background:var(--ok)}
+
+  @media (max-width:920px){
+    .dist-row{padding:9px 16px;gap:10px}
+    .dist-bar{width:78px}
+    .err{padding:13px 16px}
+    .err-act{margin-left:0;width:100%;order:9}
+  }
+</style>
+</head>
+<body class="app" data-page="ngu-phap" data-depth="1" data-title="Sổ lỗi">
+
+<div class="main">
+<div class="wrap wrap-narrow" style="max-width:940px">
+
+  <a class="crumb" href="index.html"><i data-ico="left"></i> Ngữ pháp</a>
+
+  <div class="page-head anim">
+    <div>
+      <h1>Sổ lỗi</h1>
+      <p>Mỗi lỗi bạn mắc được ghi lại kèm lịch ôn riêng, giống một thẻ từ vựng.
+         Sửa đúng ba lần liên tiếp thì lỗi mới được coi là đã khắc phục.</p>
+    </div>
+    <div class="page-actions">
+      <a class="btn" href="index.html"><i data-ico="grammar"></i> Thư viện chủ điểm</a>
+      <a class="btn btn-primary" href="luyen-tap.html"><i data-ico="play"></i> Ôn 4 lỗi đến hạn</a>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------------------ Chỉ số -->
+  <section class="grid g-4 anim anim-1" style="margin-bottom:14px">
+
+    <div class="stat">
+      <span class="stat-top"><span class="stat-label">Đang theo dõi</span><i data-ico="flag"></i></span>
+      <span class="stat-value">12</span>
+      <span class="stat-sub">Trên 6 chủ điểm</span>
+    </div>
+
+    <div class="stat">
+      <span class="stat-top"><span class="stat-label">Đến hạn hôm nay</span><i data-ico="bell"></i></span>
+      <span class="stat-value">4</span>
+      <span class="stat-sub">Khoảng 3 phút để ôn hết</span>
+    </div>
+
+    <div class="stat">
+      <span class="stat-top"><span class="stat-label">Đã khắc phục</span><i data-ico="check"></i></span>
+      <span class="stat-value">27</span>
+      <span class="stat-sub">Đúng 3 lần liên tiếp</span>
+    </div>
+
+    <div class="stat">
+      <span class="stat-top"><span class="stat-label">Tỷ lệ tái phạm</span><i data-ico="undo"></i></span>
+      <span class="stat-value">31%</span>
+      <span class="stat-sub"><span class="stat-delta down"><i data-ico="trend"></i> −8%</span> so với tháng trước</span>
+    </div>
+
+  </section>
+
+  <!-- ------------------------------------------------- Phân bố nhóm lỗi -->
+  <section class="card anim anim-2" style="margin-bottom:20px">
+    <div class="card-head">
+      <h2><i data-ico="chart"></i> Bạn hay sai kiểu gì</h2>
+      <span class="hint">Số lần mắc trong 30 ngày</span>
+    </div>
+
+    <div class="dist-row is-top">
+      <span class="dist-name">Thiếu đuôi <span class="mono">-s</span> số nhiều</span>
+      <span class="dist-bar"><i style="width:100%"></i></span><span class="dist-n">14</span>
+    </div>
+    <div class="dist-row is-top">
+      <span class="dist-name">Thiếu hoặc thừa mạo từ</span>
+      <span class="dist-bar"><i style="width:79%"></i></span><span class="dist-n">11</span>
+    </div>
+    <div class="dist-row">
+      <span class="dist-name">Thiếu <span class="mono">-s</span> ngôi thứ ba số ít</span>
+      <span class="dist-bar"><i style="width:64%"></i></span><span class="dist-n">9</span>
+    </div>
+    <div class="dist-row">
+      <span class="dist-name">Nhầm thì — quá khứ đơn thay hiện tại hoàn thành</span>
+      <span class="dist-bar"><i style="width:57%"></i></span><span class="dist-n">8</span>
+    </div>
+    <div class="dist-row">
+      <span class="dist-name">Thiếu động từ <span class="mono">to be</span> trước tính từ</span>
+      <span class="dist-bar"><i style="width:43%"></i></span><span class="dist-n">6</span>
+    </div>
+    <div class="dist-row">
+      <span class="dist-name">Trật tự tính từ – danh từ</span>
+      <span class="dist-bar"><i style="width:36%"></i></span><span class="dist-n">5</span>
+    </div>
+    <div class="dist-row">
+      <span class="dist-name">Giới từ dịch từng chữ</span>
+      <span class="dist-bar"><i style="width:29%"></i></span><span class="dist-n">4</span>
+    </div>
+
+    <div class="card-body" style="border-top:1px solid var(--border)">
+      <p class="t-xs muted-2">
+        Hai nhóm đầu chiếm <b style="color:var(--text-2)">44%</b> tổng số lỗi và đều đến từ cùng một nguyên nhân:
+        tiếng Việt không đánh dấu số nhiều và không có mạo từ. Xử lý gọn hai nhóm này là giảm được gần một nửa lỗi.
+      </p>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------ Danh sách lỗi -->
+  <div class="row wrapping anim anim-2" style="margin-bottom:14px">
+    <div class="chipset" id="filter">
+      <button class="chip is-active" data-f="all">Tất cả</button>
+      <button class="chip" data-f="due"><i data-ico="bell"></i> Đến hạn hôm nay</button>
+      <button class="chip" data-f="repeat"><i data-ico="undo"></i> Hay tái phạm</button>
+      <button class="chip" data-f="done"><i data-ico="check"></i> Đã khắc phục</button>
+    </div>
+    <span class="spacer"></span>
+    <span class="muted-2 t-xs num" id="count">8 lỗi</span>
+  </div>
+
+  <section class="card anim anim-3" id="errList">
+
+    <!-- 1 -->
+    <div class="err" data-f="due repeat">
+      <div class="err-top">
+        <span class="badge badge-err badge-dot">Thiếu -s số nhiều</span>
+        <span class="err-topic">Danh từ số nhiều · A1</span>
+        <span class="err-act">
+          <span class="badge badge-warn"><i data-ico="bell"></i> Hôm nay</span>
+          <a class="btn btn-sm" href="luyen-tap.html"><i data-ico="play"></i> Ôn ngay</a>
+        </span>
+      </div>
+      <p class="sent sent-bad"><span class="sent-tag">✕</span><span>I bought three <em>book</em> at the fair yesterday.</span></p>
+      <p class="sent sent-good"><span class="sent-tag">✓</span><span>I bought three <em>books</em> at the fair yesterday.</span></p>
+      <div class="err-foot">
+        <span><i data-ico="undo"></i> Mắc 4 lần</span>
+        <span><i data-ico="calendar"></i> Lần cuối 2 ngày trước</span>
+        <span><i data-ico="repeat"></i> Chặng ôn <span class="srs"><i class="on"></i><i></i><i></i><i></i></span></span>
+      </div>
+    </div>
+
+    <!-- 2 -->
+    <div class="err" data-f="due repeat">
+      <div class="err-top">
+        <span class="badge badge-err badge-dot">Thiếu mạo từ</span>
+        <span class="err-topic">Mạo từ a / an / the · A1</span>
+        <span class="err-act">
+          <span class="badge badge-warn"><i data-ico="bell"></i> Hôm nay</span>
+          <a class="btn btn-sm" href="luyen-tap.html"><i data-ico="play"></i> Ôn ngay</a>
+        </span>
+      </div>
+      <p class="sent sent-bad"><span class="sent-tag">✕</span><span>My sister is <em>teacher</em> at a primary school.</span></p>
+      <p class="sent sent-good"><span class="sent-tag">✓</span><span>My sister is <em>a teacher</em> at a primary school.</span></p>
+      <div class="err-foot">
+        <span><i data-ico="undo"></i> Mắc 5 lần</span>
+        <span><i data-ico="calendar"></i> Lần cuối hôm qua</span>
+        <span><i data-ico="repeat"></i> Chặng ôn <span class="srs"><i class="on"></i><i></i><i></i><i></i></span></span>
+      </div>
+    </div>
+
+    <!-- 3 -->
+    <div class="err" data-f="due">
+      <div class="err-top">
+        <span class="badge badge-err badge-dot">Nhầm thì</span>
+        <span class="err-topic">Hiện tại hoàn thành · B1</span>
+        <span class="err-act">
+          <span class="badge badge-warn"><i data-ico="bell"></i> Hôm nay</span>
+          <a class="btn btn-sm" href="luyen-tap.html"><i data-ico="play"></i> Ôn ngay</a>
+        </span>
+      </div>
+      <p class="sent sent-bad"><span class="sent-tag">✕</span><span>I <em>already sent</em> you the file this morning.</span></p>
+      <p class="sent sent-good"><span class="sent-tag">✓</span><span>I <em>have already sent</em> you the file this morning.</span></p>
+      <div class="err-foot">
+        <span><i data-ico="undo"></i> Mắc 2 lần</span>
+        <span><i data-ico="calendar"></i> Lần cuối 3 ngày trước</span>
+        <span><i data-ico="repeat"></i> Chặng ôn <span class="srs"><i class="on"></i><i class="on"></i><i></i><i></i></span></span>
+      </div>
+    </div>
+
+    <!-- 4 -->
+    <div class="err" data-f="due">
+      <div class="err-top">
+        <span class="badge badge-err badge-dot">Nhầm since / for</span>
+        <span class="err-topic">Hiện tại hoàn thành · B1</span>
+        <span class="err-act">
+          <span class="badge badge-warn"><i data-ico="bell"></i> Hôm nay</span>
+          <a class="btn btn-sm" href="luyen-tap.html"><i data-ico="play"></i> Ôn ngay</a>
+        </span>
+      </div>
+      <p class="sent sent-bad"><span class="sent-tag">✕</span><span>He has worked here <em>since five years</em>.</span></p>
+      <p class="sent sent-good"><span class="sent-tag">✓</span><span>He has worked here <em>for five years</em>.</span></p>
+      <div class="err-foot">
+        <span><i data-ico="undo"></i> Mắc 2 lần</span>
+        <span><i data-ico="calendar"></i> Lần cuối 3 ngày trước</span>
+        <span><i data-ico="repeat"></i> Chặng ôn <span class="srs"><i class="on"></i><i class="on"></i><i></i><i></i></span></span>
+      </div>
+    </div>
+
+    <!-- 5 -->
+    <div class="err" data-f="repeat">
+      <div class="err-top">
+        <span class="badge badge-err badge-dot">Thiếu -s ngôi 3</span>
+        <span class="err-topic">Hòa hợp chủ ngữ – động từ · A2</span>
+        <span class="err-act">
+          <span class="badge"><i data-ico="calendar"></i> Ôn sau 2 ngày</span>
+          <a class="btn btn-sm" href="luyen-tap.html"><i data-ico="play"></i> Ôn ngay</a>
+        </span>
+      </div>
+      <p class="sent sent-bad"><span class="sent-tag">✕</span><span>My brother <em>go</em> to the gym every morning.</span></p>
+      <p class="sent sent-good"><span class="sent-tag">✓</span><span>My brother <em>goes</em> to the gym every morning.</span></p>
+      <div class="err-foot">
+        <span><i data-ico="undo"></i> Mắc 3 lần</span>
+        <span><i data-ico="calendar"></i> Lần cuối 5 ngày trước</span>
+        <span><i data-ico="repeat"></i> Chặng ôn <span class="srs"><i class="on"></i><i class="on"></i><i></i><i></i></span></span>
+      </div>
+    </div>
+
+    <!-- 6 -->
+    <div class="err" data-f="">
+      <div class="err-top">
+        <span class="badge badge-err badge-dot">Thiếu to be</span>
+        <span class="err-topic">Trật tự từ &amp; câu hỏi · A1</span>
+        <span class="err-act">
+          <span class="badge"><i data-ico="calendar"></i> Ôn sau 5 ngày</span>
+          <a class="btn btn-sm" href="luyen-tap.html"><i data-ico="play"></i> Ôn ngay</a>
+        </span>
+      </div>
+      <p class="sent sent-bad"><span class="sent-tag">✕</span><span>She <em>very tired</em> after the trip.</span></p>
+      <p class="sent sent-good"><span class="sent-tag">✓</span><span>She <em>is very tired</em> after the trip.</span></p>
+      <div class="err-foot">
+        <span><i data-ico="undo"></i> Mắc 1 lần</span>
+        <span><i data-ico="calendar"></i> Lần cuối 8 ngày trước</span>
+        <span><i data-ico="repeat"></i> Chặng ôn <span class="srs"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></span>
+      </div>
+    </div>
+
+    <!-- 7 -->
+    <div class="err" data-f="done">
+      <div class="err-top">
+        <span class="badge badge-ok badge-dot">Giới từ</span>
+        <span class="err-topic">Giới từ thời gian &amp; nơi chốn · A2</span>
+        <span class="err-act">
+          <span class="badge badge-ok"><i data-ico="check"></i> Đã khắc phục</span>
+        </span>
+      </div>
+      <p class="sent sent-bad"><span class="sent-tag">✕</span><span>It <em>depends of</em> the weather.</span></p>
+      <p class="sent sent-good"><span class="sent-tag">✓</span><span>It <em>depends on</em> the weather.</span></p>
+      <div class="err-foot">
+        <span><i data-ico="undo"></i> Mắc 2 lần</span>
+        <span><i data-ico="check"></i> Đúng 3 lần liên tiếp</span>
+        <span><i data-ico="repeat"></i> Chặng ôn <span class="srs"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></span>
+      </div>
+    </div>
+
+    <!-- 8 -->
+    <div class="err" data-f="done">
+      <div class="err-top">
+        <span class="badge badge-ok badge-dot">Trật tự từ</span>
+        <span class="err-topic">Trật tự từ &amp; câu hỏi · A1</span>
+        <span class="err-act">
+          <span class="badge badge-ok"><i data-ico="check"></i> Đã khắc phục</span>
+        </span>
+      </div>
+      <p class="sent sent-bad"><span class="sent-tag">✕</span><span>He drives a <em>car red</em> to work.</span></p>
+      <p class="sent sent-good"><span class="sent-tag">✓</span><span>He drives a <em>red car</em> to work.</span></p>
+      <div class="err-foot">
+        <span><i data-ico="undo"></i> Mắc 1 lần</span>
+        <span><i data-ico="check"></i> Đúng 3 lần liên tiếp</span>
+        <span><i data-ico="repeat"></i> Chặng ôn <span class="srs"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></span>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="empty anim" id="errEmpty" hidden style="margin-top:14px">
+    <i data-ico="check"></i>
+    <b>Không có lỗi nào ở nhóm này</b>
+    <p>Chọn bộ lọc khác, hoặc luyện thêm một phiên để hệ thống ghi nhận điểm yếu mới.</p>
+  </div>
+
+  <div class="panel anim anim-4" style="margin-top:14px">
+    <b class="t-h3 row" style="gap:7px"><i data-ico="repeat" class="ico ico-sm"></i> Lịch ôn của một lỗi</b>
+    <p class="t-xs muted-2" style="margin-top:6px">
+      Mắc lần đầu → ôn sau <b style="color:var(--text-2)">1 ngày</b> · đúng lần 1 → <b style="color:var(--text-2)">3 ngày</b> ·
+      đúng lần 2 → <b style="color:var(--text-2)">7 ngày</b> · đúng lần 3 → <b style="color:var(--text-2)">21 ngày</b> và chuyển sang “đã khắc phục”.
+      Tái phạm ở bất kỳ chặng nào thì quay về đầu và câu hỏi đổi sang <b style="color:var(--text-2)">dạng bài khác</b>,
+      để bạn nhớ quy tắc chứ không nhớ đáp án.
+    </p>
+  </div>
+
+</div>
+</div>
+
+<script src="../app.js"></script>
+<script>
+(function () {
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#errList .err'));
+  var count = document.getElementById('count');
+  var empty = document.getElementById('errEmpty');
+  var list = document.getElementById('errList');
+
+  document.querySelectorAll('#filter .chip').forEach(function (c) {
+    c.onclick = function () {
+      document.querySelectorAll('#filter .chip').forEach(function (x) { x.classList.remove('is-active'); });
+      c.classList.add('is-active');
+      var f = c.dataset.f, n = 0;
+      rows.forEach(function (r) {
+        var tags = (r.dataset.f || '').split(' ');
+        var show = (f === 'all') || tags.indexOf(f) > -1;
+        r.style.display = show ? '' : 'none';
+        if (show) n++;
+      });
+      count.textContent = n + ' lỗi';
+      list.hidden = (n === 0);
+      empty.hidden = (n > 0);
+    };
+  });
+})();
+</script>
+</body>
+</html>

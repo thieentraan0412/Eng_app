@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thì hiện tại hoàn thành · Ngữ pháp · EngMaster</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .lv{
+    font-size:10.5px;font-weight:700;letter-spacing:.04em;
+    color:var(--text-3);background:var(--surface-2);border:1px solid var(--border);
+    height:18px;padding:0 6px;display:inline-flex;align-items:center;border-radius:4px;
+  }
+
+  /* ---- Bảng ---- */
+  .tbl{width:100%;border-collapse:collapse;font-size:13.3px}
+  .tbl th{
+    text-align:left;font-size:10.5px;font-weight:600;letter-spacing:.055em;text-transform:uppercase;
+    color:var(--text-4);padding:9px 20px;border-bottom:1px solid var(--border);white-space:nowrap;
+  }
+  .tbl td{padding:11px 20px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.55}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl tbody tr{transition:background var(--t-fast)}
+  .tbl tbody tr:hover{background:var(--surface-2)}
+  .tbl .k{color:var(--text-2);white-space:nowrap;width:1%}
+  .form-str{
+    font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:12.6px;color:var(--text);white-space:nowrap;
+  }
+  .form-str b{color:var(--accent-text);font-weight:600}
+  .ex-en{color:var(--text)}
+  .ex-vi{display:block;font-size:12.2px;color:var(--text-3);margin-top:2px}
+
+  /* ---- Dòng thời gian ---- */
+  .tl{width:100%;height:132px;display:block}
+  .tl-wrap{padding:8px 20px 16px;overflow-x:auto}
+  .tl-legend{display:flex;gap:16px;flex-wrap:wrap;padding:0 20px 16px;font-size:12.2px;color:var(--text-3)}
+  .tl-legend span{display:inline-flex;align-items:center;gap:6px}
+  .tl-key{width:14px;height:3px;border-radius:2px;flex:0 0 auto}
+
+  /* ---- 4 cách dùng ---- */
+  .use{padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:var(--r-md)}
+  /* Chỉ tiêu đề trực tiếp của khối mới là flex — <b> nội dòng trong câu giữ nguyên */
+  .use > b{display:flex;align-items:center;gap:7px;font-size:13.2px;font-weight:600;letter-spacing:-.012em}
+  .use > b .ico{width:14px;height:14px;color:var(--text-3)}
+  .use .sample b{font-weight:600;color:var(--text-2)}
+  .use .sample{
+    display:block;margin-top:7px;font-size:12.8px;color:var(--text-2);line-height:1.55;
+    padding-left:9px;border-left:2px solid var(--border-2);
+  }
+  .use .sample u{text-decoration:none;color:var(--accent-text);font-weight:600}
+
+  /* ---- Từ tín hiệu ---- */
+  .signals{display:flex;flex-wrap:wrap;gap:6px}
+  .sig{
+    font-size:12.5px;font-weight:500;color:var(--text-2);
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    background:var(--surface-2);border:1px solid var(--border);
+    padding:3px 9px;border-radius:var(--r-full);
+  }
+
+  /* ---- Đối chiếu 2 cột ---- */
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .cmp > div{padding:0}
+  .cmp > div:first-child{border-right:1px solid var(--border)}
+  .cmp-head{
+    padding:11px 18px;border-bottom:1px solid var(--border);background:var(--surface-2);
+    font-size:12.5px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:7px;
+  }
+  .cmp-head .ico{width:14px;height:14px;color:var(--text-3)}
+  .cmp-row{padding:12px 18px;border-bottom:1px solid var(--border);font-size:13px;line-height:1.55}
+  .cmp-row:last-child{border-bottom:none}
+  .cmp-row b{display:block;font-size:11.5px;font-weight:600;color:var(--text-4);
+    letter-spacing:.035em;text-transform:uppercase;margin-bottom:4px}
+  .cmp-row i{font-style:normal;display:block;font-size:12.2px;color:var(--text-3);margin-top:2px}
+
+  /* ---- Bẫy người Việt ---- */
+  .trap{padding:15px 20px;border-bottom:1px solid var(--border)}
+  .trap:last-child{border-bottom:none}
+  .trap-head{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+  .trap-no{
+    width:20px;height:20px;flex:0 0 auto;border-radius:5px;display:grid;place-items:center;
+    font-size:11px;font-weight:700;color:var(--text-3);
+    background:var(--surface-2);border:1px solid var(--border);
+  }
+  .trap-name{font-size:13.6px;font-weight:600;letter-spacing:-.014em}
+  .sent{display:flex;align-items:baseline;gap:8px;font-size:13px;line-height:1.6;margin-top:3px}
+  .sent-tag{
+    flex:0 0 auto;width:15px;height:15px;border-radius:4px;display:grid;place-items:center;
+    font-size:10px;font-weight:700;line-height:1;
+  }
+  .sent-bad  .sent-tag{background:var(--err-soft);border:1px solid var(--err-border);color:var(--err)}
+  .sent-good .sent-tag{background:var(--ok-soft); border:1px solid var(--ok-border); color:var(--ok)}
+  .sent-bad  em{font-style:normal;color:var(--err);text-decoration:line-through;
+    text-decoration-thickness:1px;text-underline-offset:2px}
+  .sent-good em{font-style:normal;color:var(--ok);font-weight:600}
+  .trap-why{font-size:12.3px;color:var(--text-3);margin-top:8px;padding-left:23px;line-height:1.55}
+
+  /* ---- Thanh CTA cuối trang ---- */
+  .cta{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:16px 20px;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--r-lg);
+  }
+  .cta-txt{flex:1 1 220px;min-width:0}
+  .cta-txt b{display:block;font-size:14px;font-weight:600;letter-spacing:-.014em}
+  .cta-txt span{display:block;font-size:12.5px;color:var(--text-3);margin-top:2px}
+
+  @media (max-width:920px){
+    .tbl th,.tbl td{padding:10px 16px}
+    .tbl th:first-child,.tbl td:first-child{padding-left:16px}
+    .cmp{grid-template-columns:1fr}
+    .cmp > div:first-child{border-right:none;border-bottom:1px solid var(--border)}
+    .trap{padding:14px 16px}
+    .tl-wrap{padding:8px 16px 14px}
+    .tl-legend{padding:0 16px 14px}
+    .tl{min-width:520px}
+  }
+</style>
+</head>
+<body class="app" data-page="ngu-phap" data-depth="1" data-title="Hiện tại hoàn thành">
+
+<div class="main">
+<div class="wrap wrap-narrow" style="max-width:900px">
+
+  <a class="crumb" href="index.html"><i data-ico="left"></i> Tất cả chủ điểm</a>
+
+  <div class="page-head anim">
+    <div>
+      <h1>Thì hiện tại hoàn thành</h1>
+      <p>Present perfect — nối một sự việc trong quá khứ với thời điểm hiện tại. Đây là thì mà tiếng Việt
+         không có tương đương trực tiếp, nên cần phân biệt kỹ với quá khứ đơn.</p>
+      <div class="row wrapping" style="margin-top:10px">
+        <span class="lv">B1</span>
+        <span class="badge"><i data-ico="grammar"></i> 8 quy tắc</span>
+        <span class="badge"><i data-ico="tasks"></i> 30 câu luyện</span>
+        <span class="badge badge-warn"><i data-ico="bell"></i> Đến hạn ôn</span>
+      </div>
+    </div>
+    <div class="page-actions">
+      <span class="ring" style="--p:48" title="Mức nắm vững 48%"><span>48%</span></span>
+      <a class="btn btn-primary" href="luyen-tap.html"><i data-ico="play"></i> Luyện chủ điểm này</a>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------------- 1. Công thức -->
+  <section class="card anim anim-1" style="margin-bottom:14px">
+    <div class="card-head">
+      <h2><i data-ico="grammar"></i> Công thức</h2>
+      <span class="hint">V3 = quá khứ phân từ</span>
+    </div>
+    <table class="tbl">
+      <thead>
+        <tr><th>Dạng</th><th>Cấu trúc</th><th>Ví dụ</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="k">Khẳng định</td>
+          <td><span class="form-str">S + <b>have / has</b> + V3</span></td>
+          <td><span class="ex-en">She <b>has lived</b> in Da Nang for six years.</span>
+              <span class="ex-vi">Cô ấy đã sống ở Đà Nẵng sáu năm rồi.</span></td>
+        </tr>
+        <tr>
+          <td class="k">Phủ định</td>
+          <td><span class="form-str">S + <b>have / has not</b> + V3</span></td>
+          <td><span class="ex-en">They <b>haven’t finished</b> the report yet.</span>
+              <span class="ex-vi">Họ vẫn chưa hoàn thành báo cáo.</span></td>
+        </tr>
+        <tr>
+          <td class="k">Nghi vấn</td>
+          <td><span class="form-str"><b>Have / Has</b> + S + V3 ?</span></td>
+          <td><span class="ex-en"><b>Have</b> you ever <b>been</b> to Hue?</span>
+              <span class="ex-vi">Bạn đã bao giờ đến Huế chưa?</span></td>
+        </tr>
+        <tr>
+          <td class="k">Wh- câu hỏi</td>
+          <td><span class="form-str">Wh + <b>have / has</b> + S + V3 ?</span></td>
+          <td><span class="ex-en">How long <b>has</b> he <b>worked</b> here?</span>
+              <span class="ex-vi">Anh ấy làm ở đây bao lâu rồi?</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="card-body" style="border-top:1px solid var(--border);padding-top:14px;padding-bottom:14px">
+      <p class="t-xs muted-2">
+        <b style="color:var(--text-2)">has</b> đi với <span class="mono">he / she / it</span> và danh từ số ít ·
+        <b style="color:var(--text-2)">have</b> đi với <span class="mono">I / you / we / they</span> và danh từ số nhiều.
+      </p>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------- 2. Dòng thời gian -->
+  <section class="card anim anim-1" style="margin-bottom:14px">
+    <div class="card-head">
+      <h2><i data-ico="activity"></i> Nhìn trên dòng thời gian</h2>
+      <span class="hint">Vì sao “đã” trong tiếng Việt không đủ để phân biệt</span>
+    </div>
+
+    <div class="tl-wrap">
+      <svg class="tl" viewBox="0 0 640 132" xmlns="http://www.w3.org/2000/svg" role="img"
+           aria-label="Dòng thời gian so sánh quá khứ đơn và hiện tại hoàn thành">
+        <!-- trục -->
+        <line x1="24" y1="92" x2="600" y2="92" stroke="var(--border-2)" stroke-width="1.4"/>
+        <path d="M600 92 l-8 -4 v8 z" fill="var(--border-2)"/>
+        <!-- mốc hiện tại -->
+        <line x1="470" y1="34" x2="470" y2="104" stroke="var(--text-4)" stroke-width="1.4" stroke-dasharray="3 4"/>
+        <text x="470" y="120" text-anchor="middle" font-size="11" font-weight="600"
+              fill="var(--text-3)" font-family="Inter, sans-serif">BÂY GIỜ</text>
+        <text x="70" y="120" text-anchor="middle" font-size="11" font-weight="600"
+              fill="var(--text-4)" font-family="Inter, sans-serif">QUÁ KHỨ</text>
+
+        <!-- quá khứ đơn: một điểm đóng -->
+        <circle cx="150" cy="92" r="4.6" fill="var(--text-4)"/>
+        <line x1="150" y1="92" x2="150" y2="64" stroke="var(--text-4)" stroke-width="1.2"/>
+        <text x="150" y="56" text-anchor="middle" font-size="11.5" fill="var(--text-3)"
+              font-family="Inter, sans-serif">I lived in Hue.</text>
+        <text x="150" y="42" text-anchor="middle" font-size="10.5" font-weight="600"
+              fill="var(--text-4)" font-family="Inter, sans-serif">QUÁ KHỨ ĐƠN · đã xong hẳn</text>
+
+        <!-- hiện tại hoàn thành: khoảng kéo tới hiện tại -->
+        <line x1="270" y1="92" x2="470" y2="92" stroke="var(--accent)" stroke-width="3.4" stroke-linecap="round"/>
+        <circle cx="270" cy="92" r="4.6" fill="var(--accent)"/>
+        <circle cx="470" cy="92" r="4.6" fill="var(--accent)"/>
+        <line x1="370" y1="92" x2="370" y2="70" stroke="var(--accent-border)" stroke-width="1.2"/>
+        <text x="370" y="62" text-anchor="middle" font-size="11.5" fill="var(--accent-text)"
+              font-family="Inter, sans-serif">I have lived in Hue for 6 years.</text>
+        <text x="370" y="48" text-anchor="middle" font-size="10.5" font-weight="600"
+              fill="var(--accent-text)" font-family="Inter, sans-serif">HIỆN TẠI HOÀN THÀNH · còn kéo dài</text>
+      </svg>
+    </div>
+
+    <div class="tl-legend">
+      <span><i class="tl-key" style="background:var(--text-4)"></i> Quá khứ đơn — sự việc <b>khép lại</b> trong quá khứ, không dính tới hiện tại</span>
+      <span><i class="tl-key" style="background:var(--accent)"></i> Hiện tại hoàn thành — sự việc <b>bắc cầu</b> từ quá khứ tới bây giờ</span>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------ 3. Bốn cách dùng -->
+  <section class="card anim anim-2" style="margin-bottom:14px">
+    <div class="card-head"><h2><i data-ico="bulb"></i> Bốn trường hợp dùng</h2></div>
+    <div class="card-body">
+      <div class="grid g-2">
+
+        <div class="use">
+          <b><i data-ico="target"></i> 1 · Kinh nghiệm trong đời</b>
+          <span class="sample">I <u>have visited</u> Japan twice.<br>
+            <span class="muted-2">Không quan tâm đi khi nào — chỉ nói là đã từng.</span></span>
+        </div>
+
+        <div class="use">
+          <b><i data-ico="zap"></i> 2 · Kết quả còn hiện hữu</b>
+          <span class="sample">She <u>has lost</u> her keys.<br>
+            <span class="muted-2">Mất từ lúc nào không rõ, nhưng <b>bây giờ vẫn chưa tìm được</b>.</span></span>
+        </div>
+
+        <div class="use">
+          <b><i data-ico="clock"></i> 3 · Khoảng thời gian chưa kết thúc</b>
+          <span class="sample">We <u>have studied</u> English <u>since</u> 2019.<br>
+            <span class="muted-2">Bắt đầu 2019 và <b>vẫn đang học</b> tới hôm nay.</span></span>
+        </div>
+
+        <div class="use">
+          <b><i data-ico="sparkle"></i> 4 · Việc vừa mới xảy ra</b>
+          <span class="sample">The train <u>has just left</u>.<br>
+            <span class="muted-2">Vừa xong cách đây rất ngắn — thường đi với <span class="mono">just</span>.</span></span>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------- 4. Từ tín hiệu -->
+  <section class="card anim anim-2" style="margin-bottom:14px">
+    <div class="card-head">
+      <h2><i data-ico="search"></i> Từ tín hiệu</h2>
+      <span class="hint">Thấy những từ này thì nghĩ ngay tới hiện tại hoàn thành</span>
+    </div>
+    <div class="card-body">
+      <div class="signals">
+        <span class="sig">already</span><span class="sig">yet</span><span class="sig">just</span>
+        <span class="sig">ever</span><span class="sig">never</span><span class="sig">since</span>
+        <span class="sig">for</span><span class="sig">so far</span><span class="sig">recently</span>
+        <span class="sig">lately</span><span class="sig">up to now</span><span class="sig">this week</span>
+      </div>
+      <div class="panel" style="margin-top:14px">
+        <p class="t-xs muted-2">
+          <b style="color:var(--text-2)">since</b> đi với <b>mốc thời gian</b> — <span class="mono">since 2019</span>, <span class="mono">since Monday</span>. ·
+          <b style="color:var(--text-2)">for</b> đi với <b>khoảng thời gian</b> — <span class="mono">for six years</span>, <span class="mono">for two days</span>.
+          Đây là cặp người học Việt nhầm nhiều nhất vì tiếng Việt dùng chung chữ “từ”.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------------- 5. Đối chiếu -->
+  <section class="card anim anim-3" style="margin-bottom:14px">
+    <div class="card-head">
+      <h2><i data-ico="shuffle"></i> Đối chiếu với quá khứ đơn</h2>
+      <span class="hint">Phần được tra nhiều nhất</span>
+    </div>
+    <div class="cmp">
+      <div>
+        <div class="cmp-head"><i data-ico="undo"></i> Quá khứ đơn</div>
+        <div class="cmp-row"><b>Thời điểm</b>Xác định và đã khép lại
+          <i>yesterday · last week · in 2019 · two days ago</i></div>
+        <div class="cmp-row"><b>Ví dụ</b>I <b>saw</b> that film last night.
+          <i>Xem xong rồi, chuyện của tối qua.</i></div>
+        <div class="cmp-row"><b>Câu hỏi</b><span class="mono">When did you…?</span>
+          <i>Hỏi về một thời điểm cụ thể.</i></div>
+        <div class="cmp-row"><b>Liên hệ hiện tại</b>Không có</div>
+      </div>
+      <div>
+        <div class="cmp-head"><i data-ico="clock"></i> Hiện tại hoàn thành</div>
+        <div class="cmp-row"><b>Thời điểm</b>Không nêu, hoặc khoảng chưa kết thúc
+          <i>ever · never · so far · since 2019 · this week</i></div>
+        <div class="cmp-row"><b>Ví dụ</b>I <b>have seen</b> that film.
+          <i>Đã từng xem — không nói lúc nào.</i></div>
+        <div class="cmp-row"><b>Câu hỏi</b><span class="mono">Have you ever…?</span>
+          <i>Hỏi về kinh nghiệm, không hỏi thời điểm.</i></div>
+        <div class="cmp-row"><b>Liên hệ hiện tại</b>Luôn có — đó là lý do dùng thì này</div>
+      </div>
+    </div>
+    <div class="card-body" style="border-top:1px solid var(--border)">
+      <p class="t-xs muted-2">
+        <b style="color:var(--text-2)">Mẹo kiểm tra nhanh:</b> nếu trong câu có một mốc thời gian đã qua hẳn
+        (<span class="mono">yesterday</span>, <span class="mono">last year</span>, <span class="mono">in 2020</span>)
+        thì <b>không</b> được dùng hiện tại hoàn thành. Câu
+        <span class="mono" style="color:var(--err)">I have seen him yesterday</span> luôn sai.
+      </p>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------- 6. Bẫy người Việt -->
+  <section class="card anim anim-3" style="margin-bottom:14px">
+    <div class="card-head">
+      <h2><i data-ico="lang"></i> Ba bẫy với người học Việt</h2>
+      <span class="hint">Lấy từ lỗi thực tế trong sổ lỗi</span>
+    </div>
+
+    <div class="trap">
+      <div class="trap-head"><span class="trap-no">1</span>
+        <span class="trap-name">Dùng quá khứ đơn vì tiếng Việt chỉ có một chữ “đã”</span></div>
+      <p class="sent sent-bad"><span class="sent-tag">✕</span><span>I <em>already sent</em> you the file.</span></p>
+      <p class="sent sent-good"><span class="sent-tag">✓</span><span>I <em>have already sent</em> you the file.</span></p>
+      <p class="trap-why">“Tôi đã gửi rồi” trong tiếng Việt không phân biệt hai thì. Quy tắc thay thế: có
+        <span class="mono">already / yet / just</span> mà không có mốc thời gian → dùng hiện tại hoàn thành.</p>
+    </div>
+
+    <div class="trap">
+      <div class="trap-head"><span class="trap-no">2</span>
+        <span class="trap-name">Nhầm <span class="mono">since</span> với <span class="mono">for</span></span></div>
+      <p class="sent sent-bad"><span class="sent-tag">✕</span><span>He has worked here <em>since five years</em>.</span></p>
+      <p class="sent sent-good"><span class="sent-tag">✓</span><span>He has worked here <em>for five years</em>.</span></p>
+      <p class="trap-why">Tiếng Việt dùng chung chữ “từ” cho cả hai. Nhớ: <span class="mono">since</span> + <b>điểm</b>,
+        <span class="mono">for</span> + <b>độ dài</b>.</p>
+    </div>
+
+    <div class="trap">
+      <div class="trap-head"><span class="trap-no">3</span>
+        <span class="trap-name">Dùng V2 thay vì V3 sau <span class="mono">have</span></span></div>
+      <p class="sent sent-bad"><span class="sent-tag">✕</span><span>She has <em>wrote</em> three emails today.</span></p>
+      <p class="sent sent-good"><span class="sent-tag">✓</span><span>She has <em>written</em> three emails today.</span></p>
+      <p class="trap-why">Tiếng Việt không có phân từ nên bước “đổi sang cột thứ ba” dễ bị bỏ.
+        Sau <span class="mono">have / has</span> luôn là <b>V3</b>, không phải V2.</p>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------- 7. CTA -->
+  <div class="cta anim anim-4">
+    <span class="topic-mark" style="width:36px;height:36px;flex:0 0 auto;border-radius:var(--r-sm);
+      display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--border)">
+      <i data-ico="play"></i></span>
+    <span class="cta-txt">
+      <b>Sẵn sàng luyện chưa?</b>
+      <span>18 câu trộn cả 4 dạng bài · mỗi câu sai sẽ được ghi vào sổ lỗi kèm lịch ôn</span>
+    </span>
+    <a class="btn" href="so-loi.html"><i data-ico="flag"></i> Lỗi của tôi ở chủ điểm này (3)</a>
+    <a class="btn btn-primary" href="luyen-tap.html"><i data-ico="play"></i> Bắt đầu luyện</a>
+  </div>
+
+</div>
+</div>
+
+<script src="../app.js"></script>
+</body>
+</html>

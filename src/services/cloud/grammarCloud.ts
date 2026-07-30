@@ -14,6 +14,7 @@ import {
   type NewCloudGrammarItem,
   type NewCloudGrammarTopic,
 } from './CloudApiClient'
+import { isMissingSchema } from './cloudError'
 import {
   BUILTIN_TOPICS,
   type GrammarCompare,
@@ -398,14 +399,40 @@ export async function deleteError(id: string): Promise<void> {
 // ============================================================
 // GHI — chủ điểm tự soạn
 // ============================================================
+// Cột source_key / bảng grammar_hidden_topics được thêm sau (supabase/grammar.sql).
+// Tài khoản chưa chạy file đó vẫn phải soạn và lưu được chủ điểm của mình —
+// chỉ riêng phần sửa/ẩn CHỦ ĐIỂM DỰNG SẴN mới bắt buộc có chúng.
+const NEED_SQL =
+  'Kho dữ liệu chưa có phần “sửa/ẩn chủ điểm dựng sẵn”. Mở Supabase → SQL Editor, chạy lại file supabase/grammar.sql rồi thử lại.'
+
+function withoutSourceKey(row: NewCloudGrammarTopic): NewCloudGrammarTopic {
+  const { source_key: _drop, ...rest } = row
+  return rest as NewCloudGrammarTopic
+}
+
 export async function createTopic(draft: TopicDraft): Promise<string> {
-  const topic = await CloudApi.createGrammarTopic(draftToRow(draft))
-  await CloudApi.createGrammarItems(topic.id, draft.items.map(itemToRow))
-  return topic.id
+  const row = draftToRow(draft)
+  let id: string
+  try {
+    id = (await CloudApi.createGrammarTopic(row)).id
+  } catch (e) {
+    if (!isMissingSchema(e, 'source_key')) throw e
+    if (row.source_key != null) throw new Error(NEED_SQL)
+    id = (await CloudApi.createGrammarTopic(withoutSourceKey(row))).id
+  }
+  await CloudApi.createGrammarItems(id, draft.items.map(itemToRow))
+  return id
 }
 
 export async function updateTopic(id: string, draft: TopicDraft): Promise<void> {
-  await CloudApi.updateGrammarTopic(id, draftToRow(draft))
+  const row = draftToRow(draft)
+  try {
+    await CloudApi.updateGrammarTopic(id, row)
+  } catch (e) {
+    if (!isMissingSchema(e, 'source_key')) throw e
+    if (row.source_key != null) throw new Error(NEED_SQL)
+    await CloudApi.updateGrammarTopic(id, withoutSourceKey(row))
+  }
   await CloudApi.replaceGrammarItems(id, draft.items.map(itemToRow))
 }
 
@@ -425,12 +452,21 @@ export async function saveTopicEdit(topic: GrammarTopic, draft: TopicDraft): Pro
 // Sửa một chủ điểm dựng sẵn rồi xóa thì bỏ cả bản sửa lẫn bản gốc.
 export async function removeTopic(topic: GrammarTopic): Promise<void> {
   if (topic.cloudId) await CloudApi.deleteGrammarTopic(topic.cloudId)
-  if (topic.builtin || topic.sourceKey) await CloudApi.hideGrammarTopic(topic.sourceKey ?? topic.key)
+  if (!topic.builtin && !topic.sourceKey) return
+  try {
+    await CloudApi.hideGrammarTopic(topic.sourceKey ?? topic.key)
+  } catch (e) {
+    throw isMissingSchema(e, 'grammar_hidden_topics') ? new Error(NEED_SQL) : e
+  }
 }
 
 // Hiện lại một chủ điểm dựng sẵn đã ẩn (tiến độ cũ còn nguyên)
 export async function restoreTopic(key: string): Promise<void> {
-  await CloudApi.unhideGrammarTopic(key)
+  try {
+    await CloudApi.unhideGrammarTopic(key)
+  } catch (e) {
+    throw isMissingSchema(e, 'grammar_hidden_topics') ? new Error(NEED_SQL) : e
+  }
 }
 
 // Bỏ bản sửa, quay về nội dung dựng sẵn ban đầu

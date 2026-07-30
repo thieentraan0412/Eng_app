@@ -12,6 +12,7 @@ import {
 } from 'react'
 import Icon from '../components/Icon'
 import { type SentenceItem, type CefrLevel } from '../data/sentences'
+import { errText } from '../services/cloud/cloudError'
 import { gradeSentence, wrongWordSegments, type GradeResult } from '../services/sentencecheck'
 import { suggest, type Suggestion } from '../services/suggestion'
 import {
@@ -50,18 +51,22 @@ const LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 // Số câu hiện lúc đầu ở tab Luyện tập — phần còn lại mở bằng nút "Hiện thêm"
 const PAGE_SIZE = 20
 
-function errMsg(e: unknown): string {
-  return e instanceof Error ? e.message : String(e)
-}
+const errMsg = errText
 
 // Ô luyện dịch chỉ nhận tiếng Anh: giữ chữ Latin ASCII, số, xuống dòng và
 // dấu câu; chuẩn hóa một số dấu câu “thông minh” thường gặp khi dán văn bản.
+// Chữ có dấu (bộ gõ tiếng Việt đang bật, hoặc dán văn bản tiếng Việt) được HẠ
+// DẤU về chữ cái gốc chứ không xóa — xóa thẳng thì chữ tự dưng biến mất,
+// người gõ tưởng ô nhập hỏng.
 function sanitizeEnglishInput(value: string): string {
   return value
     .replace(/[‘’]/g, "'")
     .replace(/[“”]/g, '"')
     .replace(/[–—]/g, '-')
     .replace(/…/g, '...')
+    .replace(/[đĐ]/g, (c) => (c === 'đ' ? 'd' : 'D'))
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
     .replace(/[^\x20-\x7E\n]/g, '')
 }
 
@@ -965,6 +970,9 @@ const SentenceCard = memo(function SentenceCard({
   const taRef = useRef<HTMLTextAreaElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
   const pendingCaret = useRef<number | null>(null)
+  // Bộ gõ (tiếng Việt, tiếng Nhật…) đang soạn dở một chữ: cấm đụng vào giá trị
+  // ô nhập cho tới khi soạn xong, nếu không chữ sẽ bị nuốt và chèn lặp.
+  const composing = useRef(false)
 
   const [caret, setCaret] = useState(0)
   const [focused, setFocused] = useState(false)
@@ -1038,6 +1046,10 @@ const SentenceCard = memo(function SentenceCard({
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter/Tab lúc bộ gõ đang chọn chữ là để CHỐT chữ đó, không phải để chấm bài
+    if (composing.current || (e.nativeEvent as unknown as { isComposing?: boolean }).isComposing) {
+      return
+    }
     // Enter (không Shift) → kiểm tra đáp án; đúng thì tự nhảy sang câu kế tiếp.
     // Shift+Enter để xuống dòng.
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -1146,9 +1158,23 @@ const SentenceCard = memo(function SentenceCard({
           rows={2}
           value={value}
           onChange={(e) => {
-            const nextValue = sanitizeEnglishInput(e.target.value)
+            const raw = e.target.value
+            // Đang soạn dở bằng bộ gõ -> nhận nguyên chuỗi thô, lọc sau khi chốt
+            const isComposing =
+              composing.current || Boolean((e.nativeEvent as InputEvent).isComposing)
+            const nextValue = isComposing ? raw : sanitizeEnglishInput(raw)
             onChange(item.id, nextValue)
             setCaret(Math.min(e.target.selectionStart, nextValue.length))
+          }}
+          onCompositionStart={() => {
+            composing.current = true
+          }}
+          onCompositionEnd={(e) => {
+            composing.current = false
+            const el = e.currentTarget
+            const nextValue = sanitizeEnglishInput(el.value)
+            onChange(item.id, nextValue)
+            setCaret(Math.min(el.selectionStart, nextValue.length))
           }}
           onKeyUp={syncCaret}
           onClick={syncCaret}

@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'rea
 import Icon from '../../components/Icon'
 import type { CefrLevel, GrammarFormula, GrammarTrap, GrammarUse } from '../../data/grammar'
 import { TOPIC_TEMPLATES, type TopicTemplate } from '../../data/grammarTemplates'
+import { errText } from '../../services/cloud/cloudError'
 import {
   ERROR_TAGS,
   TOPIC_GROUPS,
@@ -207,7 +208,7 @@ export default function NewTopic({
       setScreen('done')
       onSaved(id, d.name)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(errText(e))
     } finally {
       setSaving(false)
     }
@@ -240,7 +241,7 @@ export default function NewTopic({
       setXlsxWarnings(res.warnings)
       if (!res.draft.name) setXlsxMsg('⚠️ Thiếu “Tên chủ điểm” ở sheet ThongTin — chưa lưu được.')
     } catch (e) {
-      setXlsxMsg('❌ Không đọc được sổ tính: ' + (e instanceof Error ? e.message : String(e)))
+      setXlsxMsg('❌ Không đọc được sổ tính: ' + errText(e))
     }
   }
 

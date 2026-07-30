@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Icon from '../../components/Icon'
 import { VN_TRAPS, type CefrLevel } from '../../data/grammar'
 import type { ErrorEntry, GrammarTopic, TopicProgress } from '../../services/cloud/grammarCloud'
@@ -24,6 +24,7 @@ export default function TopicLibrary({
   onNewTopic,
   onEditTopic,
   onDeleteTopic,
+  onDeleteTopics,
   onRestoreTopic,
 }: {
   topics: GrammarTopic[]
@@ -36,16 +37,43 @@ export default function TopicLibrary({
   onNewTopic: () => void
   onEditTopic: (t: GrammarTopic) => void
   onDeleteTopic: (t: GrammarTopic) => void
+  onDeleteTopics: (list: GrammarTopic[]) => void
   onRestoreTopic: (key: string) => void
 }) {
   const [tab, setTab] = useState<'all' | 'weak' | 'trap'>('all')
   const [level, setLevel] = useState<'all' | CefrLevel>('all')
+  // Chọn nhiều chủ điểm để xóa một lượt
+  const [selecting, setSelecting] = useState(false)
+  const [picked, setPicked] = useState<Set<string>>(new Set())
 
   const ready = useMemo(() => topics.filter((t) => t.items.length > 0), [topics])
   const shown = useMemo(
     () => (level === 'all' ? topics : topics.filter((t) => t.level === level)),
     [topics, level],
   )
+
+  // ---------- Chọn nhiều ----------
+  const pickedTopics = shown.filter((t) => picked.has(t.key))
+  const togglePick = (key: string) =>
+    setPicked((s) => {
+      const next = new Set(s)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  const leaveSelect = () => {
+    setSelecting(false)
+    setPicked(new Set())
+  }
+  // Xóa xong thì bỏ tick những chủ điểm không còn trong thư viện nữa
+  useEffect(() => {
+    setPicked((s) => {
+      if (s.size === 0) return s
+      const alive = new Set(topics.map((t) => t.key))
+      const next = new Set([...s].filter((k) => alive.has(k)))
+      return next.size === s.size ? s : next
+    })
+  }, [topics])
 
   // ---------- Chỉ số ----------
   const mastered = topics.filter((t) => (progress[t.key]?.mastery ?? 0) >= 80).length
@@ -107,6 +135,15 @@ export default function TopicLibrary({
           </button>
           <button className="gr-btn" onClick={onNewTopic}>
             <Icon name="plus" /> Thêm chủ điểm
+          </button>
+          <button
+            className={selecting ? 'gr-btn is-active' : 'gr-btn'}
+            onClick={() => {
+              setTab('all')
+              selecting ? leaveSelect() : setSelecting(true)
+            }}
+          >
+            <Icon name="check" /> {selecting ? 'Thôi chọn' : 'Chọn nhiều'}
           </button>
           <button
             className="gr-btn gr-btn-primary"
@@ -219,6 +256,37 @@ export default function TopicLibrary({
       {/* ============================================ TẤT CẢ CHỦ ĐIỂM */}
       {tab === 'all' && (
         <>
+          {selecting && (
+            <div className="gr-selbar">
+              <b>
+                {picked.size > 0
+                  ? `Đã chọn ${picked.size} / ${shown.length} chủ điểm`
+                  : 'Bấm vào thẻ để chọn chủ điểm cần xóa'}
+              </b>
+              <span className="gr-spacer" />
+              <button
+                className="gr-btn gr-btn-sm"
+                onClick={() =>
+                  setPicked(
+                    picked.size === shown.length ? new Set() : new Set(shown.map((t) => t.key)),
+                  )
+                }
+              >
+                {picked.size === shown.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+              </button>
+              <button
+                className="gr-btn gr-btn-sm gr-btn-danger"
+                disabled={picked.size === 0}
+                onClick={() => onDeleteTopics(pickedTopics)}
+              >
+                <Icon name="trash" /> Xóa {picked.size > 0 ? picked.size : ''} chủ điểm
+              </button>
+              <button className="gr-btn gr-btn-sm" onClick={leaveSelect}>
+                Xong
+              </button>
+            </div>
+          )}
+
           <div className="gr-row" style={{ marginBottom: 14 }}>
             <div className="gr-chipset">
               <button
@@ -254,16 +322,20 @@ export default function TopicLibrary({
                   key={t.key}
                   topic={t}
                   progress={progress[t.key]}
-                  onOpen={() => onOpenTopic(t)}
+                  selecting={selecting}
+                  selected={picked.has(t.key)}
+                  onOpen={() => (selecting ? togglePick(t.key) : onOpenTopic(t))}
                   onEdit={() => onEditTopic(t)}
                   onDelete={() => onDeleteTopic(t)}
                 />
               ))}
-              <button className="gr-new-topic" onClick={onNewTopic}>
-                <Icon name="plus" />
-                <b>Thêm chủ điểm</b>
-                <span>Soạn mới, chép từ thư viện mẫu, hoặc nạp từ Excel</span>
-              </button>
+              {!selecting && (
+                <button className="gr-new-topic" onClick={onNewTopic}>
+                  <Icon name="plus" />
+                  <b>Thêm chủ điểm</b>
+                  <span>Soạn mới, chép từ thư viện mẫu, hoặc nạp từ Excel</span>
+                </button>
+              )}
             </section>
           )}
 

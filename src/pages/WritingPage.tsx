@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -9,7 +10,9 @@ import {
   type UIEvent,
 } from 'react'
 import Icon, { type IconName } from '../components/Icon'
+import { useTheme } from '../contexts/ThemeContext'
 import { CloudApi, type Writing } from '../services/cloud/CloudApiClient'
+import { errText } from '../services/cloud/cloudError'
 import { suggest, type Suggestion } from '../services/suggestion'
 import { ignoreWord, isMisspelled, suggestFix, tokenizeWords } from '../services/spellcheck'
 import { checkGrammar, type GrammarMatch } from '../services/grammarcheck'
@@ -34,77 +37,100 @@ interface SpellItem {
   suggestions: string[]
 }
 
-// Đề bài điền sẵn khi mở bài mới (từ nút 🎲 hoặc thẻ chủ đề)
+// Đề bài điền sẵn khi mở bài mới (từ nút gợi ý hoặc thẻ chủ đề)
 interface PromptDraft {
   title: string
   topic: string
 }
 
-// Kho gợi ý ĐỀ BÀI luyện viết — bấm 🎲 lấy ngẫu nhiên (điền chủ đề + tiêu đề)
-const WRITING_PROMPTS: PromptDraft[] = [
-  { topic: 'Daily life', title: 'Describe your typical morning routine' },
-  { topic: 'Daily life', title: 'What did you do last weekend?' },
-  { topic: 'Travel', title: 'Describe a place you want to visit and why' },
-  { topic: 'Travel', title: 'The most memorable trip you have ever taken' },
-  { topic: 'Work & Study', title: 'Why are you learning English?' },
-  { topic: 'Work & Study', title: 'Describe your dream job' },
-  { topic: 'Technology', title: 'How has technology changed the way we live?' },
-  { topic: 'Technology', title: 'Do social networks bring people closer together?' },
-  { topic: 'Food', title: 'Describe your favorite Vietnamese dish to a foreigner' },
-  { topic: 'Food', title: 'Is it better to cook at home or eat out?' },
-  { topic: 'Family & Friends', title: 'Describe a person who influenced you the most' },
-  { topic: 'Family & Friends', title: 'What makes a good friend?' },
-  { topic: 'Environment', title: 'What can individuals do to protect the environment?' },
-  { topic: 'Health', title: 'How do you keep yourself healthy?' },
-  { topic: 'Opinion', title: 'Is it better to live in the city or the countryside?' },
-  { topic: 'Opinion', title: 'Should students wear uniforms at school?' },
-  { topic: 'Story', title: 'Write a short story beginning with “It was raining heavily…”' },
-  { topic: 'Culture', title: 'Describe a Vietnamese festival to a foreign friend' },
-]
-
 // Chủ đề gợi ý ở cuối trang danh sách — bấm là mở bài mới với đề tương ứng
-const TOPIC_CARDS: (PromptDraft & { icon: IconName; label: string })[] = [
+interface TopicCard extends PromptDraft {
+  icon: IconName
+  label: string
+  level: string
+  words: string
+}
+
+const TOPIC_CARDS: TopicCard[] = [
   {
     icon: 'pen',
     label: 'Giới thiệu bản thân',
+    level: 'A1',
+    words: '80–120 từ',
     topic: 'Personal',
     title: 'Introduce yourself: who you are and what you do',
   },
   {
     icon: 'clock',
     label: 'Thói quen hằng ngày',
+    level: 'A2',
+    words: '100–150 từ',
     topic: 'Daily life',
     title: 'Describe your typical morning routine',
   },
   {
     icon: 'book',
     label: 'Một cuốn sách bạn thích',
+    level: 'B1',
+    words: '150–200 từ',
     topic: 'Culture',
     title: 'Write about a book you love and why',
   },
   {
     icon: 'trend',
     label: 'Mạng xã hội & giới trẻ',
+    level: 'B1',
+    words: '180–250 từ',
     topic: 'Technology',
     title: 'Do social networks bring people closer together?',
   },
   {
     icon: 'cloud',
     label: 'Biến đổi khí hậu',
+    level: 'B2',
+    words: '250–300 từ',
     topic: 'Environment',
     title: 'What can individuals do to slow down climate change?',
   },
   {
     icon: 'target',
     label: 'Mục tiêu 5 năm tới',
+    level: 'B2',
+    words: '200–280 từ',
     topic: 'Work & Study',
     title: 'Where do you see yourself in five years?',
+  },
+  {
+    icon: 'speak',
+    label: 'Thành phố bạn muốn sống',
+    level: 'B1',
+    words: '150–220 từ',
+    topic: 'Opinion',
+    title: 'Which city would you most like to live in and why?',
+  },
+  {
+    icon: 'bulb',
+    label: 'Công nghệ & việc học',
+    level: 'B2',
+    words: '220–300 từ',
+    topic: 'Technology',
+    title: 'How has technology changed the way we study?',
+  },
+  {
+    icon: 'flame',
+    label: 'Một ngày đáng nhớ',
+    level: 'A2',
+    words: '120–180 từ',
+    topic: 'Story',
+    title: 'Write about the most memorable day of your life',
   },
 ]
 
 const TOPIC_OPTIONS = [
-  ...new Set([...WRITING_PROMPTS, ...TOPIC_CARDS].map((p) => p.topic)),
+  ...new Set(TOPIC_CARDS.map((p) => p.topic)),
 ].sort()
+
+const DAY = 86400000
 
 function countWords(text: string): number {
   const t = text.trim()
@@ -116,15 +142,67 @@ function escapeRegExp(s: string): string {
 function preserveCase(sample: string, word: string): string {
   return sample[0] === sample[0]?.toUpperCase() ? word[0].toUpperCase() + word.slice(1) : word
 }
-// Dòng đầu của bài, cắt gọn để làm mô tả trong danh sách
-function previewOf(content: string | null): string {
-  const line = (content ?? '').trim().split(/\r?\n/).find((l) => l.trim()) ?? ''
-  return line.length > 120 ? `${line.slice(0, 120)}…` : line
+// Vài dòng đầu của bài, gộp lại thành một dòng mô tả trong danh sách
+function excerptOf(content: string | null): string {
+  const flat = (content ?? '').replace(/\s+/g, ' ').trim()
+  return flat.length > 150 ? `${flat.slice(0, 150)}…` : flat
 }
-function randomPrompt(exceptTitle?: string): PromptDraft {
-  const pool = WRITING_PROMPTS.filter((p) => p.title !== exceptTitle)
-  return pool[Math.floor(Math.random() * pool.length)]
+function dayKey(iso: string): string {
+  return new Date(iso).toISOString().slice(0, 10)
 }
+// "Hôm nay · 10:49" · "Hôm qua · 21:12" · "5 ngày trước"
+function relTime(iso: string): string {
+  const d = new Date(iso)
+  const midnight = new Date()
+  midnight.setHours(0, 0, 0, 0)
+  const diffDays = Math.floor((midnight.getTime() - d.getTime()) / DAY) + 1
+  const hhmm = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+  if (diffDays <= 0) return `Hôm nay · ${hhmm}`
+  if (diffDays === 1) return `Hôm qua · ${hhmm}`
+  if (diffDays < 30) return `${diffDays} ngày trước`
+  return d.toLocaleDateString('vi-VN')
+}
+// Chuỗi ngày viết liên tiếp tính đến hôm nay (hoặc hôm qua nếu hôm nay chưa viết)
+function streakOf(days: Set<string>): { now: number; best: number } {
+  const sorted = [...days].sort()
+  let best = 0
+  let run = 0
+  let prev: number | null = null
+  for (const d of sorted) {
+    const t = new Date(`${d}T00:00:00`).getTime()
+    run = prev !== null && t - prev === DAY ? run + 1 : 1
+    prev = t
+    if (run > best) best = run
+  }
+  // Chuỗi hiện tại: đi ngược từ hôm nay
+  let now = 0
+  const cursor = new Date()
+  cursor.setHours(0, 0, 0, 0)
+  if (!days.has(cursor.toISOString().slice(0, 10))) cursor.setDate(cursor.getDate() - 1)
+  while (days.has(cursor.toISOString().slice(0, 10))) {
+    now++
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return { now, best }
+}
+
+// Màn hẹp -> soạn thảo dùng bottom sheet thay cho panel bên phải
+function useIsNarrow(maxWidth = 920): boolean {
+  const [narrow, setNarrow] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth <= maxWidth,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width:${maxWidth}px)`)
+    const onChange = () => setNarrow(mq.matches)
+    onChange()
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [maxWidth])
+  return narrow
+}
+
+type Filter = 'all' | 'week' | 'err' | 'clean'
+type SortKey = 'new' | 'old' | 'long' | 'az'
 
 // ================= TRANG DANH SÁCH BÀI VIẾT =================
 export default function WritingPage() {
@@ -135,12 +213,16 @@ export default function WritingPage() {
   const [loading, setLoading] = useState(true)
   // Số lỗi chính tả từng bài — tính trễ sau khi danh sách đã hiện (nặng)
   const [spellCounts, setSpellCounts] = useState<Record<string, number>>({})
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<Filter>('all')
+  const [sort, setSort] = useState<SortKey>('new')
+  const [topicSeed, setTopicSeed] = useState(0)
 
   const load = async () => {
     try {
       setWritings(await CloudApi.listWritings())
     } catch (e) {
-      setError((e as Error).message)
+      setError(errText(e))
     } finally {
       setLoading(false)
     }
@@ -149,8 +231,8 @@ export default function WritingPage() {
     load()
   }, [])
 
-  // Đếm lỗi chính tả cho badge. Từ điển nspell dựng lần đầu khá tốn thời gian
-  // nên hoãn lại để danh sách hiện ra trước.
+  // Đếm lỗi chính tả cho nhãn cảnh báo. Từ điển nspell dựng lần đầu khá tốn
+  // thời gian nên hoãn lại để danh sách hiện ra trước.
   useEffect(() => {
     if (localStorage.getItem('spell_enabled') === '0' || writings.length === 0) {
       setSpellCounts({})
@@ -178,10 +260,86 @@ export default function WritingPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Xóa bài viết này?')) return
-    await CloudApi.deleteWriting(id)
-    if (sel === id) setSel(null)
-    load()
+    try {
+      await CloudApi.deleteWriting(id)
+      if (sel === id) setSel(null)
+      load()
+    } catch (e) {
+      setError(errText(e))
+    }
   }
+
+  // ---------- Chỉ số ----------
+  const stats = useMemo(() => {
+    const now = Date.now()
+    const week = writings.filter((w) => now - Date.parse(w.created_at) < 7 * DAY)
+    const totalWords = writings.reduce((s, w) => s + (w.word_count ?? 0), 0)
+    const weekWords = week.reduce((s, w) => s + (w.word_count ?? 0), 0)
+    const days = new Set<string>()
+    for (const w of writings) {
+      days.add(dayKey(w.created_at))
+      days.add(dayKey(w.updated_at))
+    }
+    const { now: streak, best } = streakOf(days)
+    const errWritings = writings.filter((w) => (spellCounts[w.id] ?? 0) > 0)
+    const errTotal = errWritings.reduce((s, w) => s + (spellCounts[w.id] ?? 0), 0)
+    return {
+      total: writings.length,
+      weekCount: week.length,
+      totalWords,
+      weekWords,
+      avgWords: writings.length ? Math.round(totalWords / writings.length) : 0,
+      streak,
+      best,
+      errTotal,
+      errDocs: errWritings.length,
+    }
+  }, [writings, spellCounts])
+
+  // ---------- Lọc + sắp xếp ----------
+  const counts = useMemo(() => {
+    const now = Date.now()
+    return {
+      all: writings.length,
+      week: writings.filter((w) => now - Date.parse(w.updated_at) < 7 * DAY).length,
+      err: writings.filter((w) => (spellCounts[w.id] ?? 0) > 0).length,
+      clean: writings.filter((w) => (spellCounts[w.id] ?? 0) === 0).length,
+    }
+  }, [writings, spellCounts])
+
+  const shown = useMemo(() => {
+    const kw = query.trim().toLowerCase()
+    const now = Date.now()
+    const list = writings.filter((w) => {
+      const bad = spellCounts[w.id] ?? 0
+      const okFilter =
+        filter === 'all' ||
+        (filter === 'week' && now - Date.parse(w.updated_at) < 7 * DAY) ||
+        (filter === 'err' && bad > 0) ||
+        (filter === 'clean' && bad === 0)
+      const okQuery =
+        !kw ||
+        (w.title ?? '').toLowerCase().includes(kw) ||
+        (w.content ?? '').toLowerCase().includes(kw) ||
+        (w.topic ?? '').toLowerCase().includes(kw)
+      return okFilter && okQuery
+    })
+    const by: Record<SortKey, (a: Writing, b: Writing) => number> = {
+      new: (a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at),
+      old: (a, b) => Date.parse(a.updated_at) - Date.parse(b.updated_at),
+      long: (a, b) => (b.word_count ?? 0) - (a.word_count ?? 0),
+      az: (a, b) => (a.title ?? '').localeCompare(b.title ?? '', 'en'),
+    }
+    return [...list].sort(by[sort])
+  }, [writings, spellCounts, query, filter, sort])
+
+  // 6 thẻ chủ đề, đổi bộ khác khi bấm "Đổi chủ đề khác"
+  const topics = useMemo(() => {
+    const start = (topicSeed * 3) % TOPIC_CARDS.length
+    return Array.from({ length: 6 }, (_, i) => TOPIC_CARDS[(start + i) % TOPIC_CARDS.length])
+  }, [topicSeed])
+
+  const filtering = query.trim() !== '' || filter !== 'all'
 
   // Trang soạn thảo (khi đã chọn / tạo bài)
   if (sel) {
@@ -201,11 +359,11 @@ export default function WritingPage() {
     )
   }
 
-  // Trang danh sách
+  // ---------------------------------------------------------------- Danh sách
   return (
     <div className="page write-page">
       <div className="write-head">
-        <div className="write-head-text">
+        <div>
           <h1>Bài viết</h1>
           <p>
             Luyện viết tiếng Anh với gợi ý từ, kiểm tra chính tả &amp; ngữ pháp theo thời gian
@@ -213,9 +371,6 @@ export default function WritingPage() {
           </p>
         </div>
         <div className="write-head-actions">
-          <button className="write-btn" onClick={() => openNew(randomPrompt())}>
-            <Icon name="shuffle" /> Gợi ý đề bài
-          </button>
           <button className="write-btn write-btn-primary" onClick={() => openNew(null)}>
             <Icon name="plus" /> Bài viết mới
           </button>
@@ -224,20 +379,134 @@ export default function WritingPage() {
 
       {error && <div className="write-alert">{error}</div>}
 
+      {/* ---------------------------------------------------------- Chỉ số */}
+      <section className="write-stats">
+        <div className="write-stat">
+          <span className="write-stat-top">
+            <span className="write-stat-label">Bài viết</span>
+            <Icon name="pen" />
+          </span>
+          <span className="write-stat-value">{stats.total}</span>
+          <span className="write-stat-sub">
+            {stats.weekCount > 0 ? `${stats.weekCount} bài trong tuần này` : 'Chưa có bài mới tuần này'}
+          </span>
+        </div>
+        <div className="write-stat">
+          <span className="write-stat-top">
+            <span className="write-stat-label">Tổng số từ</span>
+            <Icon name="type" />
+          </span>
+          <span className="write-stat-value">{stats.totalWords.toLocaleString('vi-VN')}</span>
+          <span className="write-stat-sub">
+            {stats.weekWords > 0 ? (
+              <>
+                <span className="write-delta">+{stats.weekWords.toLocaleString('vi-VN')}</span> từ ở
+                bài viết tuần này
+              </>
+            ) : (
+              `Trung bình ${stats.avgWords} từ mỗi bài`
+            )}
+          </span>
+        </div>
+        <div className="write-stat">
+          <span className="write-stat-top">
+            <span className="write-stat-label">Chuỗi ngày viết</span>
+            <Icon name="flame" />
+          </span>
+          <span className="write-stat-value">{stats.streak}</span>
+          <span className="write-stat-sub">
+            {stats.best > 0 ? `Kỷ lục ${stats.best} ngày` : 'Viết hôm nay để bắt đầu chuỗi'}
+          </span>
+        </div>
+        <div className="write-stat">
+          <span className="write-stat-top">
+            <span className="write-stat-label">Lỗi chưa sửa</span>
+            <Icon name="alert" />
+          </span>
+          <span className="write-stat-value">{stats.errTotal}</span>
+          <span className="write-stat-sub">
+            {stats.errTotal > 0 ? `Ở ${stats.errDocs} bài viết` : 'Không còn lỗi chính tả'}
+          </span>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------- Thanh lọc + tìm */}
+      {writings.length > 0 && (
+        <div className="write-toolbar">
+          <div className="write-search">
+            <Icon name="search" />
+            <input
+              className="write-input"
+              type="search"
+              placeholder="Tìm theo tiêu đề hoặc nội dung…"
+              aria-label="Tìm bài viết"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+          <div className="write-chipset">
+            {(
+              [
+                ['all', 'Tất cả'],
+                ['week', 'Tuần này'],
+                ['err', 'Có lỗi'],
+                ['clean', 'Không lỗi'],
+              ] as [Filter, string][]
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                className={filter === key ? 'write-chip is-active' : 'write-chip'}
+                onClick={() => setFilter(key)}
+              >
+                {label} <span className="write-chip-count">{counts[key]}</span>
+              </button>
+            ))}
+          </div>
+          <span className="write-spacer" />
+          <select
+            className="write-select"
+            aria-label="Sắp xếp"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+          >
+            <option value="new">Mới nhất</option>
+            <option value="old">Cũ nhất</option>
+            <option value="long">Dài nhất</option>
+            <option value="az">Theo tên A→Z</option>
+          </select>
+        </div>
+      )}
+
+      {/* --------------------------------------------------------- Danh sách */}
       {loading ? (
         <p className="write-loading">Đang tải bài viết…</p>
       ) : writings.length === 0 ? (
         <div className="write-empty">
-          <span className="write-empty-ico">
-            <Icon name="pen" />
-          </span>
-          <h2>Chưa có bài viết nào</h2>
+          <Icon name="pen" />
+          <b>Chưa có bài viết nào</b>
           <p>Bấm “Bài viết mới” hoặc chọn một chủ đề bên dưới để bắt đầu.</p>
+        </div>
+      ) : shown.length === 0 ? (
+        <div className="write-empty">
+          <Icon name="search" />
+          <b>Không tìm thấy bài viết nào</b>
+          <p>Thử từ khóa khác hoặc bỏ bớt bộ lọc đang chọn.</p>
+          <button
+            className="write-btn write-btn-sm"
+            style={{ marginTop: 12 }}
+            onClick={() => {
+              setQuery('')
+              setFilter('all')
+            }}
+          >
+            <Icon name="refresh" /> Xóa bộ lọc
+          </button>
         </div>
       ) : (
         <section className="write-list">
-          {writings.map((w) => {
+          {shown.map((w) => {
             const bad = spellCounts[w.id] ?? 0
+            const words = w.word_count ?? 0
             return (
               <div
                 key={w.id}
@@ -257,16 +526,31 @@ export default function WritingPage() {
                 </span>
                 <span className="write-row-main">
                   <span className="write-row-title">{w.title || '(chưa có tiêu đề)'}</span>
-                  <span className="write-row-sub">
-                    {previewOf(w.content) || 'Bài viết trống'}
+                  <span className="write-row-excerpt">
+                    {excerptOf(w.content) || 'Bài viết trống'}
+                  </span>
+                  <span className="write-row-meta">
+                    <span>{relTime(w.updated_at)}</span>
+                    <i className="write-sep" />
+                    <span>{words} từ</span>
+                    <i className="write-sep" />
+                    <span>{(w.content ?? '').length} ký tự</span>
+                    {w.topic && (
+                      <>
+                        <i className="write-sep" />
+                        <span>{w.topic}</span>
+                      </>
+                    )}
                   </span>
                 </span>
                 <span className="write-row-side">
-                  {w.topic && <span className="write-badge write-badge-accent">{w.topic}</span>}
-                  <span className="write-badge">{w.word_count} từ</span>
-                  {bad > 0 && (
-                    <span className="write-badge write-badge-warn">
-                      <Icon name="alert" /> {bad} lỗi chính tả
+                  {bad > 0 ? (
+                    <span className="write-badge write-badge-warn write-hide-sm">
+                      <Icon name="alert" /> {bad} lỗi
+                    </span>
+                  ) : (
+                    <span className="write-badge write-badge-ok write-hide-sm">
+                      <Icon name="check" /> Không lỗi
                     </span>
                   )}
                   <button
@@ -286,19 +570,158 @@ export default function WritingPage() {
         </section>
       )}
 
-      <h2 className="write-label">Chủ đề gợi ý</h2>
+      {/* ----------------------------------------------------- Chủ đề gợi ý */}
+      <div className="write-sec-head">
+        <h2 className="write-label">Chủ đề gợi ý</h2>
+        <button
+          className="write-btn write-btn-sm write-btn-ghost"
+          onClick={() => setTopicSeed((s) => s + 1)}
+        >
+          <Icon name="shuffle" /> Đổi chủ đề khác
+        </button>
+      </div>
       <section className="write-topics">
-        {TOPIC_CARDS.map((t) => (
+        {topics.map((t) => (
           <button key={t.label} className="write-topic" onClick={() => openNew(t)}>
-            <Icon name={t.icon} /> {t.label}
+            <Icon name={t.icon} />
+            <span>
+              <b>{t.label}</b>
+              <small>
+                {t.level} · {t.words}
+              </small>
+            </span>
           </button>
         ))}
       </section>
+
+      {filtering && shown.length > 0 && (
+        <p className="write-note" style={{ textAlign: 'center' }}>
+          Đang hiện {shown.length} / {writings.length} bài viết
+        </p>
+      )}
     </div>
   )
 }
 
-// ================= TRANG SOẠN THẢO =================
+// ================= MÀN SOẠN THẢO =================
+type PaneKey = 'spell' | 'grammar' | 'hint' | 'stats'
+
+interface ViewPrefs {
+  w: string // chiều rộng tờ giấy
+  f: string // kiểu chữ
+  s: string // cỡ chữ
+  l: string // giãn dòng
+}
+const VIEW_DEFAULT: ViewPrefs = { w: '768px', f: 'var(--font-sans)', s: '16.5px', l: '1.85' }
+const WIDTHS: [string, string][] = [
+  ['620px', 'Hẹp'],
+  ['768px', 'Vừa'],
+  ['940px', 'Rộng'],
+  ['100%', 'Tràn'],
+]
+const FONTS: [string, string, string][] = [
+  ['var(--font-sans)', 'Sans', 'write-f-sans'],
+  ['var(--font-serif)', 'Serif', 'write-f-serif'],
+  ['ui-monospace, Menlo, Consolas, monospace', 'Mono', 'write-f-mono'],
+]
+const SIZES: [string, number][] = [
+  ['15px', 12.5],
+  ['16.5px', 14],
+  ['18px', 15.5],
+  ['20px', 17],
+]
+const LINES: [string, string][] = [
+  ['1.6', 'Chặt'],
+  ['1.85', 'Vừa'],
+  ['2.1', 'Thoáng'],
+]
+
+// Toạ độ con trỏ trong ô nhập — dựng một bản sao ẩn của textarea rồi đo vị trí
+// ký tự tại con trỏ (textarea không cho hỏi trực tiếp).
+const MIRROR_PROPS = [
+  'boxSizing',
+  'width',
+  'paddingTop',
+  'paddingRight',
+  'paddingBottom',
+  'paddingLeft',
+  'borderTopWidth',
+  'borderRightWidth',
+  'borderBottomWidth',
+  'borderLeftWidth',
+  'fontFamily',
+  'fontSize',
+  'fontWeight',
+  'fontStyle',
+  'letterSpacing',
+  'lineHeight',
+  'wordSpacing',
+] as const
+
+function caretPoint(ta: HTMLTextAreaElement, pos: number): { left: number; top: number; lh: number } {
+  const cs = getComputedStyle(ta)
+  const mirror = document.createElement('div')
+  for (const prop of MIRROR_PROPS) {
+    mirror.style.setProperty(
+      prop.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`),
+      cs.getPropertyValue(prop.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)),
+    )
+  }
+  mirror.style.position = 'absolute'
+  mirror.style.top = '0'
+  mirror.style.left = '-9999px'
+  mirror.style.visibility = 'hidden'
+  mirror.style.whiteSpace = 'pre-wrap'
+  mirror.style.overflowWrap = 'break-word'
+  mirror.style.height = 'auto'
+  mirror.textContent = ta.value.slice(0, pos)
+  const marker = document.createElement('span')
+  marker.textContent = ta.value.slice(pos) || '.'
+  mirror.appendChild(marker)
+  document.body.appendChild(mirror)
+  const left = marker.offsetLeft
+  const top = marker.offsetTop
+  document.body.removeChild(mirror)
+  const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.6
+  const r = ta.getBoundingClientRect()
+  return { left: r.left + left - ta.scrollLeft, top: r.top + top - ta.scrollTop, lh }
+}
+
+// Icon của thanh định dạng — vẽ thẳng theo mockup (bộ Icon chung không có)
+const FMT_ICONS = {
+  bullet: (
+    <svg className="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <path d="M9 6.5h11M9 12h11M9 17.5h11" />
+      <circle cx="4.6" cy="6.5" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="4.6" cy="12" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="4.6" cy="17.5" r="1.15" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  number: (
+    <svg className="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <path d="M9.5 6.5h11M9.5 12h11M9.5 17.5h11" />
+      <path d="M3 4.6h1.4v3.8M2.6 8.4h2.6" strokeWidth="1.4" />
+      <path d="M2.6 10.9h2.2l-2.2 3h2.4M2.6 16.2h2.2l-1.3 1.5h.3a1.1 1.1 0 1 1-.9 1.7" strokeWidth="1.4" />
+    </svg>
+  ),
+  quote: (
+    <svg className="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <path d="M4 5.2v13.6" />
+      <path d="M9 8h11M9 12h8M9 16h11" />
+    </svg>
+  ),
+}
+
+function loadView(): ViewPrefs {
+  try {
+    const raw = localStorage.getItem('write_view')
+    if (raw) return { ...VIEW_DEFAULT, ...(JSON.parse(raw) as Partial<ViewPrefs>) }
+  } catch {
+    /* dữ liệu hỏng -> dùng mặc định */
+  }
+  return VIEW_DEFAULT
+}
+
 function Editor({
   writing,
   initial,
@@ -325,22 +748,66 @@ function Editor({
   const [spellVersion, setSpellVersion] = useState(0)
   const [grammar, setGrammar] = useState<GrammarMatch[]>([])
   const [grammarChecking, setGrammarChecking] = useState(false)
+  const [skipped, setSkipped] = useState<Set<string>>(new Set())
 
-  const suggestEnabled = localStorage.getItem('suggest_enabled') !== '0'
+  const narrow = useIsNarrow()
+  const { theme, toggle } = useTheme()
+  // Trên màn rộng panel mở sẵn; trên mobile là bottom sheet nên đóng sẵn
+  const [panelOpen, setPanelOpen] = useState(!narrow)
+  const [pane, setPane] = useState<PaneKey>('spell')
+  const [popView, setPopView] = useState(false)
+  const [view, setView] = useState<ViewPrefs>(loadView)
+
+  const [suggestOn, setSuggestOn] = useState(localStorage.getItem('suggest_enabled') !== '0')
+  // Bảng gợi ý nổi ngay dưới con trỏ (như mockup) — chỉ khi ô viết đang focus
+  const [ghost, setGhost] = useState<{ left: number; top: number } | null>(null)
+  const [ghostIdx, setGhostIdx] = useState(0)
+  const [focused, setFocused] = useState(false)
   const spellEnabled = localStorage.getItem('spell_enabled') !== '0'
   const grammarEnabled = localStorage.getItem('grammar_enabled') !== '0'
   const taRef = useRef<HTMLTextAreaElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
   const pendingCaret = useRef<number | null>(null)
+  const pendingSel = useRef<{ start: number; end: number } | null>(null)
+  const composing = useRef(false)
+
+  useEffect(() => {
+    setPanelOpen(!narrow)
+  }, [narrow])
+
+  useEffect(() => {
+    localStorage.setItem('write_view', JSON.stringify(view))
+  }, [view])
 
   // Gợi ý từ
   useEffect(() => {
-    if (!suggestEnabled) {
+    if (!suggestOn) {
       setSuggestions([])
       return
     }
     setSuggestions(suggest(content.slice(0, caret)))
-  }, [content, caret, suggestEnabled])
+  }, [content, caret, suggestOn])
+
+  // Đặt bảng gợi ý ngay dưới con trỏ, lùi vào trong nếu chạm mép phải màn hình
+  useEffect(() => {
+    const ta = taRef.current
+    if (!suggestOn || !focused || suggestions.length === 0 || !ta) {
+      setGhost(null)
+      return
+    }
+    const pt = caretPoint(ta, caret)
+    const box = ta.getBoundingClientRect()
+    // Con trỏ cuộn ra ngoài vùng nhìn thấy thì không hiện
+    if (pt.top < box.top - 8 || pt.top > box.bottom - 4) {
+      setGhost(null)
+      return
+    }
+    setGhost({
+      left: Math.min(pt.left, window.innerWidth - 190),
+      top: Math.min(pt.top + pt.lh + 4, window.innerHeight - 160),
+    })
+    setGhostIdx(0)
+  }, [suggestions, caret, suggestOn, focused])
 
   // Chính tả (debounce 350ms)
   useEffect(() => {
@@ -353,7 +820,7 @@ function Editor({
       const uniq = [...new Set(tokenizeWords(content))]
       const bad = uniq.filter((t) => isMisspelled(t))
       setBadSet(new Set(bad.map((w) => w.toLowerCase())))
-      setSpellList(bad.slice(0, 6).map((w) => ({ word: w, suggestions: suggestFix(w, 3) })))
+      setSpellList(bad.slice(0, 20).map((w) => ({ word: w, suggestions: suggestFix(w, 3) })))
     }, 350)
     return () => clearTimeout(handle)
   }, [content, spellEnabled, spellVersion])
@@ -364,7 +831,6 @@ function Editor({
       setGrammar([])
       return
     }
-    // Luật cục bộ: chạy tức thì để không phải chờ mạng
     const local = checkLocalGrammar(content)
     setGrammar(local)
     setGrammarChecking(true)
@@ -376,7 +842,6 @@ function Editor({
     return () => clearTimeout(handle)
   }, [content, grammarEnabled])
 
-  // Bấm "Kiểm tra ngay" — không đợi hết debounce
   const runGrammarNow = async () => {
     if (!content.trim() || grammarChecking) return
     setGrammarChecking(true)
@@ -386,6 +851,12 @@ function Editor({
     setGrammarChecking(false)
   }
 
+  const grammarShown = useMemo(
+    () => grammar.filter((m) => !skipped.has(`${m.offset}:${m.errorText}`)),
+    [grammar, skipped],
+  )
+
+  // Lớp phủ dưới ô nhập: gạch chân sóng đỏ cho lỗi chính tả
   const highlighted = useMemo<ReactNode[]>(() => {
     if (!spellEnabled || badSet.size === 0) return [content]
     return content.split(/([\p{L}\p{M}']+)/u).map((part, i) =>
@@ -400,12 +871,22 @@ function Editor({
   }, [content, badSet, spellEnabled])
 
   useEffect(() => {
-    if (pendingCaret.current != null && taRef.current) {
+    const ta = taRef.current
+    if (!ta) return
+    if (pendingCaret.current != null) {
       const pos = pendingCaret.current
-      taRef.current.focus()
-      taRef.current.setSelectionRange(pos, pos)
+      ta.focus()
+      ta.setSelectionRange(pos, pos)
       setCaret(pos)
       pendingCaret.current = null
+    }
+    // Sau khi bấm nút định dạng: chọn lại đúng đoạn vừa bọc để gõ đè được ngay
+    if (pendingSel.current) {
+      const { start, end } = pendingSel.current
+      ta.focus()
+      ta.setSelectionRange(start, end)
+      setCaret(end)
+      pendingSel.current = null
     }
   }, [content])
 
@@ -419,6 +900,57 @@ function Editor({
     }
   }
 
+  // ---------- Thanh định dạng ----------
+  // Bài viết lưu dạng VĂN BẢN THUẦN nên định dạng dùng ký hiệu Markdown:
+  // **đậm** · *nghiêng* · _gạch chân_ · "- " danh sách · "1. " đánh số · "> " trích dẫn.
+  const applyToSelection = (fn: (sel: string) => { text: string; start: number; end: number }) => {
+    const ta = taRef.current
+    if (!ta) return
+    const s = ta.selectionStart
+    const e = ta.selectionEnd
+    const { text, start, end } = fn(content.slice(s, e))
+    const next = content.slice(0, s) + text + content.slice(e)
+    pendingSel.current = { start: s + start, end: s + end }
+    setContent(next)
+  }
+  const wrapWith = (mark: string, placeholder: string) => {
+    const ta = taRef.current
+    if (!ta) return
+    const s = ta.selectionStart
+    const e = ta.selectionEnd
+    const sel = content.slice(s, e)
+    const m = mark.length
+    // Dấu bọc nằm NGAY NGOÀI vùng chọn (vừa bấm xong, đang chọn phần bên trong)
+    // -> bấm lần nữa là gỡ. Với "*" phải chắc đó không phải nửa của "**" (đậm).
+    const italicInsideBold =
+      mark === '*' && (content.slice(s - 2, s) === '**' || content.slice(e, e + 2) === '**')
+    if (content.slice(s - m, s) === mark && content.slice(e, e + m) === mark && !italicInsideBold) {
+      setContent(content.slice(0, s - m) + sel + content.slice(e + m))
+      pendingSel.current = { start: s - m, end: e - m }
+      return
+    }
+    applyToSelection((text) => {
+      // Chính vùng chọn đang mang dấu bọc -> gỡ
+      if (text.startsWith(mark) && text.endsWith(mark) && text.length > m * 2) {
+        const inner = text.slice(m, -m)
+        return { text: inner, start: 0, end: inner.length }
+      }
+      const body = text || placeholder
+      return { text: `${mark}${body}${mark}`, start: m, end: m + body.length }
+    })
+  }
+  const prefixLines = (make: (i: number) => string) =>
+    applyToSelection((sel) => {
+      const lines = (sel || '').split('\n')
+      const out = lines
+        .map((l, i) => {
+          const bare = l.replace(/^(\s*)([-*]\s+|\d+\.\s+|>\s+)/, '$1')
+          return bare.trim() ? bare.replace(/^(\s*)/, `$1${make(i)}`) : bare
+        })
+        .join('\n')
+      return { text: out, start: 0, end: out.length }
+    })
+
   const accept = (s: Suggestion) => {
     const before = content.slice(0, caret)
     const after = content.slice(caret)
@@ -429,9 +961,26 @@ function Editor({
     setContent(newBefore + after)
   }
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Tab' && suggestions.length > 0) {
+    if (composing.current || (e.nativeEvent as unknown as { isComposing?: boolean }).isComposing) {
+      return
+    }
+    const list = suggestions.slice(0, 5)
+    if (e.key === 'Tab' && list.length > 0) {
       e.preventDefault()
-      accept(suggestions[0])
+      accept(list[ghost ? ghostIdx : 0])
+      setGhost(null)
+      return
+    }
+    if (!ghost || list.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setGhostIdx((i) => (i + 1) % list.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setGhostIdx((i) => (i - 1 + list.length) % list.length)
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      setGhost(null)
     }
   }
 
@@ -452,7 +1001,7 @@ function Editor({
   const fixAllGrammar = () => {
     setContent((c) => {
       let out = c
-      const items = grammar
+      const items = grammarShown
         .filter((m) => m.replacements.length > 0)
         .sort((a, b) => b.offset - a.offset)
       for (const m of items) {
@@ -463,7 +1012,7 @@ function Editor({
       return out
     })
   }
-  const fixableCount = grammar.filter((m) => m.replacements.length > 0).length
+  const fixableCount = grammarShown.filter((m) => m.replacements.length > 0).length
 
   // Nội dung đã lưu lần cuối — để autosave biết có thay đổi hay không
   const lastSaved = useRef({
@@ -471,7 +1020,7 @@ function Editor({
     topic: writing?.topic ?? '',
     content: writing?.content ?? '',
   })
-  const savingRef = useRef(false) // chặn 2 lượt lưu chạy song song (tránh tạo trùng bài)
+  const savingRef = useRef(false) // chặn 2 lượt lưu song song (tránh tạo trùng bài)
 
   const save = async (e?: FormEvent, auto = false) => {
     e?.preventDefault()
@@ -488,264 +1037,817 @@ function Editor({
         setId(created.id)
       }
       lastSaved.current = { title, topic, content }
-      setSavedAt(`${new Date().toLocaleTimeString('vi-VN')}${auto ? ' · tự động' : ''}`)
+      setSavedAt(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }))
     } catch (err) {
       // Autosave lỗi (mất mạng…) thì im lặng, lần gõ tiếp theo sẽ thử lại
-      if (!auto) setError((err as Error).message)
+      if (!auto) setError(errText(err))
     } finally {
       savingRef.current = false
       setSaving(false)
     }
   }
 
-  // Ctrl+S (hoặc Cmd+S trên Mac) để lưu nhanh những gì đã nhập
+  const dirty =
+    title !== lastSaved.current.title ||
+    topic !== lastSaved.current.topic ||
+    content !== lastSaved.current.content
+
+  // TỰ ĐỘNG LƯU NHÁP: ngừng gõ 2.5s và có thay đổi -> lưu ngầm
   const saveRef = useRef(save)
   saveRef.current = save
+  useEffect(() => {
+    if (!dirty || (!title.trim() && !content.trim())) return
+    const h = setTimeout(() => void saveRef.current(undefined, true), 2500)
+    return () => clearTimeout(h)
+  }, [title, topic, content, dirty])
+
+  // Phím tắt định dạng gọi lại hàm mới nhất mà không phải gắn lại listener
+  const fmtRef = useRef((k: string) => {
+    if (k === 'b') wrapWith('**', 'đậm')
+    else if (k === 'i') wrapWith('*', 'nghiêng')
+    else wrapWith('_', 'gạch chân')
+  })
+  fmtRef.current = (k: string) => {
+    if (k === 'b') wrapWith('**', 'đậm')
+    else if (k === 'i') wrapWith('*', 'nghiêng')
+    else wrapWith('_', 'gạch chân')
+  }
+
+  const exit = useCallback(() => {
+    if (popView) {
+      setPopView(false)
+      return
+    }
+    if (narrow && panelOpen) {
+      setPanelOpen(false)
+      return
+    }
+    onBack()
+  }, [popView, narrow, panelOpen, onBack])
+
+  // Phím tắt: Ctrl+S lưu · Ctrl+J ẩn/hiện trợ lý · Esc thoát
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
         e.preventDefault()
         void saveRef.current()
+        return
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'j' || e.key === 'J')) {
+        e.preventDefault()
+        setPanelOpen((v) => !v)
+        return
+      }
+      // Định dạng chỉ áp dụng khi con trỏ đang ở trong ô viết
+      if ((e.ctrlKey || e.metaKey) && document.activeElement === taRef.current) {
+        const k = e.key.toLowerCase()
+        if (k === 'b' || k === 'i' || k === 'u') {
+          e.preventDefault()
+          fmtRef.current(k)
+          return
+        }
+      }
+      if (e.key === 'Escape') {
+        // Đang gõ giữa bài thì Esc chỉ đóng bảng đang mở, không thoát đột ngột
+        const inDoc = document.activeElement === taRef.current
+        if (inDoc && !popView) return
+        e.preventDefault()
+        exit()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
-
-  // TỰ ĐỘNG LƯU NHÁP: ngừng gõ 2.5s và có thay đổi -> lưu ngầm (không cần Ctrl+S)
-  useEffect(() => {
-    const changed =
-      title !== lastSaved.current.title ||
-      topic !== lastSaved.current.topic ||
-      content !== lastSaved.current.content
-    if (!changed || (!title.trim() && !content.trim())) return
-    const h = setTimeout(() => void saveRef.current(undefined, true), 2500)
-    return () => clearTimeout(h)
-  }, [title, topic, content])
-
-  // Chọn ngẫu nhiên 1 đề bài (khác đề đang hiện) -> điền chủ đề + tiêu đề
-  const rollPrompt = () => {
-    const p = randomPrompt(title)
-    setTitle(p.title)
-    setTopic(p.topic)
-  }
+  }, [exit, popView])
 
   const typeLabel: Record<Suggestion['type'], string> = {
     auto: 'gợi ý',
-    nextword: 'tiếp theo',
+    nextword: 'từ tiếp theo',
     synonym: 'đồng nghĩa',
   }
 
-  return (
-    <form className="page write-editor" onSubmit={save}>
-      <button type="button" className="write-crumb" onClick={onBack}>
-        <Icon name="left" /> Danh sách bài viết
-      </button>
+  // ---------- Thống kê bài viết ----------
+  const stats = useMemo(() => {
+    const words = countWords(content)
+    const sentences = (content.match(/[^.!?]+[.!?]+/g) ?? []).filter((s) => s.trim()).length
+    const longWords = (content.match(/[A-Za-z]{7,}/g) ?? []).length
+    const avg = sentences ? Math.round(words / sentences) : words
+    const longPct = words ? longWords / words : 0
+    const level =
+      words < 30 ? '—' : avg >= 20 && longPct > 0.2 ? 'B2+' : avg >= 15 ? 'B1' : avg >= 10 ? 'A2' : 'A1'
+    return {
+      words,
+      chars: content.length,
+      sentences,
+      avg,
+      longWords,
+      level,
+      read: Math.max(1, Math.round(words / 200)),
+      goalPct: Math.min(100, Math.round((words / 250) * 100)),
+    }
+  }, [content])
 
-      <div className="write-ehead">
+  const issueCount = spellList.length + grammarShown.length
+  const saveClass = saving ? 'write-save is-saving' : dirty ? 'write-save is-dirty' : 'write-save'
+
+  return (
+    <form
+      className={panelOpen ? 'write-ed' : 'write-ed is-collapsed'}
+      onSubmit={save}
+      style={
+        {
+          '--w-sheet': view.w,
+          '--w-font': view.f,
+          '--w-size': view.s,
+          '--w-lh': view.l,
+        } as React.CSSProperties
+      }
+    >
+      {/* ------------------------------------------------------ Thanh trên */}
+      <header className="write-ed-bar">
+        <button
+          type="button"
+          className="write-ibtn write-ed-exit"
+          onClick={onBack}
+          title="Thoát (Esc)"
+          aria-label="Thoát, về danh sách bài viết"
+        >
+          <Icon name="x" />
+        </button>
+
         <input
-          className="write-title"
+          className="write-ed-title"
           placeholder="Tiêu đề bài viết…"
+          aria-label="Tiêu đề bài viết"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <span className="write-count">
-          {countWords(content)} từ · {content.length} ký tự
-          {savedAt && ` · đã lưu ${savedAt}`}
+
+        <span className={saveClass}>
+          <i />
+          <span>{saving ? 'Đang lưu…' : dirty ? 'Chưa lưu' : savedAt ? `Đã lưu ${savedAt}` : 'Bản nháp'}</span>
         </span>
+
+        <span className="write-bar-break" aria-hidden="true" />
+        <span className="write-vsep write-wide-only" />
+
+        <div className="write-fmt write-wide-only" role="toolbar" aria-label="Định dạng">
+          <button
+            type="button"
+            onClick={() => wrapWith('**', 'đậm')}
+            title="Đậm (Ctrl+B) — bọc **…**"
+            aria-label="Đậm"
+          >
+            <span className="write-fmt-txt">B</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => wrapWith('*', 'nghiêng')}
+            title="Nghiêng (Ctrl+I) — bọc *…*"
+            aria-label="Nghiêng"
+          >
+            <span className="write-fmt-txt is-i">I</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => wrapWith('_', 'gạch chân')}
+            title="Gạch chân (Ctrl+U) — bọc _…_"
+            aria-label="Gạch chân"
+          >
+            <span className="write-fmt-txt is-u">U</span>
+          </button>
+          <span className="write-fmt-sep" />
+          <button
+            type="button"
+            onClick={() => prefixLines(() => '- ')}
+            title="Danh sách chấm"
+            aria-label="Danh sách chấm"
+          >
+            {FMT_ICONS.bullet}
+          </button>
+          <button
+            type="button"
+            onClick={() => prefixLines((i) => `${i + 1}. `)}
+            title="Danh sách số"
+            aria-label="Danh sách số"
+          >
+            {FMT_ICONS.number}
+          </button>
+          <button
+            type="button"
+            onClick={() => prefixLines(() => '> ')}
+            title="Trích dẫn"
+            aria-label="Trích dẫn"
+          >
+            {FMT_ICONS.quote}
+          </button>
+        </div>
+
+        <span className="write-spacer" />
+
+        <span className="write-badge write-wide-only">
+          {stats.words} từ · {stats.chars} ký tự
+        </span>
+
+        <span className="write-ed-tools">
+          <button
+            type="button"
+            className="write-ibtn"
+            onClick={toggle}
+            title={theme === 'dark' ? 'Chuyển giao diện sáng' : 'Chuyển giao diện tối'}
+            aria-label="Đổi giao diện"
+          >
+            <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+          </button>
+          <button
+            type="button"
+            className="write-ibtn"
+            onClick={() => setPopView((v) => !v)}
+            title="Tùy chọn hiển thị"
+            aria-expanded={popView}
+          >
+            <Icon name="type" />
+          </button>
+          <button
+            type="button"
+            className="write-ibtn"
+            onClick={() => setPanelOpen((v) => !v)}
+            title="Ẩn / hiện trợ lý (Ctrl+J)"
+            aria-label="Ẩn hiện trợ lý"
+          >
+            <Icon name="sparkle" />
+          </button>
+          {onDelete && (
+            <button
+              type="button"
+              className="write-btn write-btn-sm write-btn-danger write-btn-icon"
+              onClick={onDelete}
+              title="Xóa bài viết"
+            >
+              <Icon name="trash" />
+            </button>
+          )}
+        </span>
+
         <button
-          className="write-btn write-btn-primary"
+          className="write-btn write-btn-sm write-btn-primary"
           type="submit"
           disabled={saving}
           title="Lưu (Ctrl+S)"
         >
-          <Icon name="save" /> {saving ? 'Đang lưu…' : 'Lưu'}
+          <Icon name="save" /> Lưu
         </button>
-        {onDelete && (
-          <button
-            type="button"
-            className="write-btn write-btn-icon write-btn-danger"
-            onClick={onDelete}
-            title="Xóa bài viết"
-          >
-            <Icon name="trash" />
-          </button>
-        )}
-      </div>
+      </header>
 
-      {/* Chủ đề bài viết + gợi ý đề ngẫu nhiên */}
-      <div className="write-meta">
-        <input
-          className="write-input"
-          placeholder="Chủ đề (tùy chọn)…"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          list="writing-topics"
-        />
-        <datalist id="writing-topics">
-          {TOPIC_OPTIONS.map((t) => (
-            <option key={t} value={t} />
-          ))}
-        </datalist>
-        <button
-          type="button"
-          className="write-btn write-btn-sm"
-          onClick={rollPrompt}
-          title="Lấy đề bài ngẫu nhiên"
-        >
-          <Icon name="shuffle" /> Gợi ý đề bài
-        </button>
-      </div>
+      {/* --------------------------------------------- Bảng tùy chọn hiển thị */}
+      {popView && (
+        <div className="write-pop" role="dialog" aria-label="Tùy chọn hiển thị">
+          <div className="write-pop-title">Hiển thị</div>
 
-      {error && <div className="write-alert">{error}</div>}
-
-      <div className="write-ta-wrap">
-        <div className="write-backdrop" ref={backdropRef} aria-hidden="true">
-          {highlighted}
-          {'\n'}
-        </div>
-        <textarea
-          ref={taRef}
-          className="write-textarea"
-          placeholder="Viết bằng tiếng Anh… (gõ để nhận gợi ý; nhấn Tab để chèn gợi ý đầu tiên)"
-          spellCheck={false}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          data-lpignore="true"
-          data-form-type="other"
-          name="write-content"
-          value={content}
-          onChange={(e) => {
-            setContent(e.target.value)
-            setCaret(e.target.selectionStart)
-          }}
-          onKeyUp={syncCaret}
-          onClick={syncCaret}
-          onKeyDown={onKeyDown}
-          onScroll={syncScroll}
-        />
-      </div>
-
-      {/* ---------- Thanh trợ lý ---------- */}
-      <div className="write-assist">
-        {spellEnabled && spellList.length > 0 && (
-          <div className="write-arow">
-            <span className="write-alabel">
-              <Icon name="type" /> Chính tả
-            </span>
-            {spellList.map((item) => (
-              <span className="write-aitem" key={item.word}>
-                <span className="write-bad">{item.word}</span>
-                <Icon name="right" />
-                {item.suggestions.length > 0 ? (
-                  item.suggestions.map((sug) => (
-                    <button
-                      type="button"
-                      key={sug}
-                      className="write-fix"
-                      onClick={() => fixWord(item.word, sug)}
-                    >
-                      {sug}
-                    </button>
-                  ))
-                ) : (
-                  <span className="write-ahint">(không có gợi ý)</span>
-                )}
+          <div className="write-pop-row">
+            <div className="write-pop-lab">
+              <span>Chiều rộng vùng viết</span>
+              <b>{WIDTHS.find(([v]) => v === view.w)?.[1] ?? 'Vừa'}</b>
+            </div>
+            <div className="write-seg">
+              {WIDTHS.map(([val, name]) => (
                 <button
                   type="button"
-                  className="write-btn write-btn-sm write-btn-ghost"
-                  title="Bỏ qua từ này (thêm vào từ điển cá nhân)"
-                  onClick={() => ignore(item.word)}
+                  key={val}
+                  className={view.w === val ? 'is-active' : ''}
+                  onClick={() => setView((v) => ({ ...v, w: val }))}
                 >
-                  Bỏ qua
+                  {name}
                 </button>
-              </span>
-            ))}
+              ))}
+            </div>
           </div>
-        )}
 
-        <div className="write-arow">
-          <span className="write-alabel">
-            <Icon name="sparkle" /> Gợi ý
-          </span>
-          {suggestEnabled && suggestions.length > 0 ? (
-            suggestions.map((s, i) => (
-              <button
-                type="button"
-                key={s.text + i}
-                className={`write-chip ${s.type}`}
-                onClick={() => accept(s)}
-              >
-                {s.text}
-                <small>{typeLabel[s.type]}</small>
-              </button>
-            ))
-          ) : (
-            <span className="write-ahint">
-              {suggestEnabled
-                ? 'Gõ tiếng Anh để nhận gợi ý từ tiếp theo…'
-                : 'Đã tắt gợi ý (bật lại ở Cài đặt)'}
-            </span>
-          )}
-        </div>
-
-        <div className="write-arow">
-          <span className="write-alabel">
-            <Icon name="target" /> Kiểm tra câu
-          </span>
-          {!grammarEnabled ? (
-            <span className="write-ahint">Đã tắt kiểm tra câu (bật lại ở Cài đặt)</span>
-          ) : grammar.length === 0 ? (
-            <span className="write-ahint">
-              {grammarChecking ? 'Đang kiểm tra…' : 'Ngữ pháp, văn phong, dùng từ, collocation'}
-            </span>
-          ) : (
-            grammar.map((m, idx) => (
-              <span className="write-aitem" key={idx}>
-                <span className="write-gerr" title={m.message}>
-                  {m.errorText || '⚠'}
-                </span>
-                <Icon name="right" />
-                {m.replacements.length > 0 ? (
-                  m.replacements.map((rep) => (
-                    <button
-                      type="button"
-                      key={rep}
-                      className="write-fix"
-                      title={m.message}
-                      onClick={() => applyGrammar(m, rep)}
-                    >
-                      {rep}
-                    </button>
-                  ))
-                ) : (
-                  <span className="write-ginfo" title={m.message}>
-                    ⓘ
-                  </span>
-                )}
-              </span>
-            ))
-          )}
-          {grammarEnabled && (
-            <>
-              <div className="write-spacer" />
-              {fixableCount > 1 && (
-                <button type="button" className="write-btn write-btn-sm" onClick={fixAllGrammar}>
-                  <Icon name="check" /> Sửa tất cả ({fixableCount})
+          <div className="write-pop-row">
+            <div className="write-pop-lab">
+              <span>Kiểu chữ</span>
+              <b>{FONTS.find(([v]) => v === view.f)?.[1] ?? 'Sans'}</b>
+            </div>
+            <div className="write-seg">
+              {FONTS.map(([val, name, cls]) => (
+                <button
+                  type="button"
+                  key={name}
+                  className={view.f === val ? `${cls} is-active` : cls}
+                  onClick={() => setView((v) => ({ ...v, f: val }))}
+                >
+                  {name}
                 </button>
-              )}
+              ))}
+            </div>
+          </div>
+
+          <div className="write-pop-row">
+            <div className="write-pop-lab">
+              <span>Cỡ chữ</span>
+              <b>{view.s}</b>
+            </div>
+            <div className="write-seg">
+              {SIZES.map(([val, px]) => (
+                <button
+                  type="button"
+                  key={val}
+                  style={{ fontSize: px }}
+                  className={view.s === val ? 'is-active' : ''}
+                  onClick={() => setView((v) => ({ ...v, s: val }))}
+                >
+                  A
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="write-pop-row">
+            <div className="write-pop-lab">
+              <span>Giãn dòng</span>
+              <b>{view.l}</b>
+            </div>
+            <div className="write-seg">
+              {LINES.map(([val, name]) => (
+                <button
+                  type="button"
+                  key={val}
+                  className={view.l === val ? 'is-active' : ''}
+                  onClick={() => setView((v) => ({ ...v, l: val }))}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="write-pop-foot">
+            <button
+              type="button"
+              className="write-btn write-btn-sm"
+              onClick={() => setView(VIEW_DEFAULT)}
+            >
+              <Icon name="refresh" /> Mặc định
+            </button>
+            <span className="write-spacer" />
+            <button
+              type="button"
+              className="write-btn write-btn-sm write-btn-ghost"
+              onClick={() => setPopView(false)}
+            >
+              Xong
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="write-ed-body">
+        {/* --------------------------------------------------- Vùng soạn thảo */}
+        <div className="write-stage">
+          <div className="write-sheet">
+            <div className="write-prompt">
+              <Icon name="target" />
+              <input
+                className="write-input"
+                placeholder="Chủ đề (tùy chọn)…"
+                aria-label="Chủ đề"
+                list="writing-topics"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+              />
+              <datalist id="writing-topics">
+                {TOPIC_OPTIONS.map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
+            </div>
+
+            {error && <div className="write-alert">{error}</div>}
+
+            <div className="write-doc">
+              <div className="write-paper write-backdrop" ref={backdropRef} aria-hidden="true">
+                {highlighted}
+                {'\n'}
+              </div>
+              <textarea
+                ref={taRef}
+                className="write-paper write-textarea"
+                placeholder="Bắt đầu viết bằng tiếng Anh…"
+                spellCheck={false}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                data-lpignore="true"
+                data-form-type="other"
+                name="write-content"
+                aria-label="Nội dung bài viết"
+                value={content}
+                onChange={(e) => {
+                  setContent(e.target.value)
+                  setCaret(e.target.selectionStart)
+                }}
+                onCompositionStart={() => {
+                  composing.current = true
+                }}
+                onCompositionEnd={() => {
+                  composing.current = false
+                }}
+                onKeyUp={syncCaret}
+                onClick={syncCaret}
+                onKeyDown={onKeyDown}
+                onScroll={(e) => {
+                  syncScroll(e)
+                  setGhost(null)
+                }}
+                onFocus={() => setFocused(true)}
+                onBlur={() => {
+                  setFocused(false)
+                  setTimeout(() => setGhost(null), 120)
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ------------------------------------------------------ Trợ lý viết */}
+        {panelOpen && (
+          <aside className="write-panel" aria-label="Trợ lý viết">
+            <span className="write-grab" aria-hidden="true" />
+            <div className="write-pn-tabs" role="tablist">
               <button
                 type="button"
-                className="write-btn write-btn-sm"
-                onClick={runGrammarNow}
-                disabled={grammarChecking || !content.trim()}
+                className="write-ibtn write-pn-close"
+                onClick={() => setPanelOpen(false)}
+                aria-label="Đóng trợ lý"
               >
-                <Icon name="refresh" /> {grammarChecking ? 'Đang kiểm tra…' : 'Kiểm tra ngay'}
+                <Icon name="x" />
               </button>
-            </>
-          )}
+              <button
+                type="button"
+                role="tab"
+                className={pane === 'spell' ? 'is-active' : ''}
+                onClick={() => setPane('spell')}
+              >
+                Chính tả
+                {spellList.length > 0 && <span className="write-pn-count">{spellList.length}</span>}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                className={pane === 'grammar' ? 'is-active' : ''}
+                onClick={() => setPane('grammar')}
+              >
+                Câu
+                {grammarShown.length > 0 && (
+                  <span className="write-pn-count">{grammarShown.length}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                className={pane === 'hint' ? 'is-active' : ''}
+                onClick={() => setPane('hint')}
+              >
+                Gợi ý
+              </button>
+              <button
+                type="button"
+                role="tab"
+                className={pane === 'stats' ? 'is-active' : ''}
+                onClick={() => setPane('stats')}
+              >
+                Thống kê
+              </button>
+            </div>
+
+            <div className="write-pn-body">
+              {/* ---------- Chính tả ---------- */}
+              {pane === 'spell' &&
+                (!spellEnabled ? (
+                  <div className="write-off">
+                    <Icon name="type" />
+                    <b>Kiểm tra chính tả đang tắt</b>
+                    <p>Bật lại trong Cài đặt để thấy từ sai được gạch chân ngay khi gõ.</p>
+                  </div>
+                ) : spellList.length === 0 ? (
+                  <div className="write-off">
+                    <Icon name="check" />
+                    <b>Không còn lỗi chính tả</b>
+                    <p>Toàn bộ từ trong bài đều nằm trong từ điển.</p>
+                  </div>
+                ) : (
+                  spellList.map((item, i) => (
+                    <div className="write-issue" key={item.word}>
+                      <div className="write-issue-top">
+                        <span className="write-badge write-badge-err write-badge-dot">
+                          Sai chính tả
+                        </span>
+                        <span className="write-spacer" />
+                        <span className="write-issue-kind">Lỗi {i + 1}</span>
+                      </div>
+                      <div className="write-issue-txt">
+                        <span className="write-bad">{item.word}</span>
+                      </div>
+                      <div className="write-fix-row">
+                        {item.suggestions.length > 0 ? (
+                          item.suggestions.map((sug) => (
+                            <button
+                              type="button"
+                              key={sug}
+                              className="write-fix"
+                              onClick={() => fixWord(item.word, sug)}
+                            >
+                              {sug}
+                            </button>
+                          ))
+                        ) : (
+                          <span className="write-issue-kind">Không có gợi ý</span>
+                        )}
+                        <button
+                          type="button"
+                          className="write-skip"
+                          title="Thêm vào từ điển cá nhân"
+                          onClick={() => ignore(item.word)}
+                        >
+                          Bỏ qua
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ))}
+
+              {/* ---------- Câu / ngữ pháp ---------- */}
+              {pane === 'grammar' &&
+                (!grammarEnabled ? (
+                  <div className="write-off">
+                    <Icon name="target" />
+                    <b>Kiểm tra câu đang tắt</b>
+                    <p>Bật lại trong Cài đặt để nhận góp ý về ngữ pháp, văn phong và collocation.</p>
+                  </div>
+                ) : (
+                  <>
+                    {grammarShown.length === 0 ? (
+                      <div className="write-off">
+                        <Icon name={grammarChecking ? 'refresh' : 'check'} />
+                        <b>{grammarChecking ? 'Đang kiểm tra…' : 'Chưa thấy lỗi câu nào'}</b>
+                        <p>Ngữ pháp, văn phong, dùng từ và collocation đều được soi tự động.</p>
+                      </div>
+                    ) : (
+                      grammarShown.map((m, idx) => (
+                        <div className="write-issue" key={`${m.offset}-${idx}`}>
+                          <div className="write-issue-top">
+                            <span className="write-badge write-badge-accent write-badge-dot">
+                              Câu
+                            </span>
+                            <span className="write-spacer" />
+                            <span className="write-issue-kind">Câu {idx + 1}</span>
+                          </div>
+                          <div className="write-issue-txt">
+                            <span className="write-bad">{m.errorText || '⚠'}</span>
+                            {m.replacements.length > 0 && (
+                              <>
+                                {' → '}
+                                <span className="write-good">{m.replacements[0]}</span>
+                              </>
+                            )}
+                            {m.message && <> — {m.message}</>}
+                          </div>
+                          <div className="write-fix-row">
+                            {m.replacements.length > 0 && (
+                              <button
+                                type="button"
+                                className="write-fix"
+                                onClick={() => applyGrammar(m, m.replacements[0])}
+                              >
+                                <Icon name="check" /> Áp dụng
+                              </button>
+                            )}
+                            {m.replacements.slice(1, 3).map((rep) => (
+                              <button
+                                type="button"
+                                key={rep}
+                                className="write-fix"
+                                onClick={() => applyGrammar(m, rep)}
+                              >
+                                {rep}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              className="write-skip"
+                              onClick={() =>
+                                setSkipped((s) => new Set(s).add(`${m.offset}:${m.errorText}`))
+                              }
+                            >
+                              Bỏ qua
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    <div className="write-fix-row" style={{ marginTop: 4 }}>
+                      {fixableCount > 1 && (
+                        <button
+                          type="button"
+                          className="write-btn write-btn-sm"
+                          onClick={fixAllGrammar}
+                        >
+                          <Icon name="check" /> Sửa tất cả ({fixableCount})
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="write-btn write-btn-sm write-btn-block"
+                        onClick={runGrammarNow}
+                        disabled={grammarChecking || !content.trim()}
+                      >
+                        <Icon name="refresh" />{' '}
+                        {grammarChecking ? 'Đang kiểm tra…' : 'Kiểm tra lại toàn bài'}
+                      </button>
+                    </div>
+                  </>
+                ))}
+
+              {/* ---------- Gợi ý từ ---------- */}
+              {pane === 'hint' &&
+                (!suggestOn ? (
+                  <div className="write-off">
+                    <Icon name="sparkle" />
+                    <b>Gợi ý từ đang tắt</b>
+                    <p>
+                      Bật để nhận gợi ý từ tiếp theo ngay khi bạn gõ. Nhấn{' '}
+                      <span className="write-kbd">Tab</span> để chấp nhận gợi ý đầu tiên.
+                    </p>
+                    <div className="write-off-row">
+                      <button
+                        type="button"
+                        className="write-btn write-btn-sm write-btn-primary"
+                        onClick={() => {
+                          localStorage.setItem('suggest_enabled', '1')
+                          setSuggestOn(true)
+                        }}
+                      >
+                        <Icon name="zap" /> Bật ngay
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="write-pn-note">
+                      <b>Gợi ý đang bật</b>
+                      Gõ tiếng Anh rồi dừng một nhịp — danh sách bên dưới đổi theo con trỏ.{' '}
+                      <span className="write-kbd">Tab</span> chèn gợi ý đầu tiên.
+                    </div>
+                    {suggestions.length === 0 ? (
+                      <p className="write-note">Chưa có gợi ý cho vị trí con trỏ hiện tại.</p>
+                    ) : (
+                      suggestions.map((s, i) => (
+                        <button
+                          type="button"
+                          key={s.text + i}
+                          className="write-sug"
+                          onClick={() => accept(s)}
+                        >
+                          {s.text}
+                          <small>{typeLabel[s.type]}</small>
+                        </button>
+                      ))
+                    )}
+                    <div className="write-off-row" style={{ justifyContent: 'flex-start' }}>
+                      <button
+                        type="button"
+                        className="write-btn write-btn-sm write-btn-ghost"
+                        onClick={() => {
+                          localStorage.setItem('suggest_enabled', '0')
+                          setSuggestOn(false)
+                        }}
+                      >
+                        Tắt gợi ý
+                      </button>
+                    </div>
+                  </>
+                ))}
+
+              {/* ---------- Thống kê ---------- */}
+              {pane === 'stats' && (
+                <>
+                  <div className="write-kv">
+                    <span>Số từ</span>
+                    <b>{stats.words}</b>
+                  </div>
+                  <div className="write-kv">
+                    <span>Ký tự</span>
+                    <b>{stats.chars}</b>
+                  </div>
+                  <div className="write-kv">
+                    <span>Số câu</span>
+                    <b>{stats.sentences}</b>
+                  </div>
+                  <div className="write-kv">
+                    <span>Độ dài TB câu</span>
+                    <b>{stats.avg}</b>
+                  </div>
+                  <div className="write-kv">
+                    <span>Từ dài (&gt;6 chữ)</span>
+                    <b>{stats.longWords}</b>
+                  </div>
+                  <div className="write-kv">
+                    <span>Trình độ ước lượng</span>
+                    <b>{stats.level}</b>
+                  </div>
+                  <div className="write-kv">
+                    <span>Thời gian đọc</span>
+                    <b>{stats.read} phút</b>
+                  </div>
+
+                  <div className="write-goal">
+                    <div className="write-goal-top">
+                      <span>Mục tiêu 250 từ</span>
+                      <b>{stats.goalPct}%</b>
+                    </div>
+                    <div className="write-bar">
+                      <i style={{ width: `${stats.goalPct}%` }} />
+                    </div>
+                  </div>
+
+                  <p className="write-note">
+                    Trình độ ước lượng dựa trên độ dài câu và tỷ lệ từ dài — chỉ mang tính tham
+                    khảo.
+                  </p>
+                </>
+              )}
+            </div>
+          </aside>
+        )}
+      </div>
+
+      {/* Bảng gợi ý từ nổi ngay dưới con trỏ — Tab để nhận */}
+      {ghost && suggestions.length > 0 && (
+        <div className="write-ghost" style={{ left: ghost.left, top: ghost.top }} role="listbox">
+          <div className="write-ghost-head">Gợi ý từ tiếp theo</div>
+          {suggestions.slice(0, 5).map((s, i) => (
+            <button
+              type="button"
+              key={s.text + i}
+              role="option"
+              aria-selected={i === ghostIdx}
+              className={i === ghostIdx ? 'write-ghost-item is-sel' : 'write-ghost-item'}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                accept(s)
+                setGhost(null)
+              }}
+              onMouseEnter={() => setGhostIdx(i)}
+            >
+              {s.text}
+              {i === ghostIdx && <span className="write-kbd">Tab</span>}
+            </button>
+          ))}
         </div>
+      )}
+
+      {/* Lớp phủ khi trợ lý mở dạng bottom sheet (mobile) */}
+      {narrow && panelOpen && (
+        <div className="write-scrim" onClick={() => setPanelOpen(false)} aria-hidden="true" />
+      )}
+
+      {/* Nút nổi mở trợ lý (mobile) */}
+      {!panelOpen && (
+        <button
+          type="button"
+          className="write-fab"
+          onClick={() => setPanelOpen(true)}
+          aria-label="Mở trợ lý viết"
+        >
+          <Icon name="sparkle" />
+          <span className="write-fab-txt">Trợ lý</span>
+          {issueCount > 0 && <span className="write-fab-count">{issueCount}</span>}
+        </button>
+      )}
+
+      {/* ------------------------------------------------------ Phím tắt */}
+      <div className="write-foot">
+        <span>
+          <span className="write-kbd">Ctrl</span>
+          <span className="write-kbd">S</span> Lưu
+        </span>
+        <span>
+          <span className="write-kbd">Ctrl</span>
+          <span className="write-kbd">B</span> Đậm
+        </span>
+        <span>
+          <span className="write-kbd">Ctrl</span>
+          <span className="write-kbd">I</span> Nghiêng
+        </span>
+        <span>
+          <span className="write-kbd">Ctrl</span>
+          <span className="write-kbd">J</span> Trợ lý
+        </span>
+        <span>
+          <span className="write-kbd">Tab</span> Nhận gợi ý
+        </span>
+        <span>
+          <span className="write-kbd">Esc</span> Thoát
+        </span>
       </div>
     </form>
   )
