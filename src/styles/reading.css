@@ -454,9 +454,9 @@
    TRÌNH ĐỌC — mockup 06-doc/bai-doc.html
    ============================================================ */
 .page.page-wide.read-page {
-  max-width: 1080px;
-  margin-left: auto;
-  margin-right: auto;
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
 }
 .read-crumb {
   display: inline-flex;
@@ -1604,6 +1604,14 @@ body.read-focus .read-page .reading-text,
 body.read-focus .read-doc-head {
   max-width: 74ch;
   margin-inline: auto;
+}
+
+/* Tận dụng thêm chiều ngang trên màn hình lớn và cho khung tra từ dễ đọc hơn. */
+@media (min-width: 1440px) {
+  .read-grid2 {
+    grid-template-columns: minmax(0, 1fr) clamp(380px, 25vw, 420px);
+    gap: 32px;
+  }
 }
 
 /* Cửa sổ desktop hẹp: giữ cột tra từ cạnh bài nhưng thu gọn nhẹ. */

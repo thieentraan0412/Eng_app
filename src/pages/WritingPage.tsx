@@ -186,8 +186,8 @@ function streakOf(days: Set<string>): { now: number; best: number } {
   return { now, best }
 }
 
-// Màn hẹp -> soạn thảo dùng bottom sheet thay cho panel bên phải
-function useIsNarrow(maxWidth = 920): boolean {
+// Màn hình chưa đủ rộng cho hai cột -> trợ lý mở dạng lớp nổi.
+function useIsNarrow(maxWidth = 1199): boolean {
   const [narrow, setNarrow] = useState(
     () => typeof window !== 'undefined' && window.innerWidth <= maxWidth,
   )
@@ -612,11 +612,11 @@ interface ViewPrefs {
   s: string // cỡ chữ
   l: string // giãn dòng
 }
-const VIEW_DEFAULT: ViewPrefs = { w: '768px', f: 'var(--font-sans)', s: '16.5px', l: '1.85' }
+const VIEW_DEFAULT: ViewPrefs = { w: '1120px', f: 'var(--font-sans)', s: '16.5px', l: '1.85' }
 const WIDTHS: [string, string][] = [
-  ['620px', 'Hẹp'],
-  ['768px', 'Vừa'],
-  ['940px', 'Rộng'],
+  ['760px', 'Hẹp'],
+  ['960px', 'Vừa'],
+  ['1120px', 'Rộng'],
   ['100%', 'Tràn'],
 ]
 const FONTS: [string, string, string][] = [
@@ -715,7 +715,12 @@ const FMT_ICONS = {
 function loadView(): ViewPrefs {
   try {
     const raw = localStorage.getItem('write_view')
-    if (raw) return { ...VIEW_DEFAULT, ...(JSON.parse(raw) as Partial<ViewPrefs>) }
+    if (raw) {
+      const stored = { ...VIEW_DEFAULT, ...(JSON.parse(raw) as Partial<ViewPrefs>) }
+      // Các độ rộng cũ không còn khớp bố cục studio mới.
+      if (!WIDTHS.some(([width]) => width === stored.w)) stored.w = VIEW_DEFAULT.w
+      return stored
+    }
   } catch {
     /* dữ liệu hỏng -> dùng mặc định */
   }
@@ -752,7 +757,7 @@ function Editor({
 
   const narrow = useIsNarrow()
   const { theme, toggle } = useTheme()
-  // Trên màn rộng panel mở sẵn; trên mobile là bottom sheet nên đóng sẵn
+  // Chỉ dock panel khi đủ rộng; tablet/mobile mở theo yêu cầu dưới dạng lớp nổi.
   const [panelOpen, setPanelOpen] = useState(!narrow)
   const [pane, setPane] = useState<PaneKey>('spell')
   const [popView, setPopView] = useState(false)
@@ -1162,140 +1167,108 @@ function Editor({
         } as React.CSSProperties
       }
     >
-      {/* ------------------------------------------------------ Thanh trên */}
+      {/* ------------------------------------------------------ Thanh tài liệu */}
       <header className="write-ed-bar">
-        <button
-          type="button"
-          className="write-ibtn write-ed-exit"
-          onClick={onBack}
-          title="Thoát (Esc)"
-          aria-label="Thoát, về danh sách bài viết"
-        >
-          <Icon name="x" />
-        </button>
-
-        <input
-          className="write-ed-title"
-          placeholder="Tiêu đề bài viết…"
-          aria-label="Tiêu đề bài viết"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-
-        <span className={saveClass}>
-          <i />
-          <span>{saving ? 'Đang lưu…' : dirty ? 'Chưa lưu' : savedAt ? `Đã lưu ${savedAt}` : 'Bản nháp'}</span>
-        </span>
-
-        <span className="write-bar-break" aria-hidden="true" />
-        <span className="write-vsep write-wide-only" />
-
-        <div className="write-fmt write-wide-only" role="toolbar" aria-label="Định dạng">
-          <button
-            type="button"
-            onClick={() => wrapWith('**', 'đậm')}
-            title="Đậm (Ctrl+B) — bọc **…**"
-            aria-label="Đậm"
-          >
-            <span className="write-fmt-txt">B</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => wrapWith('*', 'nghiêng')}
-            title="Nghiêng (Ctrl+I) — bọc *…*"
-            aria-label="Nghiêng"
-          >
-            <span className="write-fmt-txt is-i">I</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => wrapWith('_', 'gạch chân')}
-            title="Gạch chân (Ctrl+U) — bọc _…_"
-            aria-label="Gạch chân"
-          >
-            <span className="write-fmt-txt is-u">U</span>
-          </button>
-          <span className="write-fmt-sep" />
-          <button
-            type="button"
-            onClick={() => prefixLines(() => '- ')}
-            title="Danh sách chấm"
-            aria-label="Danh sách chấm"
-          >
-            {FMT_ICONS.bullet}
-          </button>
-          <button
-            type="button"
-            onClick={() => prefixLines((i) => `${i + 1}. `)}
-            title="Danh sách số"
-            aria-label="Danh sách số"
-          >
-            {FMT_ICONS.number}
-          </button>
-          <button
-            type="button"
-            onClick={() => prefixLines(() => '> ')}
-            title="Trích dẫn"
-            aria-label="Trích dẫn"
-          >
-            {FMT_ICONS.quote}
-          </button>
-        </div>
-
-        <span className="write-spacer" />
-
-        <span className="write-badge write-wide-only">
-          {stats.words} từ · {stats.chars} ký tự
-        </span>
-
-        <span className="write-ed-tools">
-          <button
-            type="button"
-            className="write-ibtn"
-            onClick={toggle}
-            title={theme === 'dark' ? 'Chuyển giao diện sáng' : 'Chuyển giao diện tối'}
-            aria-label="Đổi giao diện"
-          >
-            <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
-          </button>
-          <button
-            type="button"
-            className="write-ibtn"
-            onClick={() => setPopView((v) => !v)}
-            title="Tùy chọn hiển thị"
-            aria-expanded={popView}
-          >
-            <Icon name="type" />
-          </button>
-          <button
-            type="button"
-            className="write-ibtn"
-            onClick={() => setPanelOpen((v) => !v)}
-            title="Ẩn / hiện trợ lý (Ctrl+J)"
-            aria-label="Ẩn hiện trợ lý"
-          >
-            <Icon name="sparkle" />
-          </button>
-          {onDelete && (
+        <div className="write-ed-bar-inner">
+          <div className="write-ed-heading">
             <button
               type="button"
-              className="write-btn write-btn-sm write-btn-danger write-btn-icon"
-              onClick={onDelete}
-              title="Xóa bài viết"
+              className="write-ibtn write-ed-exit"
+              onClick={onBack}
+              title="Thoát (Esc)"
+              aria-label="Thoát, về danh sách bài viết"
             >
-              <Icon name="trash" />
+              <Icon name="left" />
             </button>
-          )}
-        </span>
 
-        <button
-          className="write-btn write-btn-sm write-btn-primary"
-          type="submit"
-          disabled={saving}
-          title="Lưu (Ctrl+S)"
-        >
-          <Icon name="save" /> Lưu
-        </button>
+            <div className="write-ed-title-block">
+              <span className="write-ed-kicker">
+                <Icon name="pen" /> Bài viết tiếng Anh
+              </span>
+              <div className="write-ed-title-line">
+                <input
+                  className="write-ed-title"
+                  placeholder="Tiêu đề bài viết…"
+                  aria-label="Tiêu đề bài viết"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+
+                <span className={saveClass} role="status" aria-live="polite">
+                  <i />
+                  <span>
+                    {saving
+                      ? 'Đang lưu…'
+                      : dirty
+                        ? 'Chưa lưu'
+                        : savedAt
+                          ? `Đã lưu ${savedAt}`
+                          : 'Bản nháp'}
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <span className="write-spacer" />
+
+          <span className="write-ed-tools" role="toolbar" aria-label="Công cụ tài liệu">
+            <button
+              type="button"
+              className="write-ibtn write-theme-btn"
+              onClick={toggle}
+              title={theme === 'dark' ? 'Chuyển giao diện sáng' : 'Chuyển giao diện tối'}
+              aria-label="Đổi giao diện"
+            >
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+            </button>
+            <button
+              type="button"
+              className={popView ? 'write-ibtn write-view-btn is-active' : 'write-ibtn write-view-btn'}
+              onClick={() => setPopView((v) => !v)}
+              title="Tùy chọn hiển thị"
+              aria-label="Tùy chọn hiển thị"
+              aria-expanded={popView}
+            >
+              <Icon name="type" />
+            </button>
+            <button
+              type="button"
+              className={
+                panelOpen
+                  ? 'write-ibtn write-assistant-btn is-active'
+                  : 'write-ibtn write-assistant-btn'
+              }
+              onClick={() => setPanelOpen((v) => !v)}
+              title="Ẩn / hiện trợ lý (Ctrl+J)"
+              aria-label="Ẩn hiện trợ lý"
+              aria-expanded={panelOpen}
+              aria-controls="writing-assistant"
+            >
+              <Icon name="sparkle" />
+            </button>
+            {onDelete && (
+              <button
+                type="button"
+                className="write-btn write-btn-sm write-btn-danger write-btn-icon"
+                onClick={onDelete}
+                title="Xóa bài viết"
+                aria-label="Xóa bài viết"
+              >
+                <Icon name="trash" />
+              </button>
+            )}
+          </span>
+
+          <button
+            className="write-btn write-btn-primary write-ed-submit"
+            type="submit"
+            disabled={saving}
+            title="Lưu (Ctrl+S)"
+          >
+            <Icon name="save" /> <span>Lưu bài</span>
+          </button>
+        </div>
       </header>
 
       {/* --------------------------------------------- Bảng tùy chọn hiển thị */}
@@ -1404,86 +1377,221 @@ function Editor({
         {/* --------------------------------------------------- Vùng soạn thảo */}
         <div className="write-stage">
           <div className="write-sheet">
-            <div className="write-prompt">
-              <Icon name="target" />
-              <input
-                className="write-input"
-                placeholder="Chủ đề (tùy chọn)…"
-                aria-label="Chủ đề"
-                list="writing-topics"
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-              />
-              <datalist id="writing-topics">
-                {TOPIC_OPTIONS.map((t) => (
-                  <option key={t} value={t} />
-                ))}
-              </datalist>
-            </div>
+            <div className="write-sheet-head">
+              <label className="write-prompt">
+                <span className="write-prompt-label">
+                  <Icon name="target" /> Chủ đề
+                </span>
+                <input
+                  className="write-input"
+                  placeholder="Chọn hoặc nhập chủ đề…"
+                  aria-label="Chủ đề"
+                  list="writing-topics"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                />
+                <datalist id="writing-topics">
+                  {TOPIC_OPTIONS.map((t) => (
+                    <option key={t} value={t} />
+                  ))}
+                </datalist>
+              </label>
 
-            {error && <div className="write-alert">{error}</div>}
-
-            <div className="write-doc">
-              <div className="write-paper write-backdrop" ref={backdropRef} aria-hidden="true">
-                {highlighted}
-                {'\n'}
+              <div className="write-sheet-stats" aria-label="Thống kê nhanh">
+                <span>
+                  <b>{stats.words}</b> từ
+                </span>
+                <i aria-hidden="true" />
+                <span>
+                  <b>{stats.chars}</b> ký tự
+                </span>
+                <i aria-hidden="true" />
+                <span>{stats.read} phút đọc</span>
               </div>
-              <textarea
-                ref={taRef}
-                className="write-paper write-textarea"
-                placeholder="Bắt đầu viết bằng tiếng Anh…"
-                spellCheck={false}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                data-lpignore="true"
-                data-form-type="other"
-                name="write-content"
-                aria-label="Nội dung bài viết"
-                value={content}
-                onChange={(e) => {
-                  setContent(e.target.value)
-                  setCaret(e.target.selectionStart)
-                }}
-                onCompositionStart={() => {
-                  composing.current = true
-                }}
-                onCompositionEnd={() => {
-                  composing.current = false
-                }}
-                onKeyUp={syncCaret}
-                onClick={syncCaret}
-                onKeyDown={onKeyDown}
-                onScroll={(e) => {
-                  syncScroll(e)
-                  setGhost(null)
-                }}
-                onFocus={() => setFocused(true)}
-                onBlur={() => {
-                  setFocused(false)
-                  setTimeout(() => setGhost(null), 120)
-                }}
-              />
             </div>
+
+            {error && (
+              <div className="write-alert" role="alert">
+                {error}
+              </div>
+            )}
+
+            <section className="write-canvas" aria-label="Trình soạn thảo">
+              <div className="write-canvas-bar">
+                <div className="write-fmt" role="toolbar" aria-label="Định dạng">
+                  <button
+                    type="button"
+                    onClick={() => wrapWith('**', 'đậm')}
+                    title="Đậm (Ctrl+B) — bọc **…**"
+                    aria-label="Đậm"
+                  >
+                    <span className="write-fmt-txt">B</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => wrapWith('*', 'nghiêng')}
+                    title="Nghiêng (Ctrl+I) — bọc *…*"
+                    aria-label="Nghiêng"
+                  >
+                    <span className="write-fmt-txt is-i">I</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => wrapWith('_', 'gạch chân')}
+                    title="Gạch chân (Ctrl+U) — bọc _…_"
+                    aria-label="Gạch chân"
+                  >
+                    <span className="write-fmt-txt is-u">U</span>
+                  </button>
+                  <span className="write-fmt-sep" aria-hidden="true" />
+                  <button
+                    type="button"
+                    onClick={() => prefixLines(() => '- ')}
+                    title="Danh sách chấm"
+                    aria-label="Danh sách chấm"
+                  >
+                    {FMT_ICONS.bullet}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => prefixLines((i) => `${i + 1}. `)}
+                    title="Danh sách số"
+                    aria-label="Danh sách số"
+                  >
+                    {FMT_ICONS.number}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => prefixLines(() => '> ')}
+                    title="Trích dẫn"
+                    aria-label="Trích dẫn"
+                  >
+                    {FMT_ICONS.quote}
+                  </button>
+                </div>
+
+                <span className="write-spacer" />
+
+                <div className="write-goal" title={`${stats.goalPct}% mục tiêu 250 từ`}>
+                  <span className="write-goal-copy">
+                    <span>Mục tiêu</span>
+                    <b>{stats.words}/250 từ</b>
+                  </span>
+                  <span className="write-goal-track" aria-hidden="true">
+                    <i style={{ width: `${stats.goalPct}%` }} />
+                  </span>
+                </div>
+              </div>
+
+              <div className="write-doc">
+                <div className="write-paper write-backdrop" ref={backdropRef} aria-hidden="true">
+                  {highlighted}
+                  {'\n'}
+                </div>
+                <textarea
+                  ref={taRef}
+                  className="write-paper write-textarea"
+                  placeholder="Bắt đầu viết bằng tiếng Anh…"
+                  spellCheck={false}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  data-lpignore="true"
+                  data-form-type="other"
+                  name="write-content"
+                  aria-label="Nội dung bài viết"
+                  aria-autocomplete="list"
+                  aria-controls={ghost && suggestions.length > 0 ? 'writing-suggestions' : undefined}
+                  aria-activedescendant={
+                    ghost && suggestions.length > 0
+                      ? `writing-suggestion-${ghostIdx}`
+                      : undefined
+                  }
+                  value={content}
+                  onChange={(e) => {
+                    setContent(e.target.value)
+                    setCaret(e.target.selectionStart)
+                  }}
+                  onCompositionStart={() => {
+                    composing.current = true
+                  }}
+                  onCompositionEnd={() => {
+                    composing.current = false
+                  }}
+                  onKeyUp={syncCaret}
+                  onClick={syncCaret}
+                  onKeyDown={onKeyDown}
+                  onScroll={(e) => {
+                    syncScroll(e)
+                    setGhost(null)
+                  }}
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => {
+                    setFocused(false)
+                    setTimeout(() => setGhost(null), 120)
+                  }}
+                />
+              </div>
+
+              <div className="write-canvas-foot">
+                <span className={issueCount > 0 ? 'write-quality has-issues' : 'write-quality'}>
+                  <Icon name={issueCount > 0 ? 'sparkle' : 'check'} />
+                  {issueCount > 0
+                    ? `${issueCount} điểm cần xem lại`
+                    : 'Chưa thấy điểm cần xem lại'}
+                </span>
+
+                <div className="write-canvas-shortcuts" aria-label="Phím tắt">
+                  <span>
+                    <span className="write-kbd">Ctrl S</span> Lưu
+                  </span>
+                  <span>
+                    <span className="write-kbd">Ctrl J</span> Trợ lý
+                  </span>
+                  <span>
+                    <span className="write-kbd">Tab</span> Gợi ý
+                  </span>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
 
         {/* ------------------------------------------------------ Trợ lý viết */}
         {panelOpen && (
-          <aside className="write-panel" aria-label="Trợ lý viết">
+          <aside className="write-panel" id="writing-assistant" aria-label="Trợ lý viết">
             <span className="write-grab" aria-hidden="true" />
-            <div className="write-pn-tabs" role="tablist">
+            <div className="write-panel-head">
+              <span className="write-panel-title">
+                <span className="write-panel-icon">
+                  <Icon name="sparkle" />
+                </span>
+                <span>
+                  <b>Trợ lý viết</b>
+                  <small>Phân tích trong khi bạn gõ</small>
+                </span>
+              </span>
+
+              <span className={issueCount > 0 ? 'write-panel-status has-issues' : 'write-panel-status'}>
+                {issueCount > 0 ? `${issueCount} lưu ý` : 'Sẵn sàng'}
+              </span>
+
               <button
                 type="button"
-                className="write-ibtn write-pn-close"
+                className="write-ibtn write-panel-close"
                 onClick={() => setPanelOpen(false)}
                 aria-label="Đóng trợ lý"
               >
                 <Icon name="x" />
               </button>
+            </div>
+
+            <div className="write-pn-tabs" role="tablist">
               <button
                 type="button"
                 role="tab"
+                aria-selected={pane === 'spell'}
+                aria-controls="writing-assistant-pane"
                 className={pane === 'spell' ? 'is-active' : ''}
                 onClick={() => setPane('spell')}
               >
@@ -1493,6 +1601,8 @@ function Editor({
               <button
                 type="button"
                 role="tab"
+                aria-selected={pane === 'grammar'}
+                aria-controls="writing-assistant-pane"
                 className={pane === 'grammar' ? 'is-active' : ''}
                 onClick={() => setPane('grammar')}
               >
@@ -1504,6 +1614,8 @@ function Editor({
               <button
                 type="button"
                 role="tab"
+                aria-selected={pane === 'hint'}
+                aria-controls="writing-assistant-pane"
                 className={pane === 'hint' ? 'is-active' : ''}
                 onClick={() => setPane('hint')}
               >
@@ -1512,6 +1624,8 @@ function Editor({
               <button
                 type="button"
                 role="tab"
+                aria-selected={pane === 'stats'}
+                aria-controls="writing-assistant-pane"
                 className={pane === 'stats' ? 'is-active' : ''}
                 onClick={() => setPane('stats')}
               >
@@ -1519,7 +1633,7 @@ function Editor({
               </button>
             </div>
 
-            <div className="write-pn-body">
+            <div className="write-pn-body" id="writing-assistant-pane" role="tabpanel">
               {/* ---------- Chính tả ---------- */}
               {pane === 'spell' &&
                 (!spellEnabled ? (
@@ -1782,12 +1896,18 @@ function Editor({
 
       {/* Bảng gợi ý từ nổi ngay dưới con trỏ — Tab để nhận */}
       {ghost && suggestions.length > 0 && (
-        <div className="write-ghost" style={{ left: ghost.left, top: ghost.top }} role="listbox">
+        <div
+          className="write-ghost"
+          id="writing-suggestions"
+          style={{ left: ghost.left, top: ghost.top }}
+          role="listbox"
+        >
           <div className="write-ghost-head">Gợi ý từ tiếp theo</div>
           {suggestions.slice(0, 5).map((s, i) => (
             <button
               type="button"
               key={s.text + i}
+              id={`writing-suggestion-${i}`}
               role="option"
               aria-selected={i === ghostIdx}
               className={i === ghostIdx ? 'write-ghost-item is-sel' : 'write-ghost-item'}
@@ -1823,32 +1943,6 @@ function Editor({
           {issueCount > 0 && <span className="write-fab-count">{issueCount}</span>}
         </button>
       )}
-
-      {/* ------------------------------------------------------ Phím tắt */}
-      <div className="write-foot">
-        <span>
-          <span className="write-kbd">Ctrl</span>
-          <span className="write-kbd">S</span> Lưu
-        </span>
-        <span>
-          <span className="write-kbd">Ctrl</span>
-          <span className="write-kbd">B</span> Đậm
-        </span>
-        <span>
-          <span className="write-kbd">Ctrl</span>
-          <span className="write-kbd">I</span> Nghiêng
-        </span>
-        <span>
-          <span className="write-kbd">Ctrl</span>
-          <span className="write-kbd">J</span> Trợ lý
-        </span>
-        <span>
-          <span className="write-kbd">Tab</span> Nhận gợi ý
-        </span>
-        <span>
-          <span className="write-kbd">Esc</span> Thoát
-        </span>
-      </div>
     </form>
   )
 }
