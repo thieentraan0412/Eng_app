@@ -92,8 +92,9 @@ export async function createFolder(name: string): Promise<Folder> {
   return folderFromCloud(f)
 }
 
-export async function renameFolder(id: string, name: string): Promise<void> {
-  await CloudApi.renameSentenceFolder(id, name.trim() || 'Thư mục mới')
+export async function renameFolder(id: string, name: string): Promise<Folder> {
+  const folder = await CloudApi.renameSentenceFolder(id, name.trim() || 'Thư mục mới')
+  return folderFromCloud(folder)
 }
 
 export async function deleteFolder(id: string): Promise<void> {

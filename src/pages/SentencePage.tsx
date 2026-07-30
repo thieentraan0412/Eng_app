@@ -105,6 +105,8 @@ export default function SentencePage() {
   // Đổi tên thư mục ngay trên thẻ
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [savingRenameId, setSavingRenameId] = useState<string | null>(null)
+  const renameInFlight = useRef<string | null>(null)
 
   const refresh = async () => {
     const [fs, cs, ds, ok] = await Promise.all([
@@ -168,19 +170,38 @@ export default function SentencePage() {
   }
 
   const startRename = (f: Folder) => {
+    if (renameInFlight.current) return
     setEditingId(f.id)
     setEditName(f.name)
   }
-  const saveRename = async () => {
-    const id = editingId
-    const name = editName.trim()
+  const cancelRename = () => {
+    if (renameInFlight.current) return
     setEditingId(null)
-    if (!id || !name) return
+    setEditName('')
+  }
+  const saveRename = async (folderId = editingId) => {
+    const id = folderId
+    const name = editName.trim()
+    if (!id || renameInFlight.current) return
+
+    const current = folders.find((folder) => folder.id === id)
+    if (!name || current?.name === name) {
+      cancelRename()
+      return
+    }
+
+    renameInFlight.current = id
+    setSavingRenameId(id)
     try {
-      await renameFolder(id, name)
-      await refresh()
+      const updated = await renameFolder(id, name)
+      setFolders((items) => items.map((folder) => (folder.id === updated.id ? updated : folder)))
+      setEditingId((editing) => (editing === id ? null : editing))
+      setEditName('')
     } catch (err) {
       alert('Không đổi được tên: ' + errMsg(err))
+    } finally {
+      renameInFlight.current = null
+      setSavingRenameId(null)
     }
   }
   const remove = async (f: Folder) => {
@@ -264,41 +285,81 @@ export default function SentencePage() {
             const total = counts[f.id] ?? 0
             const done = Math.min(doneCounts[f.id] ?? 0, total)
             const ok = Math.min(correctCounts[f.id] ?? 0, total)
+            const isEditing = editingId === f.id
+            const isSavingRename = savingRenameId === f.id
             return (
               <div
                 key={f.id}
-                className="cc-deck"
+                className={isEditing ? 'cc-deck is-renaming' : 'cc-deck'}
                 role="button"
                 tabIndex={0}
-                onClick={() => (editingId === f.id ? undefined : setSelected(f))}
+                aria-busy={isSavingRename || undefined}
+                onClick={() => (editingId ? undefined : setSelected(f))}
                 onKeyDown={(e) => {
-                  if (editingId !== f.id && (e.key === 'Enter' || e.key === ' ')) {
+                  if (!editingId && (e.key === 'Enter' || e.key === ' ')) {
                     e.preventDefault()
                     setSelected(f)
                   }
                 }}
               >
                 <span className="cc-deck-tools">
-                  <button
-                    className="cc-ibtn"
-                    title="Đổi tên thư mục"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      startRename(f)
-                    }}
-                  >
-                    <Icon name="pencil" />
-                  </button>
-                  <button
-                    className="cc-ibtn danger"
-                    title="Xóa thư mục"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      remove(f)
-                    }}
-                  >
-                    <Icon name="trash" />
-                  </button>
+                  {isEditing ? (
+                    <>
+                      <button
+                        type="button"
+                        className="cc-ibtn cc-rename-save"
+                        title={isSavingRename ? 'Đang lưu…' : 'Lưu tên mới'}
+                        aria-label={isSavingRename ? 'Đang lưu tên mới' : 'Lưu tên mới'}
+                        disabled={isSavingRename}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void saveRename(f.id)
+                        }}
+                      >
+                        <Icon name="check" />
+                      </button>
+                      <button
+                        type="button"
+                        className="cc-ibtn"
+                        title="Hủy đổi tên"
+                        aria-label="Hủy đổi tên"
+                        disabled={isSavingRename}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          cancelRename()
+                        }}
+                      >
+                        <Icon name="x" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="cc-ibtn"
+                        title="Đổi tên thư mục"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          startRename(f)
+                        }}
+                      >
+                        <Icon name="pencil" />
+                      </button>
+                      <button
+                        type="button"
+                        className="cc-ibtn danger"
+                        title="Xóa thư mục"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          remove(f)
+                        }}
+                      >
+                        <Icon name="trash" />
+                      </button>
+                    </>
+                  )}
                 </span>
 
                 <span className="cc-deck-top">
@@ -306,20 +367,24 @@ export default function SentencePage() {
                     <Icon name="folder" />
                   </span>
                   <span className="cc-deck-txt">
-                    {editingId === f.id ? (
+                    {isEditing ? (
                       <input
                         className="cc-input cc-rename"
                         autoFocus
                         value={editName}
+                        disabled={isSavingRename}
                         onClick={(e) => e.stopPropagation()}
+                        onFocus={(e) => e.currentTarget.select()}
                         onChange={(e) => setEditName(e.target.value)}
-                        onBlur={saveRename}
                         onKeyDown={(e) => {
+                          e.stopPropagation()
+                          if (e.nativeEvent.isComposing) return
                           if (e.key === 'Enter') {
                             e.preventDefault()
-                            saveRename()
+                            void saveRename(f.id)
                           } else if (e.key === 'Escape') {
-                            setEditingId(null)
+                            e.preventDefault()
+                            cancelRename()
                           }
                         }}
                       />

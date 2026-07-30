@@ -158,6 +158,10 @@
   background: var(--surface-2);
   color: var(--text);
 }
+.cc-page .cc-ibtn:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
 .cc-page .cc-ibtn.danger:hover {
   background: color-mix(in srgb, var(--danger) 12%, var(--surface));
   color: var(--danger);
@@ -397,6 +401,17 @@
 .cc-deck:hover .cc-deck-tools,
 .cc-deck:focus-within .cc-deck-tools {
   opacity: 1;
+}
+.cc-deck.is-renaming .cc-deck-top {
+  padding-right: 58px;
+}
+.cc-page .cc-rename-save {
+  background: color-mix(in srgb, var(--success) 10%, var(--surface));
+  color: var(--success);
+}
+.cc-page .cc-rename-save:hover {
+  background: color-mix(in srgb, var(--success) 16%, var(--surface));
+  color: var(--success);
 }
 
 /* Ô đổi tên inline */
