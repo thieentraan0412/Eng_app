@@ -192,12 +192,20 @@ export default function SentencePage() {
 
     renameInFlight.current = id
     setSavingRenameId(id)
+    setFolders((items) =>
+      items.map((folder) => (folder.id === id ? { ...folder, name } : folder)),
+    )
+    setEditingId((editing) => (editing === id ? null : editing))
     try {
       const updated = await renameFolder(id, name)
       setFolders((items) => items.map((folder) => (folder.id === updated.id ? updated : folder)))
-      setEditingId((editing) => (editing === id ? null : editing))
       setEditName('')
     } catch (err) {
+      if (current) {
+        setFolders((items) => items.map((folder) => (folder.id === id ? current : folder)))
+      }
+      setEditingId(id)
+      setEditName(name)
       alert('Không đổi được tên: ' + errMsg(err))
     } finally {
       renameInFlight.current = null
@@ -295,6 +303,11 @@ export default function SentencePage() {
                 tabIndex={0}
                 aria-busy={isSavingRename || undefined}
                 onClick={() => (editingId ? undefined : setSelected(f))}
+                onBlur={(e) => {
+                  if (isEditing && !e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                    void saveRename(f.id)
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (!editingId && (e.key === 'Enter' || e.key === ' ')) {
                     e.preventDefault()
@@ -402,12 +415,12 @@ export default function SentencePage() {
                 </span>
 
                 <span className="cc-deck-meta">
-                  {ok > 0 ? (
+                  {done > 0 ? (
                     <span className="cc-badge cc-badge-ok">
-                      <Icon name="check" /> {ok} đúng
+                      <Icon name="check" /> Đã làm {done}/{total} · {ok} đúng
                     </span>
                   ) : (
-                    <span className="cc-badge">Chưa bắt đầu</span>
+                    <span className="cc-badge">Đã làm 0/{total} câu</span>
                   )}
                   <span className="cc-deck-go">
                     Mở thư mục <Icon name="right" />
