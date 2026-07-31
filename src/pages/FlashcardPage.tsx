@@ -4,6 +4,7 @@ import { previewInterval, type Rating } from '../services/srs'
 import { speak, stopSpeaking, ttsSupported } from '../services/tts'
 import { track } from '../services/studyTracker'
 import Icon from '../components/Icon'
+import ConfirmDialog from '../components/ConfirmDialog'
 import '../styles/flashcard.css'
 
 // Nút loa phát âm 1 lần (câu ví dụ) — dừng nổi bọt để không lật thẻ khi bấm
@@ -342,6 +343,8 @@ function ReviewSession({
   const [myEx, setMyEx] = useState('')
   const [savingEx, setSavingEx] = useState(false)
   const [ratingCard, setRatingCard] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Card | null>(null)
+  const [deletingCard, setDeletingCard] = useState(false)
   // Chế độ Việt→Anh: gõ từ tiếng Anh; đúng thì tự sang từ mới
   // Gắn nội dung nhập với đúng thẻ để sự kiện bàn phím/IME đến trễ từ thẻ cũ
   // không thể làm giá trị đó xuất hiện trên thẻ mới.
@@ -362,8 +365,10 @@ function ReviewSession({
   const activeCardIdRef = useRef<string | null>(null)
   const isComposingRef = useRef(false)
   const answerAdvanceTimerRef = useRef<number | null>(null)
+  const deletePausedAdvanceRef = useRef(false)
   const ratingRef = useRef(false)
   const savingExRef = useRef(false)
+  const deletingCardRef = useRef(false)
   const mountedRef = useRef(true)
   // Vuốt ngang (mobile) để chuyển thẻ
   const touchStart = useRef<{ x: number; y: number } | null>(null)
@@ -389,9 +394,9 @@ function ReviewSession({
   }
 
   const toggleCard = () => {
-    // Khi quay từ mặt đáp án về mặt trước, bắt đầu một lượt nhập mới.
-    if (flipped) resetTyping()
-    setFlipped(!flipped)
+    // Lật qua lại chỉ đổi mặt thẻ: giữ nguyên nội dung đã gõ, trạng thái đúng/sai
+    // và mức gợi ý. Các dữ liệu này chỉ được xóa khi thực sự chuyển/đổi thẻ.
+    setFlipped((value) => !value)
   }
 
   const toggleTyping = () => {
@@ -422,7 +427,7 @@ function ReviewSession({
   }
 
   const safeExit = () => {
-    if (!ratingRef.current) onExit()
+    if (!ratingRef.current && !deletingCardRef.current && !deleteTarget) onExit()
   }
 
   useEffect(() => {
@@ -499,7 +504,7 @@ function ReviewSession({
   // Hết phiên -> xóa hàng thẻ (lần sau vào lấy thẻ đến hạn mới) nhưng GIỮ danh sách đã học.
   const rvTimer = useRef<number | undefined>(undefined)
   useEffect(() => {
-    if (!queue || queue.length === 0) return
+    if (!queue) return
     window.clearTimeout(rvTimer.current)
     const data: ReviewSaved = current
       ? {
@@ -652,7 +657,7 @@ function ReviewSession({
   }
 
   async function rate(rating: Rating) {
-    if (!current || ratingRef.current || savingExRef.current) return
+    if (!current || ratingRef.current || savingExRef.current || deletingCardRef.current) return
     ratingRef.current = true
     setRatingCard(true)
     setError(null)
@@ -685,16 +690,92 @@ function ReviewSession({
 
   // Chuyển thẻ thủ công (không đánh giá, không ghi SRS)
   const goNext = () => {
-    if (!queue || ratingRef.current || savingExRef.current) return
+    if (!queue || ratingRef.current || savingExRef.current || deletingCardRef.current) return
     resetCardInput()
     setFlipped(false)
     setIdx((i) => Math.min(i + 1, queue.length))
   }
   const goBack = () => {
-    if (ratingRef.current || savingExRef.current) return
+    if (ratingRef.current || savingExRef.current || deletingCardRef.current) return
     resetCardInput()
     setFlipped(false)
     setIdx((i) => Math.max(0, i - 1))
+  }
+
+  const askDeleteCurrentCard = () => {
+    if (!current || ratingRef.current || savingExRef.current || deletingCardRef.current) return
+    // Không để bộ hẹn giờ "gõ đúng -> tự sang thẻ" chấm đúng thẻ trong lúc hộp xác nhận mở.
+    deletePausedAdvanceRef.current = answerAdvanceTimerRef.current !== null
+    if (answerAdvanceTimerRef.current !== null) {
+      window.clearTimeout(answerAdvanceTimerRef.current)
+      answerAdvanceTimerRef.current = null
+    }
+    stopSpeaking()
+    setDeleteTarget(current)
+  }
+
+  const cancelDeleteCard = () => {
+    if (deletingCardRef.current) return
+    const targetId = deleteTarget?.id
+    setDeleteTarget(null)
+    if (
+      deletePausedAdvanceRef.current &&
+      targetId &&
+      current?.id === targetId &&
+      answerState === 'correct'
+    ) {
+      scheduleNextCard()
+    }
+    deletePausedAdvanceRef.current = false
+  }
+
+  const deleteCurrentCard = async () => {
+    const target = deleteTarget
+    if (!target || !queue || deletingCardRef.current) return
+
+    deletingCardRef.current = true
+    setDeletingCard(true)
+    setError(null)
+    try {
+      await CloudApi.deleteCard(target.id)
+      if (!mountedRef.current) return
+
+      const targetIndex = queue.findIndex((card) => card.id === target.id)
+      const nextQueue = queue.filter((card) => card.id !== target.id)
+      deletePausedAdvanceRef.current = false
+      seen.current.delete(target.id)
+      window.dispatchEvent(new Event('cards-changed'))
+      resetCardInput()
+      setFlipped(false)
+      setQueue(nextQueue)
+      setIdx((currentIndex) => {
+        if (nextQueue.length === 0) return 0
+        const shiftedIndex =
+          targetIndex >= 0 && targetIndex < currentIndex
+            ? currentIndex - 1
+            : currentIndex
+        // Giữ nguyên vị trí để thẻ kế tiếp trượt vào; nếu vừa xóa thẻ cuối,
+        // cho phép idx === length để đi tới màn hoàn thành thay vì quay ngược.
+        return Math.min(Math.max(0, shiftedIndex), nextQueue.length)
+      })
+      setDeleteTarget(null)
+    } catch (e) {
+      if (mountedRef.current) {
+        setDeleteTarget(null)
+        setError(`Không thể xóa thẻ: ${(e as Error).message}`)
+        if (
+          deletePausedAdvanceRef.current &&
+          current?.id === target.id &&
+          answerState === 'correct'
+        ) {
+          scheduleNextCard()
+        }
+        deletePausedAdvanceRef.current = false
+      }
+    } finally {
+      deletingCardRef.current = false
+      if (mountedRef.current) setDeletingCard(false)
+    }
   }
 
   // Vuốt ngang trên vùng thẻ: trái = từ sau, phải = từ trước.
@@ -743,6 +824,8 @@ function ReviewSession({
   // Phím tắt: Space lật, 1-4 đánh giá
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      // Hộp xác nhận tự xử lý Esc; không cho phím tắt phía sau đổi/lật thẻ.
+      if (deleteTarget) return
       if (!current) return
       // Đang gõ trong ô nhập (VD: ô câu ví dụ) -> không kích hoạt phím tắt
       const t = e.target as HTMLElement
@@ -776,7 +859,7 @@ function ReviewSession({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current, flipped])
+  }, [current, flipped, deleteTarget])
 
   if (error && !queue) {
     return (
@@ -861,6 +944,16 @@ function ReviewSession({
         <span className="fc-badge" title="Đã ôn / tổng số thẻ">
           <Icon name="check" /> {done} / {total}
         </span>
+        <button
+          type="button"
+          className="fc-btn fc-btn-sm rev-delete-card"
+          onClick={askDeleteCurrentCard}
+          disabled={ratingCard || savingEx || deletingCard}
+          title={`Xóa thẻ “${current.word}”`}
+          aria-label={`Xóa thẻ ${current.word}`}
+        >
+          <Icon name="trash" /> <span>Xóa thẻ</span>
+        </button>
       </div>
 
       {error && (
@@ -1116,6 +1209,31 @@ function ReviewSession({
           </span>
         </p>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Xóa thẻ này?"
+        body={
+          <>
+            Thẻ sẽ bị xóa khỏi bộ “{deck.name}” và không còn xuất hiện trong các phiên ôn tập.
+            Thao tác này không thể hoàn tác.
+          </>
+        }
+        items={
+          deleteTarget
+            ? [
+                `${deleteTarget.word}${
+                  deleteTarget.meaning ? ` — ${deleteTarget.meaning}` : ''
+                }`,
+              ]
+            : undefined
+        }
+        confirmLabel="Xóa thẻ"
+        danger
+        busy={deletingCard}
+        onConfirm={() => void deleteCurrentCard()}
+        onCancel={cancelDeleteCard}
+      />
     </div>
   )
 }

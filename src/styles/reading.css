@@ -1039,7 +1039,7 @@ button.read-card-hint:hover {
   margin: 2px 0 0;
 }
 
-/* Các nghĩa phổ biến là nút chọn nghĩa để lưu */
+/* Các nghĩa phổ biến là các nút chọn nhiều nghĩa để lưu */
 .read-common-meanings {
   min-width: 0;
   margin-top: 16px;
@@ -1050,6 +1050,11 @@ button.read-card-hint:hover {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.4;
+}
+.read-common-title small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
 }
 .read-common-list {
   display: grid;
@@ -1096,7 +1101,7 @@ button.read-card-hint:hover {
   width: 20px;
   height: 20px;
   border: 1px solid var(--border-strong);
-  border-radius: 50%;
+  border-radius: 6px;
   color: var(--surface);
   font-size: 11px;
   line-height: 1;
@@ -1104,6 +1109,11 @@ button.read-card-hint:hover {
 .read-common-meaning.is-selected .read-meaning-check {
   border-color: var(--primary);
   background: var(--primary);
+}
+.read-common-meaning:disabled,
+.read-usage-select:disabled {
+  cursor: default;
+  opacity: 0.68;
 }
 
 /* Từng cách dùng: định nghĩa, nguyên bản và ví dụ song ngữ */
@@ -1306,7 +1316,7 @@ button.read-card-hint:hover {
   font-size: 13.5px;
   font-weight: 700;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
 }
 .read-save-preview-copy small {
   color: var(--muted);

@@ -528,6 +528,19 @@
 .rev-top .fc-badge:first-of-type {
   margin-left: auto;
 }
+.rev-delete-card {
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--border));
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+  color: var(--danger);
+  box-shadow: none;
+}
+.rev-delete-card .ico {
+  color: currentColor;
+}
+.rev-delete-card:hover {
+  border-color: color-mix(in srgb, var(--danger) 48%, var(--border));
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+}
 .rev-bar {
   flex: 1 1 auto;
   max-width: 420px;
@@ -1102,6 +1115,14 @@
   }
   .fc-btn-sm {
     height: 30px;
+  }
+  .rev-delete-card {
+    width: 30px;
+    min-width: 30px;
+    padding: 0;
+  }
+  .rev-delete-card span {
+    display: none;
   }
 }
 

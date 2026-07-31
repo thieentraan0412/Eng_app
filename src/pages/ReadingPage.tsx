@@ -117,11 +117,15 @@ interface SaveWordEntry {
   inferPos?: boolean
 }
 
-type SavedReadingWord = SaveWordEntry
+interface SavedReadingWord extends SaveWordEntry {
+  meanings?: string[]
+}
 
 interface LookupState {
   word: string
   meaning: string | null
+  selectedMeanings: string[]
+  meaningSelectionTouched: boolean
   contextMeaning: string | null
   phonetic?: string
   pos?: string
@@ -146,6 +150,10 @@ function firstShortPos(pos?: string): string | undefined {
 
 function preferredGroupMeaning(group: DictionaryPosGroup): string | null {
   return group.meanings[0] ?? group.usages[0]?.definitionVi ?? null
+}
+
+function meaningKey(value: string): string {
+  return value.trim().toLocaleLowerCase('vi-VN')
 }
 
 function wordsInPhrase(value: string): string[] {
@@ -340,6 +348,13 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
     return request
   }
 
+  const findSavedReadingWord = (value: string): SavedReadingWord | undefined => {
+    const key = value.replace(/\s+/g, ' ').trim().toLowerCase()
+    return savedInReading.find(
+      (item) => item.word.replace(/\s+/g, ' ').trim().toLowerCase() === key,
+    )
+  }
+
   const lookupText = (selectedText: string, example: string, saved?: SavedReadingWord) => {
     const source = selectedText.replace(/\s+/g, ' ').trim()
     if (!source || source.length > 200 || !/[A-Za-z]/.test(source)) return
@@ -348,6 +363,11 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
     const singleWord = isSingleWord(source)
     const offline = singleWord ? translate(source) : null
     const initialMeaning = saved?.meaning ?? offline?.vi ?? null
+    const initialSelectedMeanings = saved?.meanings?.length
+      ? saved.meanings.map((meaning) => meaning.trim()).filter(Boolean)
+      : initialMeaning
+        ? [initialMeaning]
+        : []
     const initialPos = firstShortPos(saved?.pos ?? offline?.pos)
     const word = saved?.word ?? offline?.word ?? source
     const sameAsContext = example.trim() === source
@@ -356,6 +376,8 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
     setLookup({
       word,
       meaning: initialMeaning,
+      selectedMeanings: initialSelectedMeanings,
+      meaningSelectionTouched: Boolean(saved?.meanings?.length),
       contextMeaning: initialMeaning,
       phonetic: saved?.phonetic ?? offline?.phonetic,
       pos: initialPos,
@@ -387,6 +409,12 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
           return {
             ...current,
             meaning: current.meaning ?? resolvedContext,
+            selectedMeanings:
+              current.meaningSelectionTouched ||
+              current.selectedMeanings.length ||
+              !resolvedContext
+                ? current.selectedMeanings
+                : [resolvedContext],
             meaningSource:
               current.meaning
                 ? current.meaningSource
@@ -443,6 +471,13 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
               activePos,
               pos: canUseFallback ? activePos : current.pos,
               meaning: current.meaning ?? (canUseFallback ? fallbackMeaning : null),
+              selectedMeanings:
+                current.meaningSelectionTouched ||
+                current.selectedMeanings.length ||
+                !canUseFallback ||
+                !fallbackMeaning
+                  ? current.selectedMeanings
+                  : [fallbackMeaning],
               meaningSource: canUseFallback ? 'dictionary' : current.meaningSource,
               contextMeaning: canUseFallback ? fallbackMeaning : current.contextMeaning,
               status: canUseFallback ? 'ready' : current.status,
@@ -464,18 +499,45 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
     )
   }
 
-  const selectLookupMeaning = (group: DictionaryPosGroup, meaning: string) => {
-    setLookup((current) =>
-      current
-        ? {
-            ...current,
-            activePos: group.pos,
-            pos: group.pos,
-            meaning,
-            meaningSource: 'dictionary',
-          }
-        : current,
-    )
+  const toggleLookupMeaning = (group: DictionaryPosGroup, meaning: string) => {
+    setLookup((current) => {
+      if (!current) return current
+
+      // Một thẻ chỉ có một từ loại. Có thể chọn nhiều nghĩa trong từ loại đó;
+      // chọn nghĩa ở từ loại khác sẽ bắt đầu một nhóm lựa chọn mới.
+      const normalizedMeaning = meaning.trim()
+      const normalizedKey = meaningKey(normalizedMeaning)
+      const selectableMeanings = new Set(
+        [
+          ...group.meanings,
+          ...group.usages.flatMap((usage) =>
+            usage.definitionVi ? [usage.definitionVi] : [],
+          ),
+        ].map(meaningKey),
+      )
+      const meaningsInCurrentPos =
+        current.pos === group.pos
+          ? current.selectedMeanings.filter((item) =>
+              selectableMeanings.has(meaningKey(item)),
+            )
+          : []
+      const isSelected = meaningsInCurrentPos.some(
+        (item) => meaningKey(item) === normalizedKey,
+      )
+      const selectedMeanings = isSelected
+        ? meaningsInCurrentPos.filter((item) => meaningKey(item) !== normalizedKey)
+        : [...meaningsInCurrentPos, normalizedMeaning]
+
+      return {
+        ...current,
+        activePos: group.pos,
+        pos: selectedMeanings.length ? group.pos : undefined,
+        meaning: selectedMeanings[0] ?? current.contextMeaning,
+        selectedMeanings,
+        meaningSelectionTouched: true,
+        meaningSource: selectedMeanings.length ? 'dictionary' : 'context',
+      }
+    })
   }
 
   useEffect(() => {
@@ -491,13 +553,15 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
   ) => setSavedInReading(update)
 
   const saveLookupWord = async () => {
-    if (!lookup?.meaning || lookup.status !== 'ready' || savingWord) return
+    if (!lookup?.selectedMeanings.length || lookup.status !== 'ready' || savingWord) return
     const lookupId = lookupRequestRef.current
     setSavingWord(true)
     setSaveError(null)
+    const selectedMeaningText = lookup.selectedMeanings.join('; ')
     const entry: SavedReadingWord = {
       word: lookup.word,
-      meaning: lookup.meaning,
+      meaning: selectedMeaningText,
+      meanings: [...lookup.selectedMeanings],
       phonetic: lookup.phonetic,
       pos: lookup.pos,
       inferPos: false,
@@ -587,7 +651,11 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
     setBar({ x: rect.left + rect.width / 2, y: rect.top - 8, start, end })
 
     const selText = range.toString().trim()
-    lookupText(selText, sentenceAround(text, start, end))
+    lookupText(
+      selText,
+      sentenceAround(text, start, end),
+      findSavedReadingWord(selText),
+    )
   }
 
   const save = (next: ReadingHighlight[]) => {
@@ -692,6 +760,19 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
   const activeDetailsGroup = lookup?.details?.groups.find(
     (group) => group.pos === lookup.activePos,
   )
+  const selectedMeaningText = lookup?.selectedMeanings.join('; ') ?? ''
+  const isLookupSaved = Boolean(
+    lookup &&
+      savedInReading.some(
+        (item) =>
+          item.word.trim().toLowerCase() === lookup.word.trim().toLowerCase(),
+      ),
+  )
+  const isLookupMeaningSelected = (group: DictionaryPosGroup, meaning: string) =>
+    Boolean(
+      lookup?.pos === group.pos &&
+        lookup.selectedMeanings.some((item) => meaningKey(item) === meaningKey(meaning)),
+    )
 
   return (
     <div className="page page-wide read-page">
@@ -932,7 +1013,9 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
                           key={word}
                           type="button"
                           className="read-tok"
-                          onClick={() => lookupText(word, lookup.example)}
+                          onClick={() =>
+                            lookupText(word, lookup.example, findSavedReadingWord(word))
+                          }
                         >
                           {word}
                         </button>
@@ -947,7 +1030,7 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
                       <div>
                         <b className="read-details-title">Các nghĩa của “{lookup.word}”</b>
                         <span className="read-details-subtitle">
-                          Chọn từ loại, sau đó chọn đúng cách dùng
+                          Có thể chọn nhiều nghĩa trong cùng một từ loại
                         </span>
                       </div>
                     </div>
@@ -985,30 +1068,39 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
 
                         {activeDetailsGroup.meanings.length > 0 && (
                           <div className="read-common-meanings">
-                            <span className="read-common-title">Nghĩa phổ biến</span>
-                            <div className="read-common-list">
+                            <span className="read-common-title">
+                              Nghĩa phổ biến <small>· chọn nhiều</small>
+                            </span>
+                            <div
+                              className="read-common-list"
+                              role="group"
+                              aria-label="Chọn một hoặc nhiều nghĩa phổ biến"
+                            >
                               {activeDetailsGroup.meanings.map((meaning) => (
                                 <button
                                   key={meaning}
                                   type="button"
                                   className={
-                                    lookup.pos === activeDetailsGroup.pos &&
-                                    lookup.meaning === meaning
+                                    isLookupMeaningSelected(activeDetailsGroup, meaning)
                                       ? 'read-common-meaning is-selected'
                                       : 'read-common-meaning'
                                   }
-                                  aria-pressed={
-                                    lookup.pos === activeDetailsGroup.pos &&
-                                    lookup.meaning === meaning
+                                  aria-pressed={isLookupMeaningSelected(
+                                    activeDetailsGroup,
+                                    meaning,
+                                  )}
+                                  disabled={savingWord || isLookupSaved}
+                                  title={
+                                    isLookupSaved
+                                      ? 'Từ này đã được lưu'
+                                      : 'Chọn hoặc bỏ nghĩa này khỏi thẻ từ'
                                   }
-                                  title="Chọn nghĩa này để lưu vào bộ từ"
                                   onClick={() =>
-                                    selectLookupMeaning(activeDetailsGroup, meaning)
+                                    toggleLookupMeaning(activeDetailsGroup, meaning)
                                   }
                                 >
                                   <span className="read-meaning-check" aria-hidden="true">
-                                    {lookup.pos === activeDetailsGroup.pos &&
-                                    lookup.meaning === meaning
+                                    {isLookupMeaningSelected(activeDetailsGroup, meaning)
                                       ? '✓'
                                       : ''}
                                   </span>
@@ -1025,8 +1117,11 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
                             {activeDetailsGroup.usages.map((usage, index) => (
                               <article
                                 className={
-                                  lookup.pos === activeDetailsGroup.pos &&
-                                  lookup.meaning === usage.definitionVi
+                                  usage.definitionVi &&
+                                  isLookupMeaningSelected(
+                                    activeDetailsGroup,
+                                    usage.definitionVi,
+                                  )
                                     ? 'read-usage-item is-selected'
                                     : 'read-usage-item'
                                 }
@@ -1065,26 +1160,31 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
                                   <button
                                     type="button"
                                     className={
-                                      lookup.pos === activeDetailsGroup.pos &&
-                                      lookup.meaning === usage.definitionVi
+                                      isLookupMeaningSelected(
+                                        activeDetailsGroup,
+                                        usage.definitionVi,
+                                      )
                                         ? 'read-usage-select is-selected'
                                         : 'read-usage-select'
                                     }
-                                    aria-pressed={
-                                      lookup.pos === activeDetailsGroup.pos &&
-                                      lookup.meaning === usage.definitionVi
-                                    }
+                                    aria-pressed={isLookupMeaningSelected(
+                                      activeDetailsGroup,
+                                      usage.definitionVi,
+                                    )}
+                                    disabled={savingWord || isLookupSaved}
                                     onClick={() =>
-                                      selectLookupMeaning(
+                                      toggleLookupMeaning(
                                         activeDetailsGroup,
                                         usage.definitionVi!,
                                       )
                                     }
                                   >
-                                    {lookup.pos === activeDetailsGroup.pos &&
-                                    lookup.meaning === usage.definitionVi
-                                      ? '✓ Đã chọn nghĩa này'
-                                      : 'Chọn nghĩa này để lưu'}
+                                    {isLookupMeaningSelected(
+                                      activeDetailsGroup,
+                                      usage.definitionVi,
+                                    )
+                                      ? '✓ Đã thêm nghĩa này'
+                                      : '+ Thêm nghĩa này để lưu'}
                                   </button>
                                 )}
                               </article>
@@ -1113,14 +1213,18 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
                     </p>
                   )}
                 </div>
-                {lookup.status === 'ready' && lookup.meaning && (
+                {lookup.status === 'ready' && selectedMeaningText && (
                   <div className="read-save-panel">
                     <div className="read-save-preview">
                       <div className="read-save-preview-copy">
-                        <span>Đang chọn để lưu</span>
-                        <b title={lookup.meaning}>{lookup.meaning}</b>
+                        <span>
+                          {lookup.meaningSelectionTouched
+                            ? `Đang chọn ${lookup.selectedMeanings.length} nghĩa để lưu`
+                            : 'Đang chọn để lưu'}
+                        </span>
+                        <b title={selectedMeaningText}>{selectedMeaningText}</b>
                         {!lookup.pos && isSingleWord(lookup.word) && (
-                          <small>Chọn một nghĩa phía trên để xác định từ loại</small>
+                          <small>Chọn một hoặc nhiều nghĩa phía trên để xác định từ loại</small>
                         )}
                       </div>
                       {lookup.pos && (
@@ -1136,7 +1240,7 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
                           value={deckId}
                           aria-label="Chọn bộ từ để lưu"
                           onChange={(event) => setDeckId(event.target.value)}
-                          disabled={savingWord || decks.length === 0}
+                          disabled={savingWord || isLookupSaved || decks.length === 0}
                         >
                           {decks.length === 0 ? (
                             <option value="">Bộ từ mặc định</option>
@@ -1154,17 +1258,11 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
                         className="read-btn read-btn-sm read-btn-primary read-lookup-save"
                         disabled={
                           savingWord ||
-                          savedInReading.some(
-                            (item) =>
-                              item.word.trim().toLowerCase() === lookup.word.trim().toLowerCase(),
-                          )
+                          isLookupSaved
                         }
                         onClick={saveLookupWord}
                       >
-                        {savedInReading.some(
-                          (item) =>
-                            item.word.trim().toLowerCase() === lookup.word.trim().toLowerCase(),
-                        ) ? (
+                        {isLookupSaved ? (
                           <>
                             <Icon name="check" /> Đã lưu
                           </>

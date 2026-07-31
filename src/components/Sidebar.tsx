@@ -28,9 +28,22 @@ export default function Sidebar({ current, onNavigate, onClose }: Props) {
 
   // Chỉ số cạnh mục Từ vựng / Ôn tập — lỗi thì đơn giản là không hiện
   useEffect(() => {
-    CloudApi.summary()
-      .then((s) => setCounts({ cards: s.cards, due: s.due }))
-      .catch(() => setCounts(null))
+    let cancelled = false
+    const refreshCounts = () => {
+      CloudApi.summary()
+        .then((s) => {
+          if (!cancelled) setCounts({ cards: s.cards, due: s.due })
+        })
+        .catch(() => {
+          if (!cancelled) setCounts(null)
+        })
+    }
+    refreshCounts()
+    window.addEventListener('cards-changed', refreshCounts)
+    return () => {
+      cancelled = true
+      window.removeEventListener('cards-changed', refreshCounts)
+    }
   }, [])
 
   // Tên hiển thị: phần trước @ của email
