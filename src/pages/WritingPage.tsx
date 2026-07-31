@@ -6,8 +6,6 @@ import {
   useState,
   type FormEvent,
   type KeyboardEvent,
-  type ReactNode,
-  type UIEvent,
 } from 'react'
 import Icon, { type IconName } from '../components/Icon'
 import { useTheme } from '../contexts/ThemeContext'
@@ -748,7 +746,6 @@ function Editor({
   const [savedAt, setSavedAt] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const [badSet, setBadSet] = useState<Set<string>>(new Set())
   const [spellList, setSpellList] = useState<SpellItem[]>([])
   const [spellVersion, setSpellVersion] = useState(0)
   const [grammar, setGrammar] = useState<GrammarMatch[]>([])
@@ -771,7 +768,6 @@ function Editor({
   const spellEnabled = localStorage.getItem('spell_enabled') !== '0'
   const grammarEnabled = localStorage.getItem('grammar_enabled') !== '0'
   const taRef = useRef<HTMLTextAreaElement>(null)
-  const backdropRef = useRef<HTMLDivElement>(null)
   const pendingCaret = useRef<number | null>(null)
   const pendingSel = useRef<{ start: number; end: number } | null>(null)
   const composing = useRef(false)
@@ -814,17 +810,15 @@ function Editor({
     setGhostIdx(0)
   }, [suggestions, caret, suggestOn, focused])
 
-  // Chính tả (debounce 350ms)
+  // Chính tả (debounce 350ms) — chỉ liệt kê trong trợ lý, KHÔNG gạch chân trong bài
   useEffect(() => {
     if (!spellEnabled) {
-      setBadSet(new Set())
       setSpellList([])
       return
     }
     const handle = setTimeout(() => {
       const uniq = [...new Set(tokenizeWords(content))]
       const bad = uniq.filter((t) => isMisspelled(t))
-      setBadSet(new Set(bad.map((w) => w.toLowerCase())))
       setSpellList(bad.slice(0, 20).map((w) => ({ word: w, suggestions: suggestFix(w, 3) })))
     }, 350)
     return () => clearTimeout(handle)
@@ -861,20 +855,6 @@ function Editor({
     [grammar, skipped],
   )
 
-  // Lớp phủ dưới ô nhập: gạch chân sóng đỏ cho lỗi chính tả
-  const highlighted = useMemo<ReactNode[]>(() => {
-    if (!spellEnabled || badSet.size === 0) return [content]
-    return content.split(/([\p{L}\p{M}']+)/u).map((part, i) =>
-      /^[\p{L}\p{M}']+$/u.test(part) && badSet.has(part.toLowerCase()) ? (
-        <mark className="write-misspell" key={i}>
-          {part}
-        </mark>
-      ) : (
-        part
-      ),
-    )
-  }, [content, badSet, spellEnabled])
-
   useEffect(() => {
     const ta = taRef.current
     if (!ta) return
@@ -898,13 +878,6 @@ function Editor({
   const syncCaret = () => {
     if (taRef.current) setCaret(taRef.current.selectionStart)
   }
-  const syncScroll = (e: UIEvent<HTMLTextAreaElement>) => {
-    if (backdropRef.current) {
-      backdropRef.current.scrollTop = e.currentTarget.scrollTop
-      backdropRef.current.scrollLeft = e.currentTarget.scrollLeft
-    }
-  }
-
   // ---------- Thanh định dạng ----------
   // Bài viết lưu dạng VĂN BẢN THUẦN nên định dạng dùng ký hiệu Markdown:
   // **đậm** · *nghiêng* · _gạch chân_ · "- " danh sách · "1. " đánh số · "> " trích dẫn.
@@ -1484,10 +1457,6 @@ function Editor({
               </div>
 
               <div className="write-doc">
-                <div className="write-paper write-backdrop" ref={backdropRef} aria-hidden="true">
-                  {highlighted}
-                  {'\n'}
-                </div>
                 <textarea
                   ref={taRef}
                   className="write-paper write-textarea"
@@ -1521,10 +1490,7 @@ function Editor({
                   onKeyUp={syncCaret}
                   onClick={syncCaret}
                   onKeyDown={onKeyDown}
-                  onScroll={(e) => {
-                    syncScroll(e)
-                    setGhost(null)
-                  }}
+                  onScroll={() => setGhost(null)}
                   onFocus={() => setFocused(true)}
                   onBlur={() => {
                     setFocused(false)

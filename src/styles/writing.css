@@ -1070,15 +1070,6 @@
   overflow-wrap: break-word;
   word-break: break-word;
 }
-.write-backdrop {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  background: transparent;
-  color: transparent;
-  pointer-events: none;
-  user-select: none;
-}
 .write-textarea {
   position: relative;
   background: transparent;
@@ -1141,22 +1132,6 @@
   padding-inline: 5px;
   font-size: 9.5px;
 }
-/* Gạch chân nét sóng: chữ thật nằm ở textarea bên trên nên chữ ở đây trong suốt */
-.write-misspell {
-  background: transparent;
-  color: transparent;
-  text-decoration: underline wavy var(--danger);
-  text-underline-offset: 3.5px;
-  text-decoration-thickness: 1px;
-}
-.write-gmark {
-  background: transparent;
-  color: transparent;
-  text-decoration: underline wavy var(--primary);
-  text-underline-offset: 3.5px;
-  text-decoration-thickness: 1px;
-}
-
 /* ---------- Panel trợ lý ---------- */
 .write-panel {
   flex: 0 0 var(--write-panel-w);

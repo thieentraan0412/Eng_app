@@ -1,0 +1,304 @@
+RULE DESIGN CHO PHẦN MỀM, DESKTOP APP, WEB PC VÀ WEB MOBILE
+
+1. NGUYÊN TẮC CHUNG
+- Thiết kế dựa trên mục tiêu và nhu cầu thực tế của người dùng.
+- Không ưu tiên giao diện đẹp hơn khả năng sử dụng.
+- Mỗi màn hình phải có một mục tiêu chính rõ ràng.
+- Luôn hiển thị trạng thái hiện tại của hệ thống.
+- Dùng từ ngữ quen thuộc với người dùng, tránh thuật ngữ kỹ thuật không cần thiết.
+- Giữ giao diện và cách thao tác nhất quán trong toàn bộ sản phẩm.
+- Ưu tiên ngăn ngừa lỗi thay vì chỉ hiển thị thông báo sau khi lỗi xảy ra.
+- Cho phép người dùng quay lại, hủy hoặc hoàn tác khi phù hợp.
+- Không để người dùng phải ghi nhớ thông tin từ màn hình trước.
+- Thiết kế cho dữ liệu thực tế, bao gồm dữ liệu dài, thiếu, rỗng hoặc bất thường.
+
+2. PHÂN TÍCH NGHIỆP VỤ VÀ NGƯỜI DÙNG
+- Xác định đầy đủ các nhóm người dùng và quyền của từng nhóm.
+- Xác định mục tiêu, khó khăn và tần suất sử dụng của từng nhóm người dùng.
+- Mô tả quy trình nghiệp vụ từ đầu đến cuối trước khi thiết kế màn hình.
+- Xác định trạng thái dữ liệu và điều kiện chuyển trạng thái.
+- Xác định các bước bắt buộc, bước tùy chọn và bước có thể bỏ qua.
+- Thiết kế đầy đủ luồng thành công, lỗi, hủy, mất mạng và hết quyền truy cập.
+- Không thay đổi dữ liệu hoặc trạng thái quan trọng mà không thông báo cho người dùng.
+
+3. KIẾN TRÚC THÔNG TIN VÀ ĐIỀU HƯỚNG
+- Nhóm các chức năng có liên quan vào cùng khu vực.
+- Đặt tên menu theo ngôn ngữ nghiệp vụ của người dùng.
+- Các chức năng quan trọng và thường dùng phải dễ tìm.
+- Không tạo quá nhiều cấp menu nếu không thật sự cần thiết.
+- Dùng sidebar cho hệ thống có nhiều phân hệ.
+- Dùng tab cho các nhóm nội dung cùng cấp trong một đối tượng.
+- Dùng breadcrumb khi người dùng cần biết vị trí hiện tại trong cấu trúc nhiều cấp.
+- Giữ vị trí menu và hành vi điều hướng nhất quán.
+- Luôn có trạng thái đang chọn cho menu, tab hoặc bộ lọc hiện tại.
+
+4. BỐ CỤC VÀ PHÂN CẤP THÔNG TIN
+- Dùng grid và hệ thống khoảng cách thống nhất.
+- Căn chỉnh các thành phần theo một trục rõ ràng.
+- Nhóm các nội dung liên quan bằng khoảng cách, viền hoặc nền.
+- Dùng kích thước, độ đậm và vị trí để tạo phân cấp thị giác.
+- Không đặt quá nhiều thành phần cạnh tranh sự chú ý trên cùng một màn hình.
+- Nút hành động chính phải nổi bật hơn nút phụ.
+- Nội dung quan trọng phải xuất hiện trước nội dung bổ sung.
+- Hạn chế dùng quá nhiều card nếu chúng không tạo ra nhóm thông tin rõ ràng.
+- Không lấp đầy toàn bộ khoảng trống chỉ để giao diện trông nhiều nội dung hơn.
+
+5. TYPOGRAPHY
+- Sử dụng số lượng font chữ tối thiểu.
+- Xây dựng hệ thống heading, body, label và caption rõ ràng.
+- Giữ cỡ chữ và độ đậm nhất quán cho cùng một loại nội dung.
+- Không dùng chữ quá nhỏ cho thông tin quan trọng.
+- Đảm bảo line-height đủ để đọc dễ dàng.
+- Hạn chế viết toàn bộ nội dung bằng chữ in hoa.
+- Không dùng màu chữ quá nhạt làm giảm khả năng đọc.
+- Kiểm tra giao diện khi nội dung dài hơn thiết kế mẫu.
+- Cho phép giao diện hoạt động khi người dùng phóng to chữ hoặc trình duyệt.
+
+6. MÀU SẮC
+- Xây dựng màu chính, màu phụ và màu trung tính rõ ràng.
+- Quy định màu riêng cho thành công, cảnh báo, lỗi và thông tin.
+- Không dùng màu sắc làm dấu hiệu duy nhất để thể hiện trạng thái.
+- Luôn kết hợp màu với icon, nhãn hoặc nội dung mô tả.
+- Đảm bảo độ tương phản giữa chữ, nền và thành phần tương tác.
+- Không dùng quá nhiều màu nổi bật trên cùng một màn hình.
+- Màu của cùng một trạng thái phải giống nhau trên toàn bộ hệ thống.
+- Thiết kế riêng màu cho hover, focus, pressed, selected và disabled.
+- Kiểm tra giao diện ở cả light mode và dark mode nếu sản phẩm hỗ trợ.
+
+7. ICON VÀ HÌNH ẢNH
+- Icon phải cùng phong cách, độ dày và kích thước.
+- Icon khó hiểu phải đi kèm nhãn hoặc tooltip.
+- Không dùng icon trang trí gây nhầm lẫn với nút thao tác.
+- Không sử dụng hai icon khác nhau cho cùng một chức năng.
+- Ảnh sản phẩm phải có kích thước và tỷ lệ hiển thị thống nhất.
+- Chuẩn bị trạng thái ảnh lỗi hoặc ảnh chưa có.
+- Dùng ảnh đúng mục đích, không làm chậm hoặc gây nhiễu giao diện.
+
+8. BUTTON VÀ HÀNH ĐỘNG
+- Mỗi khu vực chỉ nên có một hành động chính nổi bật.
+- Nút phải có nhãn mô tả hành động, tránh từ quá chung chung như “OK”.
+- Dùng động từ rõ ràng như “Lưu thay đổi”, “Xác nhận thanh toán”, “Tạo đơn”.
+- Nút nguy hiểm như xóa, hủy đơn hoặc hoàn tiền phải được phân biệt rõ.
+- Không đặt nút nguy hiểm sát nút xác nhận chính.
+- Hiển thị trạng thái loading sau khi người dùng nhấn.
+- Vô hiệu hóa thao tác lặp trong lúc hệ thống đang xử lý.
+- Không cho phép nhấn liên tục tạo nhiều bản ghi hoặc nhiều đơn hàng.
+- Không để nút disabled mà không giải thích lý do khi người dùng cần biết.
+- Cho phép undo thay vì xác nhận nhiều bước với thao tác có thể hoàn tác dễ dàng.
+
+9. FORM NHẬP LIỆU
+- Mỗi trường nhập phải có label rõ ràng.
+- Placeholder không được thay thế hoàn toàn cho label.
+- Phân biệt rõ trường bắt buộc và không bắt buộc.
+- Sắp xếp trường theo thứ tự nghiệp vụ và tần suất sử dụng.
+- Chọn đúng loại input cho số, ngày, thời gian, tiền tệ và mật khẩu.
+- Hiển thị đơn vị ngay cạnh giá trị khi cần.
+- Validation phải xuất hiện gần trường bị lỗi.
+- Nội dung lỗi phải nói rõ vấn đề và cách sửa.
+- Không xóa dữ liệu người dùng đã nhập khi submit lỗi.
+- Tự động định dạng dữ liệu nhưng không làm thay đổi ý nghĩa giá trị.
+- Dùng giá trị mặc định hợp lý, không tự chọn dữ liệu có thể gây hậu quả.
+- Hỗ trợ điều hướng bằng phím Tab trên desktop và web PC.
+
+10. BẢNG DỮ LIỆU
+- Chỉ hiển thị các cột cần thiết cho tác vụ hiện tại.
+- Cố định cột hoặc tiêu đề khi bảng dài nếu cần.
+- Hỗ trợ sắp xếp, lọc, tìm kiếm và phân trang rõ ràng.
+- Hiển thị tổng số kết quả.
+- Các thao tác trên từng dòng phải dễ nhận biết.
+- Không giấu quá nhiều thao tác quan trọng trong menu ba chấm.
+- Dùng bulk action khi người dùng thường xử lý nhiều dòng.
+- Giữ bộ lọc khi người dùng mở chi tiết rồi quay lại.
+- Có trạng thái không có dữ liệu và không có kết quả tìm kiếm riêng biệt.
+- Xử lý nội dung dài bằng wrap, truncate và tooltip phù hợp.
+- Số và tiền tệ nên căn phải để dễ so sánh.
+- Nội dung văn bản thường căn trái.
+- Không dùng bảng quá rộng trên mobile; chuyển thành card hoặc cho cuộn ngang có kiểm soát.
+
+11. MODAL, DIALOG, DRAWER VÀ TOAST
+- Chỉ dùng modal khi người dùng cần tập trung vào một tác vụ ngắn.
+- Không đặt quy trình dài hoặc nhiều bước trong modal nhỏ.
+- Tiêu đề modal phải mô tả rõ tác vụ.
+- Modal phải có nút đóng hoặc hủy rõ ràng.
+- Không đóng modal ngoài ý muốn khi người dùng đang nhập dữ liệu quan trọng.
+- Khi đóng modal có dữ liệu chưa lưu, cần cảnh báo phù hợp.
+- Không mở nhiều modal chồng lên nhau.
+- Dùng full-screen dialog trên mobile cho form hoặc nội dung phức tạp.
+- Toast chỉ dùng cho thông báo ngắn và không yêu cầu hành động quan trọng.
+- Lỗi nghiêm trọng không nên chỉ hiển thị bằng toast rồi tự biến mất.
+- Drawer phù hợp cho bộ lọc, thông tin phụ hoặc điều hướng trên mobile.
+
+12. TRẠNG THÁI GIAO DIỆN
+- Mỗi component tương tác phải có trạng thái default, hover, focus, pressed, selected và disabled.
+- Mỗi màn hình phải có loading state.
+- Mỗi danh sách phải có empty state.
+- Mỗi thao tác bất đồng bộ phải có success và error state.
+- Dùng skeleton khi nội dung tải theo cấu trúc ổn định.
+- Không để màn hình trắng trong lúc tải.
+- Thông báo lỗi phải cho người dùng biết có thể thử lại hay cần liên hệ hỗ trợ.
+- Trạng thái offline và reconnect phải được thể hiện rõ.
+- Khi đồng bộ dữ liệu, hiển thị trạng thái đang đồng bộ, thành công hoặc thất bại.
+
+13. THÔNG BÁO VÀ NỘI DUNG UX
+- Nội dung phải ngắn, rõ và hướng đến hành động.
+- Không đổ lỗi cho người dùng.
+- Không dùng mã lỗi kỹ thuật làm nội dung chính.
+- Thông báo xác nhận phải nêu rõ hậu quả của thao tác.
+- Dùng từ ngữ thống nhất cho cùng một đối tượng và hành động.
+- Không dùng nhiều tên khác nhau cho cùng một chức năng.
+- Nút xác nhận phải phản ánh đúng hành động sẽ xảy ra.
+- Với thao tác không thể hoàn tác, phải nói rõ điều đó.
+
+14. RESPONSIVE DESIGN
+- Không thiết kế responsive bằng cách chỉ thu nhỏ toàn bộ giao diện.
+- Thay đổi cấu trúc bố cục theo không gian hiển thị.
+- Ưu tiên nội dung và thao tác quan trọng trên màn hình nhỏ.
+- Kiểm tra tối thiểu ở các độ rộng mobile, tablet, laptop và desktop.
+- Không phụ thuộc vào một độ phân giải duy nhất.
+- Kiểm tra khi trình duyệt zoom 125%, 150% và 200%.
+- Không để text, button hoặc input bị cắt khi nội dung dài.
+- Sidebar desktop nên chuyển thành drawer hoặc navigation phù hợp trên mobile.
+- Bộ lọc desktop có thể chuyển thành drawer hoặc bottom sheet trên mobile.
+- Bảng desktop có thể chuyển thành card, danh sách hoặc cuộn ngang có kiểm soát trên mobile.
+
+15. RULE CHO DESKTOP APP
+- Tận dụng chuột, bàn phím, hover, phím tắt và context menu.
+- Hỗ trợ resize cửa sổ ở nhiều kích thước.
+- Không giả định người dùng luôn mở ứng dụng toàn màn hình.
+- Đảm bảo giao diện hoạt động khi minimize, maximize và restore.
+- Hỗ trợ focus rõ ràng khi dùng bàn phím.
+- Các thao tác thường dùng nên có phím tắt hợp lý.
+- Context menu chỉ nên chứa các hành động liên quan trực tiếp đến đối tượng.
+- Hỗ trợ drag and drop khi thực sự giúp thao tác nhanh hơn.
+- Hiển thị trạng thái thiết bị như máy in, máy quét, mạng và đồng bộ.
+- Xử lý rõ trường hợp thiết bị bị ngắt kết nối.
+- Không để modal che toàn bộ thông tin quan trọng trong lúc thao tác.
+- Hạn chế mở quá nhiều cửa sổ phụ.
+- Giữ trạng thái và vị trí cửa sổ nếu việc đó giúp người dùng làm việc liên tục.
+
+16. RULE CHO WEB PC
+- Tối ưu cho tác vụ quản trị, dữ liệu lớn và thao tác lặp lại.
+- Hỗ trợ URL có thể chia sẻ cho trang chi tiết hoặc bộ lọc khi phù hợp.
+- Giữ trạng thái khi người dùng dùng nút Back và Forward của trình duyệt.
+- Cảnh báo khi người dùng rời trang có dữ liệu chưa lưu.
+- Hỗ trợ mở chi tiết ở tab mới khi nghiệp vụ cần so sánh nhiều đối tượng.
+- Không làm mất bộ lọc hoặc vị trí cuộn khi quay lại danh sách.
+- Dashboard phải ưu tiên KPI có khả năng hành động, không chỉ trang trí.
+- Biểu đồ phải có tiêu đề, đơn vị và khoảng thời gian rõ ràng.
+- Form dài nên chia thành section hoặc step hợp lý.
+- Session timeout phải cảnh báo trước khi đăng xuất.
+- Kiểm tra giao diện ở 1280x720, 1366x768, 1440x900 và 1920x1080.
+
+17. RULE CHO WEB MOBILE
+- Thiết kế mobile-first cho các tác vụ chính.
+- Không phụ thuộc vào hover.
+- Vùng chạm phải đủ lớn và có khoảng cách tránh bấm nhầm.
+- Ưu tiên thao tác bằng một tay khi phù hợp.
+- Các chức năng chính có thể đặt ở bottom navigation.
+- Không đặt quá nhiều nút trên cùng một hàng.
+- Tránh modal nhỏ nhiều tầng; ưu tiên full-screen dialog hoặc bottom sheet.
+- Tối ưu form cho bàn phím điện thoại.
+- Chọn đúng kiểu bàn phím cho số, điện thoại, email và URL.
+- Không để bàn phím che nút xác nhận hoặc trường đang nhập.
+- Giữ dữ liệu khi người dùng chuyển ứng dụng hoặc kết nối mạng bị gián đoạn.
+- Hỗ trợ safe area và nhiều tỷ lệ màn hình.
+- Tối ưu ảnh, dung lượng và tốc độ tải.
+- Hiển thị phản hồi ngay khi chạm để người dùng biết hệ thống đã nhận thao tác.
+
+18. ACCESSIBILITY
+- Đảm bảo độ tương phản đủ giữa chữ và nền.
+- Mọi chức năng quan trọng phải sử dụng được bằng bàn phím trên desktop và web PC.
+- Focus indicator phải rõ ràng.
+- Input phải liên kết đúng với label.
+- Hình ảnh có ý nghĩa phải có alt text.
+- Không truyền đạt trạng thái chỉ bằng màu sắc.
+- Thứ tự đọc của screen reader phải hợp lý.
+- Không tự động phát âm thanh hoặc chuyển động gây khó chịu.
+- Cho phép giảm chuyển động nếu người dùng yêu cầu.
+- Vùng bấm phải đủ lớn.
+- Nội dung lỗi phải dễ hiểu và có hướng sửa.
+- Giao diện phải hoạt động khi phóng to đến 200%.
+
+19. DESIGN SYSTEM
+- Xây dựng token cho màu, typography, spacing, radius, shadow và breakpoint.
+- Mọi màn hình phải ưu tiên dùng component chung.
+- Không tự tạo component mới nếu component hiện tại có thể mở rộng hợp lý.
+- Mỗi component phải có đầy đủ trạng thái và variant.
+- Đặt tên component theo chức năng, không theo màu hoặc vị trí cụ thể.
+- Quy định rõ khi nào dùng từng loại button, input, modal, toast và navigation.
+- Component phải hỗ trợ responsive và accessibility.
+- Mọi thay đổi component phải được cập nhật vào tài liệu Design System.
+- Không thay đổi trực tiếp component dùng chung chỉ để giải quyết một màn hình riêng lẻ.
+
+20. FIGMA
+- Dùng Auto Layout cho các thành phần có nội dung thay đổi.
+- Dùng Component và Variant thay vì sao chép nhiều phiên bản thủ công.
+- Dùng Variables hoặc Styles cho màu, typography và spacing.
+- Đặt tên frame, layer và component rõ ràng.
+- Tách khu vực wireframe, final design và component library.
+- Không để quá nhiều layer không tên hoặc tên mặc định.
+- Prototype phải thể hiện đầy đủ luồng chính và các trạng thái quan trọng.
+- Đánh dấu màn hình đã sẵn sàng cho developer.
+- Kiểm tra responsive trực tiếp bằng cách resize frame.
+- Sử dụng dữ liệu gần với dữ liệu thật, không chỉ dùng Lorem Ipsum.
+
+21. PROTOTYPE VÀ KIỂM THỬ
+- Bắt đầu bằng wireframe trước khi làm giao diện chi tiết.
+- Prototype phải kiểm tra được các tác vụ chính.
+- Kiểm thử với người dùng gần với nhóm sử dụng thực tế.
+- Quan sát hành vi thay vì chỉ hỏi người dùng có thích giao diện hay không.
+- Đo khả năng hoàn thành tác vụ, thời gian thao tác và số lỗi.
+- Kiểm tra khả năng tìm thấy chức năng.
+- Kiểm tra các trường hợp dữ liệu rỗng, lỗi, dài và bất thường.
+- Ghi nhận vấn đề theo mức độ ảnh hưởng và tần suất xảy ra.
+- Sửa vấn đề usability trước khi tối ưu phần trang trí.
+
+22. HANDOFF CHO DEVELOPER
+- Cung cấp đầy đủ kích thước, khoảng cách, màu và typography.
+- Mô tả responsive rule cho từng breakpoint.
+- Cung cấp trạng thái hover, focus, pressed, loading, disabled và error.
+- Ghi rõ điều kiện hiển thị và ẩn của từng thành phần.
+- Ghi rõ rule validation và nội dung thông báo lỗi.
+- Cung cấp asset đúng định dạng và kích thước.
+- Mô tả animation, transition và thời gian nếu có.
+- Ghi chú các ràng buộc nghiệp vụ quan trọng.
+- Cung cấp acceptance criteria cho luồng chính.
+- Review sản phẩm sau khi developer triển khai.
+- Không đánh giá chỉ dựa trên pixel; cần kiểm tra cả hành vi và nghiệp vụ.
+
+23. RULE CHO PHẦN MỀM POS, F&B VÀ BÁN LẺ
+- Ưu tiên tốc độ thao tác và giảm số lần nhấn.
+- Nút thêm món, thanh toán, giữ đơn và gửi bếp phải dễ nhận biết.
+- Hiển thị rõ bàn, khách hàng, nhân viên và trạng thái đơn.
+- Món mới, món đã gửi bếp, món đã hủy và món trả phải có trạng thái khác nhau.
+- Số lượng, đơn giá, giảm giá, thuế và thành tiền phải minh bạch.
+- Mọi thay đổi đơn giá hoặc số lượng phải cập nhật lại tổng tiền ngay.
+- Khi tăng giảm số lượng, phải áp dụng đúng đơn giá và rule giảm giá hiện tại.
+- Không tự giữ đơn giá đã làm tròn khi nghiệp vụ yêu cầu quay về đơn giá gốc.
+- Làm tròn đơn hàng phải có rule rõ ràng và có thể kiểm tra lại.
+- Khi thêm món sau khi làm tròn, cần xác định rõ có reset làm tròn hay không.
+- Thanh toán phải chống nhấn lặp và tạo giao dịch trùng.
+- In hóa đơn phải hiển thị trạng thái đang in, thành công hoặc thất bại.
+- Hủy đơn, trả hàng và hoàn tiền phải có xác nhận và phân quyền.
+- Khi trả hàng, số lượng mặc định không được vượt quá số lượng có thể trả.
+- Danh sách món trả phải thể hiện số lượng đã mua, đã trả và còn có thể trả.
+- Hệ thống phải xử lý rõ mất mạng, mất kết nối máy in hoặc đồng bộ thất bại.
+- Các chức năng thường dùng phải phù hợp với màn hình cảm ứng.
+- Không để popup che mất toàn bộ thông tin đơn hàng trong lúc xử lý.
+
+24. CHECKLIST TRƯỚC KHI BÀN GIAO THIẾT KẾ
+- Đã có đầy đủ user flow.
+- Đã có loading, empty, error và success state.
+- Đã kiểm tra nội dung dài và dữ liệu bất thường.
+- Đã kiểm tra responsive.
+- Đã kiểm tra keyboard và focus.
+- Đã kiểm tra độ tương phản.
+- Đã sử dụng đúng Design System.
+- Đã có rule validation.
+- Đã có xác nhận cho thao tác nguy hiểm.
+- Đã mô tả quyền của từng vai trò.
+- Đã mô tả hành vi khi mất mạng hoặc lỗi hệ thống.
+- Đã chuẩn bị asset cho developer.
+- Đã có acceptance criteria.
+- Đã review giao diện sau khi triển khai.
+
