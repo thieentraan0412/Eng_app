@@ -247,6 +247,7 @@ create table if not exists public.grammar_progress (
   srs_interval integer not null default 0,         -- số ngày tới lần ôn kế
   srs_due_date date    not null default current_date,
   last_studied timestamptz,
+  learned      boolean not null default false,     -- người dùng tự đánh dấu "đã học"
   updated_at   timestamptz not null default now(),
   unique (user_id, topic_key)
 );

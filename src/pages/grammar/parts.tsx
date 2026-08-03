@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import Icon, { type IconName } from '../../components/Icon'
 import type { GrammarTopic, TopicProgress } from '../../services/cloud/grammarCloud'
-import { daysUntil, isDue } from '../../services/cloud/grammarCloud'
+import { daysUntil, isDue, isLearned } from '../../services/cloud/grammarCloud'
 
 // Bộ icon người dùng chọn được cho chủ điểm — quy về IconName đã có sẵn
 export function topicIcon(name: string): IconName {
@@ -80,6 +80,17 @@ export function SentencePair({ wrong, right }: { wrong: string; right: string })
 // Nhãn trạng thái ôn của một chủ điểm
 export function TopicStatus({ p }: { p: TopicProgress | undefined }) {
   if (!p) return <span className="gr-badge">Chưa bắt đầu</span>
+  // Dòng tiến độ có thể được tạo ra chỉ vì bấm "Đã học" — chưa trả lời câu nào
+  // thì đừng nói về lịch ôn hay điểm số.
+  if (p.attempts === 0 && !isLearned(p)) return <span className="gr-badge">Chưa bắt đầu</span>
+  // "Đã học" đè lên mọi trạng thái khác: đã nắm rồi thì không nhắc đến hạn/yếu nữa
+  if (isLearned(p)) {
+    return (
+      <span className="gr-badge gr-badge-ok gr-badge-dot">
+        <Icon name="check" /> Đã học
+      </span>
+    )
+  }
   if (isDue(p)) {
     return (
       <span className="gr-badge gr-badge-warn gr-badge-dot">
@@ -111,6 +122,7 @@ export function TopicCard({
   onOpen,
   onEdit,
   onDelete,
+  onToggleLearned,
 }: {
   topic: GrammarTopic
   progress: TopicProgress | undefined
@@ -120,9 +132,15 @@ export function TopicCard({
   onOpen: () => void
   onEdit?: () => void
   onDelete?: () => void
+  onToggleLearned?: () => void
 }) {
   const mastery = progress?.mastery ?? 0
-  const cls = `gr-topic${selecting ? ' is-selecting' : ''}${selected ? ' is-picked' : ''}`
+  const learned = isLearned(progress)
+  // Đạt ngưỡng nắm vững thì thẻ đã xanh sẵn — nút chỉ bỏ được dấu đánh TAY
+  const marked = progress?.learned === true
+  const cls = `gr-topic${selecting ? ' is-selecting' : ''}${selected ? ' is-picked' : ''}${
+    learned ? ' is-learned' : ''
+  }`
   return (
     <div
       className={cls}
@@ -142,8 +160,21 @@ export function TopicCard({
           {selected && <Icon name="check" />}
         </span>
       )}
-      {!selecting && (onEdit || onDelete) && (
+      {!selecting && (onEdit || onDelete || onToggleLearned) && (
         <span className="gr-topic-tools">
+          {onToggleLearned && (
+            <button
+              className={marked ? 'gr-ibtn gr-ibtn-learn is-learned' : 'gr-ibtn gr-ibtn-learn'}
+              title={marked ? 'Bỏ đánh dấu đã học' : 'Đánh dấu đã học'}
+              aria-pressed={marked}
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleLearned()
+              }}
+            >
+              <Icon name="check" />
+            </button>
+          )}
           {onEdit && (
             <button
               className="gr-ibtn"
@@ -197,7 +228,13 @@ export function TopicCard({
         <span>
           {topic.formulas.length} quy tắc · {topic.items.length} câu
         </span>
-        <span>{progress ? `Nắm vững ${mastery}%` : 'Chưa bắt đầu'}</span>
+        {learned ? (
+          <span className="gr-topic-done">
+            <Icon name="check" /> Đã học{progress?.attempts ? ` · ${mastery}%` : ''}
+          </span>
+        ) : (
+          <span>{progress?.attempts ? `Nắm vững ${mastery}%` : 'Chưa bắt đầu'}</span>
+        )}
       </span>
     </div>
   )

@@ -11,6 +11,8 @@ import {
   revertTopic,
   reviewError,
   saveTopicResult,
+  setTopicLearned,
+  todayStr,
   type ErrorEntry,
   type GrammarData,
   type GrammarTopic,
@@ -241,6 +243,43 @@ export default function GrammarPage() {
     }
   }
 
+  // Bật/tắt dấu "đã học". Đổi màu thẻ ngay rồi mới gọi cloud; hỏng thì trả lại
+  // trạng thái cũ để giao diện không nói dối.
+  const toggleLearned = async (t: GrammarTopic, learned: boolean) => {
+    const before = data.progress[t.key]
+    setData((d) => ({
+      ...d,
+      progress: {
+        ...d.progress,
+        [t.key]: before
+          ? { ...before, learned }
+          : {
+              topicKey: t.key,
+              attempts: 0,
+              correct: 0,
+              mastery: 0,
+              interval: 0,
+              due: todayStr(),
+              lastStudied: null,
+              learned,
+            },
+      },
+    }))
+    setError(null)
+    try {
+      await setTopicLearned(t.key, learned)
+      await refresh()
+    } catch (e) {
+      setError(errMsg(e))
+      setData((d) => {
+        const next = { ...d.progress }
+        if (before) next[t.key] = before
+        else delete next[t.key]
+        return { ...d, progress: next }
+      })
+    }
+  }
+
   // Bỏ bản chỉnh sửa của một chủ điểm dựng sẵn, quay lại nội dung gốc
   const backToBuiltin = (t: GrammarTopic) =>
     setAsk({
@@ -372,6 +411,7 @@ export default function GrammarPage() {
           onEdit={() => editTopic(openTopic)}
           onDelete={() => discardTopic(openTopic)}
           onRevert={() => backToBuiltin(openTopic)}
+          onToggleLearned={(learned) => void toggleLearned(openTopic, learned)}
         />
         {confirmUi}
       </>
@@ -403,6 +443,7 @@ export default function GrammarPage() {
         onDeleteTopic={discardTopic}
         onDeleteTopics={discardTopics}
         onRestoreTopic={unhideTopic}
+        onToggleLearned={toggleLearned}
       />
       {confirmUi}
     </>

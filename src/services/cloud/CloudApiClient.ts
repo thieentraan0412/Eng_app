@@ -301,6 +301,8 @@ export interface NewCloudGrammarProgress {
   srs_interval: number
   srs_due_date: string
   last_studied: string | null
+  /** người dùng tự đánh dấu "đã học" — cột thêm sau, DB cũ chưa có */
+  learned?: boolean
 }
 
 export interface CloudGrammarProgress extends NewCloudGrammarProgress {
@@ -1206,6 +1208,19 @@ export const CloudApi = {
     if (!user) throw new Error('Chưa đăng nhập')
     const { error } = await supabase.from('grammar_progress').upsert(
       { ...p, user_id: user.id, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,topic_key' },
+    )
+    if (error) throw error
+  },
+
+  // Bật/tắt dấu "đã học" mà KHÔNG đụng tới điểm số và lịch ôn: upsert chỉ liệt kê
+  // learned nên khi dòng đã có, các cột khác giữ nguyên; khi chưa có thì dòng mới
+  // lấy giá trị mặc định của bảng (0 câu, chưa luyện).
+  async setGrammarLearned(topicKey: string, learned: boolean): Promise<void> {
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { error } = await supabase.from('grammar_progress').upsert(
+      { topic_key: topicKey, learned, user_id: user.id, updated_at: new Date().toISOString() },
       { onConflict: 'user_id,topic_key' },
     )
     if (error) throw error

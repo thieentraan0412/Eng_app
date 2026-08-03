@@ -61,6 +61,7 @@ create table if not exists public.grammar_progress (
   srs_interval integer not null default 0,         -- số ngày tới lần ôn kế
   srs_due_date date    not null default current_date,
   last_studied timestamptz,
+  learned      boolean not null default false,     -- người dùng tự đánh dấu "đã học"
   updated_at   timestamptz not null default now(),
   unique (user_id, topic_key)
 );
@@ -100,6 +101,9 @@ create table if not exists public.grammar_hidden_topics (
 
 -- Chạy bổ sung cho tài khoản đã cài schema trước khi có 2 phần trên
 alter table public.grammar_topics add column if not exists source_key text;
+-- Đánh dấu "đã học" thủ công (thêm sau) — thiếu cột này thì nút đánh dấu sẽ
+-- báo nhắc chạy lại file SQL, phần còn lại của trang Ngữ pháp vẫn chạy bình thường.
+alter table public.grammar_progress add column if not exists learned boolean not null default false;
 
 -- ---------- Chỉ mục ----------
 create index if not exists idx_gtopics_user     on public.grammar_topics (user_id);

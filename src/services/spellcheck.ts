@@ -59,6 +59,49 @@ export function isNonEnglish(token: string): boolean {
   return NON_ASCII.test(token)
 }
 
+// ---------- Nhận diện từ tiếng Việt ----------
+// Chữ có dấu thì thấy ngay, nhưng người học hay gõ không dấu ("khi", "nguoi",
+// "hoc"…) — những từ đó lọt vào từ điển tiếng Anh như từ sai chính tả.
+// Cách phân biệt: âm tiết tiếng Việt có cấu trúc CỐ ĐỊNH  phụ âm đầu + vần + phụ
+// âm cuối, và bộ phụ âm cuối rất hẹp (c, ch, m, n, ng, nh, p, t). Chuỗi nào tách
+// được theo đúng khuôn đó thì coi là tiếng Việt.
+//
+// Trùng với từ tiếng Anh thật (the, me, can, ban…) không sao: hàm này chỉ được
+// gọi cho các từ ĐÃ trượt từ điển tiếng Anh.
+const VN_ONSETS = [
+  'ngh', 'ng', 'nh', 'ch', 'gh', 'gi', 'kh', 'ph', 'qu', 'th', 'tr',
+  'b', 'c', 'd', 'g', 'h', 'k', 'l', 'm', 'n', 'p', 'r', 's', 't', 'v', 'x', '',
+]
+const VN_CODAS = ['ng', 'nh', 'ch', 'c', 'm', 'n', 'p', 't', '']
+const VN_NUCLEI = new Set([
+  'a', 'e', 'i', 'o', 'u', 'y',
+  'ai', 'ao', 'au', 'ay', 'eo', 'eu', 'ia', 'ie', 'iu', 'oa', 'oe', 'oi', 'oo',
+  'ua', 'ue', 'ui', 'uo', 'uu', 'uy', 'ya', 'ye', 'yu',
+  'ieu', 'oai', 'oao', 'oay', 'oeo', 'uai', 'uao', 'uay', 'uoi', 'uou',
+  'uya', 'uye', 'uyu', 'yeu',
+])
+
+// Chuỗi chữ cái ASCII có tách được thành một âm tiết tiếng Việt không dấu không
+function isVietnameseSyllable(word: string): boolean {
+  const w = word.toLowerCase()
+  if (!/^[a-z]{2,7}$/.test(w)) return false
+  for (const onset of VN_ONSETS) {
+    if (!w.startsWith(onset)) continue
+    const rest = w.slice(onset.length)
+    for (const coda of VN_CODAS) {
+      if (coda && !rest.endsWith(coda)) continue
+      const nucleus = coda ? rest.slice(0, rest.length - coda.length) : rest
+      if (VN_NUCLEI.has(nucleus)) return true
+    }
+  }
+  return false
+}
+
+// Token là tiếng Việt (có dấu, ký tự lạ, hoặc âm tiết Việt gõ không dấu)
+export function isVietnamese(token: string): boolean {
+  return isNonEnglish(token) || isVietnameseSyllable(token)
+}
+
 // Một token có phải từ viết sai không
 export function isMisspelled(token: string): boolean {
   // Từ đã cho vào "bỏ qua"

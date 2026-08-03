@@ -46,6 +46,21 @@ export interface TopicProgress {
   interval: number // số ngày tới lần ôn kế
   due: string // yyyy-mm-dd
   lastStudied: string | null
+  /** người dùng tự bấm "Đã học" (khác với mastery do hệ thống tự tính) */
+  learned: boolean
+}
+
+/** Ngưỡng mastery coi như đã nắm chủ điểm mà không cần bấm tay */
+export const MASTERED_AT = 80
+
+/**
+ * Chủ điểm được coi là "đã học" khi người dùng tự đánh dấu, HOẶC khi mức nắm
+ * vững do hệ thống tính đã đạt ngưỡng. Dùng chung cho thẻ xanh lá, huy hiệu
+ * trạng thái và ô thống kê "Chủ điểm đã nắm" để ba chỗ không lệch nhau.
+ */
+export function isLearned(p: TopicProgress | undefined): boolean {
+  if (!p) return false
+  return p.learned || p.mastery >= MASTERED_AT
 }
 
 // ---------- Một lỗi trong sổ lỗi ----------
@@ -283,6 +298,8 @@ export async function loadGrammar(): Promise<GrammarData> {
       interval: p.srs_interval,
       due: p.srs_due_date,
       lastStudied: p.last_studied,
+      // DB chưa chạy phần SQL thêm cột -> coi như chưa đánh dấu
+      learned: p.learned ?? false,
     }
   }
 
@@ -321,6 +338,9 @@ export async function saveTopicResult(
     interval,
     due: addDays(interval),
     lastStudied: new Date().toISOString(),
+    // Luyện tập KHÔNG động tới dấu đánh tay: payload dưới không liệt kê cột
+    // learned nên upsert giữ nguyên giá trị cũ trong DB.
+    learned: prev?.learned ?? false,
   }
 
   await CloudApi.saveGrammarProgress({
@@ -392,6 +412,19 @@ export async function reviewError(entry: ErrorEntry, ok: boolean): Promise<Error
   return { ...entry, stage, status: resolved ? 'resolved' : 'active', due }
 }
 
+/**
+ * Bật/tắt dấu "đã học" của một chủ điểm.
+ * Cột `learned` được thêm sau nên tài khoản cài schema từ trước có thể chưa có —
+ * khi đó báo đúng việc cần làm thay vì ném lỗi Postgres khó hiểu.
+ */
+export async function setTopicLearned(topicKey: string, learned: boolean): Promise<void> {
+  try {
+    await CloudApi.setGrammarLearned(topicKey, learned)
+  } catch (e) {
+    throw isMissingSchema(e, 'learned') ? new Error(NEED_LEARNED_SQL) : e
+  }
+}
+
 export async function deleteError(id: string): Promise<void> {
   await CloudApi.deleteGrammarError(id)
 }
@@ -404,6 +437,9 @@ export async function deleteError(id: string): Promise<void> {
 // chỉ riêng phần sửa/ẩn CHỦ ĐIỂM DỰNG SẴN mới bắt buộc có chúng.
 const NEED_SQL =
   'Kho dữ liệu chưa có phần “sửa/ẩn chủ điểm dựng sẵn”. Mở Supabase → SQL Editor, chạy lại file supabase/grammar.sql rồi thử lại.'
+
+const NEED_LEARNED_SQL =
+  'Kho dữ liệu chưa có cột đánh dấu “đã học”. Mở Supabase → SQL Editor, chạy lại file supabase/grammar.sql rồi thử lại.'
 
 function withoutSourceKey(row: NewCloudGrammarTopic): NewCloudGrammarTopic {
   const { source_key: _drop, ...rest } = row

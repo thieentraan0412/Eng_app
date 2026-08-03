@@ -824,6 +824,72 @@
   background: var(--surface);
 }
 
+/* ---------- Chủ điểm đã học: viền + nền xanh lá ---------- */
+.gr-topic.is-learned {
+  background: color-mix(in srgb, var(--success) 7%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 34%, var(--border));
+}
+.gr-topic.is-learned:hover {
+  border-color: color-mix(in srgb, var(--success) 55%, var(--border));
+}
+.gr-topic.is-learned .gr-mark {
+  background: color-mix(in srgb, var(--success) 13%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border));
+  color: var(--success);
+}
+/* Thanh tiến độ đổi sang xanh nhưng GIỮ NGUYÊN độ dài theo mức nắm vững thật:
+   đánh dấu tay mà chưa luyện câu nào thì thanh vẫn rỗng — thẻ xanh nói "tôi đã
+   học", thanh nói "hệ thống chưa đo được", hai điều đó không mâu thuẫn. */
+.gr-topic.is-learned .gr-bar > i {
+  background: var(--success);
+}
+.gr-topic.is-learned .gr-bar {
+  background: color-mix(in srgb, var(--success) 16%, var(--surface-2));
+}
+.gr-topic-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: var(--success);
+}
+.gr-topic-done .ico {
+  width: 13px;
+  height: 13px;
+}
+/* Nút bật/tắt dấu — đang bật thì tô xanh để phân biệt với nút sửa/xóa */
+.gr-ibtn.is-learned {
+  background: color-mix(in srgb, var(--success) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 38%, var(--border));
+  color: var(--success);
+}
+/* Thẻ đã học: giữ nút dấu luôn hiện (máy cảm ứng không hover được), và chừa
+   chỗ cho nó ở hàng tiêu đề — nếu không nút sẽ đè lên tên chủ điểm dài. */
+.gr-topic.is-learned .gr-topic-tools {
+  opacity: 1;
+}
+.gr-topic.is-learned .gr-topic-name {
+  padding-right: 32px;
+}
+/* display:none chứ không phải opacity:0 — nút ẩn vẫn chiếm chỗ trong hàng flex
+   sẽ đẩy nút dấu lệch sang trái và đè lên tên chủ điểm. */
+.gr-topic.is-learned .gr-topic-tools .gr-ibtn:not(.gr-ibtn-learn) {
+  display: none;
+}
+.gr-topic.is-learned:hover .gr-topic-tools .gr-ibtn,
+.gr-topic.is-learned:focus-within .gr-topic-tools .gr-ibtn {
+  display: grid;
+}
+/* Nút "Đã học" ở đầu trang bài học */
+.gr-btn.is-learned {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 38%, var(--border));
+  color: var(--success);
+}
+.gr-btn.is-learned .ico {
+  color: currentColor;
+}
+
 /* ---------- Chọn nhiều chủ điểm để xóa ---------- */
 .gr-topic.is-selecting {
   padding-right: 44px;

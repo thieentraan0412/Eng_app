@@ -15,7 +15,7 @@ import { suggest, type Suggestion } from '../services/suggestion'
 import {
   ignoreWord,
   isMisspelled,
-  isNonEnglish,
+  isVietnamese,
   suggestFix,
   tokenizeWords,
 } from '../services/spellcheck'
@@ -39,7 +39,6 @@ function mergeGrammar(a: GrammarMatch[], b: GrammarMatch[]): GrammarMatch[] {
 interface SpellItem {
   word: string
   suggestions: string[]
-  foreign: boolean // chứa ký tự ngoài bảng chữ cái tiếng Anh -> không phải lỗi gõ máy
   pending: boolean // đang tìm gợi ý sửa
 }
 
@@ -258,7 +257,7 @@ export default function WritingPage() {
       const out: Record<string, number> = {}
       for (const w of writings) {
         const uniq = [...new Set(tokenizeWords((w.content ?? '').slice(0, 4000)))]
-        out[w.id] = uniq.filter((t) => isMisspelled(t)).length
+        out[w.id] = uniq.filter((t) => !isVietnamese(t) && isMisspelled(t)).length
       }
       if (!cancelled) setSpellCounts(out)
     }, 250)
@@ -860,22 +859,15 @@ function Editor({
     let alive = true
     const handle = setTimeout(() => {
       const uniq = [...new Set(tokenizeWords(content))]
-      const bad = uniq.filter((t) => isMisspelled(t)).slice(0, 20)
+      // Chỉ soát tiếng Anh: từ tiếng Việt (có dấu hay không dấu) bỏ qua hoàn toàn
+      const bad = uniq.filter((t) => !isVietnamese(t) && isMisspelled(t)).slice(0, 20)
       if (!alive) return
 
-      // Bước 1: danh sách hiện ngay. Từ tiếng Việt không bao giờ có gợi ý tiếng Anh
-      // nên đánh dấu xong luôn, không cần chờ.
-      setSpellList(
-        bad.map((w) => ({
-          word: w,
-          suggestions: [],
-          foreign: isNonEnglish(w),
-          pending: !isNonEnglish(w),
-        })),
-      )
+      // Bước 1: danh sách hiện ngay, gợi ý sửa điền sau
+      setSpellList(bad.map((w) => ({ word: w, suggestions: [], pending: true })))
 
       // Bước 2: rải việc tìm gợi ý ra từng nhịp rảnh
-      const queue = bad.filter((w) => !isNonEnglish(w))
+      const queue = bad
       let i = 0
       const step = () => {
         if (!alive || i >= queue.length) return
@@ -1699,14 +1691,8 @@ function Editor({
                   spellList.map((item, i) => (
                     <div className="write-issue" key={item.word}>
                       <div className="write-issue-top">
-                        <span
-                          className={
-                            item.foreign
-                              ? 'write-badge write-badge-warn write-badge-dot'
-                              : 'write-badge write-badge-err write-badge-dot'
-                          }
-                        >
-                          {item.foreign ? 'Không phải tiếng Anh' : 'Sai chính tả'}
+                        <span className="write-badge write-badge-err write-badge-dot">
+                          Sai chính tả
                         </span>
                         <span className="write-spacer" />
                         <span className="write-issue-kind">Lỗi {i + 1}</span>

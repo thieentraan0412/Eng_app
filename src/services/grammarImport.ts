@@ -5,6 +5,8 @@
 //      Điền chỗ trống   She {has lived} in Hue for six years. (live)
 //      Trắc nghiệm      He has worked here {for | since | from} five years.
 //      Sửa lỗi sai      My sister is [teacher > a teacher] at school.
+//                       (vế sai phải là MỘT từ — nhiều hơn thì dòng đó tự
+//                        chuyển thành bài điền chỗ trống, xem parseLine)
 //      Viết lại câu     They built it in 1990. >> It was built in 1990.
 //    Bổ trợ: (gợi ý) cuối câu điền · // giải thích ở cuối bất kỳ dòng nào ·
 //    dòng mở đầu bằng # là ghi chú.
@@ -102,6 +104,26 @@ export function parseLine(src: string, no: number): ParsedLine | null {
 
     const head = line.slice(0, mc.index)
     const tail = line.slice((mc.index ?? 0) + mc[0].length)
+
+    // Dạng "Sửa lỗi" của app chỉ thay ĐÚNG MỘT token: người học bấm vào một từ
+    // rồi gõ dạng đúng. Nếu vế sai dài hơn một từ ([discussed about > discussed],
+    // [dress red > red dress]…) thì các từ thừa vẫn nằm lại trong câu và câu sau
+    // khi sửa vẫn sai. Những dòng đó chuyển thành "Điền chỗ trống": cả cụm sai
+    // trở thành ô trống, đáp án là cụm đúng.
+    // (Vế ĐÚNG dài bao nhiêu từ cũng được — nó chỉ thay vào một chỗ.)
+    if (wrong.split(/\s+/).length > 1) {
+      return {
+        no,
+        ok: true,
+        raw,
+        kind: 'cloze',
+        why,
+        answer: right,
+        prompt: `${head}___${tail}`,
+        display: { before: head, highlight: right, after: tail, note: `sửa: ${wrong}` },
+      }
+    }
+
     const full = (head + wrong + tail).replace(/\s+/g, ' ').trim()
     const tokens = full.split(' ')
     // Vị trí từ sai = số từ đứng trước nó

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Icon from '../../components/Icon'
 import { VN_TRAPS, type CefrLevel } from '../../data/grammar'
 import type { ErrorEntry, GrammarTopic, TopicProgress } from '../../services/cloud/grammarCloud'
-import { isDue, todayStr } from '../../services/cloud/grammarCloud'
+import { isDue, isLearned, MASTERED_AT, todayStr } from '../../services/cloud/grammarCloud'
 import { SentencePair, TopicCard, TopicStatus, topicIcon } from './parts'
 
 const LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1']
@@ -26,6 +26,7 @@ export default function TopicLibrary({
   onDeleteTopic,
   onDeleteTopics,
   onRestoreTopic,
+  onToggleLearned,
 }: {
   topics: GrammarTopic[]
   progress: Record<string, TopicProgress>
@@ -39,6 +40,7 @@ export default function TopicLibrary({
   onDeleteTopic: (t: GrammarTopic) => void
   onDeleteTopics: (list: GrammarTopic[]) => void
   onRestoreTopic: (key: string) => void
+  onToggleLearned: (t: GrammarTopic, learned: boolean) => void
 }) {
   const [tab, setTab] = useState<'all' | 'weak' | 'trap'>('all')
   const [level, setLevel] = useState<'all' | CefrLevel>('all')
@@ -76,7 +78,7 @@ export default function TopicLibrary({
   }, [topics])
 
   // ---------- Chỉ số ----------
-  const mastered = topics.filter((t) => (progress[t.key]?.mastery ?? 0) >= 80).length
+  const mastered = topics.filter((t) => isLearned(progress[t.key])).length
   const attempts = Object.values(progress).reduce((s, p) => s + p.attempts, 0)
   const corrects = Object.values(progress).reduce((s, p) => s + p.correct, 0)
   const accuracy = attempts > 0 ? Math.round((corrects / attempts) * 100) : 0
@@ -87,6 +89,8 @@ export default function TopicLibrary({
   const priority = useMemo(() => {
     const score = (t: GrammarTopic) => {
       const p = progress[t.key]
+      // Đã đánh dấu học xong thì đẩy xuống cuối, đừng nhắc nữa
+      if (isLearned(p)) return 1000
       if (!p) return 60 // chưa luyện bao giờ
       return (isDue(p) ? 0 : 100) + p.mastery
     }
@@ -95,7 +99,10 @@ export default function TopicLibrary({
 
   const priorityWhy = (t: GrammarTopic): string => {
     const p = progress[t.key]
-    if (!p) return 'Chưa luyện lần nào — bắt đầu để hệ thống biết bạn yếu chỗ nào'
+    if (isLearned(p)) return 'Đã đánh dấu học xong — chỉ ôn lại khi bạn muốn'
+    // p có thể tồn tại chỉ vì từng bấm "Đã học" rồi bỏ — vẫn là chưa luyện
+    if (!p || p.attempts === 0)
+      return 'Chưa luyện lần nào — bắt đầu để hệ thống biết bạn yếu chỗ nào'
     if (isDue(p)) return 'Đến hạn ôn theo lịch giãn cách'
     if (p.mastery < 50) return `Mới đúng ${p.correct}/${p.attempts} câu — đang là điểm yếu`
     return `Nắm vững ${p.mastery}% · ôn thêm để giữ trong trí nhớ dài hạn`
@@ -105,7 +112,9 @@ export default function TopicLibrary({
   const weak = useMemo(
     () =>
       ready
-        .filter((t) => progress[t.key])
+        // Chủ điểm đã đánh dấu học xong không còn là "điểm yếu" nữa, dù mức
+        // nắm vững hệ thống tính được vẫn thấp
+        .filter((t) => progress[t.key]?.attempts && !isLearned(progress[t.key]))
         .sort((a, b) => (progress[a.key]?.mastery ?? 0) - (progress[b.key]?.mastery ?? 0))
         .slice(0, 5),
     [ready, progress],
@@ -166,7 +175,7 @@ export default function TopicLibrary({
             {mastered}
             <small>/{topics.length}</small>
           </span>
-          <span className="gr-stat-sub">Mức nắm vững ≥ 80%</span>
+          <span className="gr-stat-sub">Tự đánh dấu, hoặc nắm vững ≥ {MASTERED_AT}%</span>
         </div>
         <div className="gr-stat">
           <span className="gr-stat-top">
@@ -327,6 +336,7 @@ export default function TopicLibrary({
                   onOpen={() => (selecting ? togglePick(t.key) : onOpenTopic(t))}
                   onEdit={() => onEditTopic(t)}
                   onDelete={() => onDeleteTopic(t)}
+                  onToggleLearned={() => onToggleLearned(t, !progress[t.key]?.learned)}
                 />
               ))}
               {!selecting && (

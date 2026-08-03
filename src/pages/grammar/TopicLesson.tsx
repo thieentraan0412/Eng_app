@@ -14,6 +14,7 @@ export default function TopicLesson({
   onEdit,
   onDelete,
   onRevert,
+  onToggleLearned,
 }: {
   topic: GrammarTopic
   progress: TopicProgress | undefined
@@ -25,8 +26,10 @@ export default function TopicLesson({
   onDelete: () => void
   /** chỉ có ở bản sửa của chủ điểm dựng sẵn — bỏ bản sửa, quay về nội dung gốc */
   onRevert: () => void
+  onToggleLearned: (learned: boolean) => void
 }) {
   const mastery = progress?.mastery ?? 0
+  const marked = progress?.learned === true
   const myErrors = errors.filter((e) => e.topicKey === topic.key && e.status === 'active')
   const empty =
     topic.formulas.length === 0 &&
@@ -67,6 +70,18 @@ export default function TopicLesson({
           >
             <span>{mastery}%</span>
           </span>
+          <button
+            className={marked ? 'gr-btn is-learned' : 'gr-btn'}
+            aria-pressed={marked}
+            title={
+              marked
+                ? 'Bỏ đánh dấu — chủ điểm quay lại danh sách cần ôn'
+                : 'Đánh dấu đã học — thẻ chuyển xanh và thôi nhắc ôn'
+            }
+            onClick={() => onToggleLearned(!marked)}
+          >
+            <Icon name="check" /> {marked ? 'Đã học' : 'Đánh dấu đã học'}
+          </button>
           <button className="gr-btn" onClick={onEdit}>
             <Icon name="pencil" /> Sửa
           </button>

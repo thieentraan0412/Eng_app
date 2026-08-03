@@ -1078,9 +1078,24 @@
     grid-template-columns: 1fr;
   }
 
+  /* Không canh giữa một khối nội dung nhỏ giữa màn hình cao: ở 390×844
+     cách đó để thừa ~190px trống trên và ~190px dưới. Xếp từ trên xuống
+     rồi cho thẻ nở chiếm hết chỗ còn lại. */
+  .rev-stage {
+    justify-content: flex-start;
+    gap: 14px;
+    padding-bottom: 16px; /* .rev-foot đã ẩn ở mobile nên 48px là thừa */
+  }
   .rev-card {
+    /* Thẻ nuốt đúng phần cao còn dư: không còn khoảng trắng lửng nào
+       giữa thẻ và hàng chuyển thẻ, mà hàng nút đánh giá + chuyển thẻ
+       vẫn luôn nằm trong tầm nhìn (trang không phải cuộn). */
+    flex: 1 1 auto;
+    min-height: 180px;
+    /* Mặt sau (nghĩa + ví dụ + collocation) dài hơn thì cuộn TRONG thẻ */
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 26px 18px;
-    min-height: 224px;
   }
   .rev-word {
     font-size: 29px;
