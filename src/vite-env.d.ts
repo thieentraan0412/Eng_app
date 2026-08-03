@@ -39,6 +39,20 @@ export interface EngMasterApi {
   onAlwaysOnTopState: (cb: (on: boolean) => void) => () => void
   setMiniWindow: (on: boolean) => Promise<boolean>
   getWindowState: () => Promise<{ alwaysOnTop: boolean; mini: boolean }>
+  onWindowState: (
+    cb: (state: { alwaysOnTop: boolean; mini: boolean }) => void,
+  ) => () => void
+
+  // Thanh cửa sổ tự vẽ + toàn màn hình
+  minimizeWindow: () => Promise<boolean>
+  toggleMaximizeWindow: () => Promise<boolean>
+  getMaximizedWindow: () => Promise<boolean>
+  closeWindow: () => Promise<boolean>
+  onMaximizedState: (cb: (on: boolean) => void) => () => void
+  onWindowChromeToggle: (cb: () => void) => () => void
+  getFullScreen: () => Promise<boolean>
+  toggleFullScreen: (next?: boolean) => Promise<boolean>
+  onFullScreenState: (cb: (on: boolean) => void) => () => void
 
   // Dịch nhanh toàn màn hình
   setDesktopTranslate: (enabled: boolean) => Promise<boolean>

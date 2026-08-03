@@ -53,7 +53,36 @@ contextBridge.exposeInMainWorld('api', {
   setMiniWindow: (on: boolean): Promise<boolean> => ipcRenderer.invoke('window:mini', on),
   getWindowState: (): Promise<{ alwaysOnTop: boolean; mini: boolean }> =>
     ipcRenderer.invoke('window:get-state'),
+  onWindowState: (cb: (state: { alwaysOnTop: boolean; mini: boolean }) => void): (() => void) => {
+    const h = (_event: IpcRendererEvent, state: { alwaysOnTop: boolean; mini: boolean }) =>
+      cb(state)
+    ipcRenderer.on('window:state', h)
+    return () => ipcRenderer.removeListener('window:state', h)
+  },
 
+  // ----- Thanh cửa sổ tự vẽ + toàn màn hình -----
+  minimizeWindow: (): Promise<boolean> => ipcRenderer.invoke('window:minimize'),
+  toggleMaximizeWindow: (): Promise<boolean> => ipcRenderer.invoke('window:maximize:toggle'),
+  getMaximizedWindow: (): Promise<boolean> => ipcRenderer.invoke('window:maximized:get'),
+  closeWindow: (): Promise<boolean> => ipcRenderer.invoke('window:close'),
+  onMaximizedState: (cb: (on: boolean) => void): (() => void) => {
+    const h = (_event: IpcRendererEvent, on: boolean) => cb(on)
+    ipcRenderer.on('window:maximized-state', h)
+    return () => ipcRenderer.removeListener('window:maximized-state', h)
+  },
+  onWindowChromeToggle: (cb: () => void): (() => void) => {
+    const h = () => cb()
+    ipcRenderer.on('window:chrome-toggle', h)
+    return () => ipcRenderer.removeListener('window:chrome-toggle', h)
+  },
+  getFullScreen: (): Promise<boolean> => ipcRenderer.invoke('window:fullscreen:get'),
+  toggleFullScreen: (next?: boolean): Promise<boolean> =>
+    ipcRenderer.invoke('window:fullscreen:toggle', next),
+  onFullScreenState: (cb: (on: boolean) => void): (() => void) => {
+    const h = (_event: IpcRendererEvent, on: boolean) => cb(on)
+    ipcRenderer.on('window:fullscreen-state', h)
+    return () => ipcRenderer.removeListener('window:fullscreen-state', h)
+  },
   // ----- Dịch nhanh toàn màn hình -----
   // (Cửa sổ chính) Bật/tắt tính năng tô-chữ-để-dịch trên toàn desktop
   setDesktopTranslate: (enabled: boolean): Promise<boolean> =>

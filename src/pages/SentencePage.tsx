@@ -534,8 +534,6 @@ function PracticeView({
   const [topicF, setTopicF] = useState('')
 
   // Bộ đếm số lượt lưu đang chạy -> hiển thị "đang lưu…"
-  const pending = useRef(0)
-  const [saving, setSaving] = useState(false)
   // Hẹn giờ debounce khi gõ, theo từng câu
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
@@ -614,21 +612,13 @@ function PracticeView({
     }
   }, [])
 
-  // Lưu bài 1 câu lên cloud (best-effort, có chỉ báo "đang lưu…"). Ổn định.
+  // Lưu bài 1 câu lên cloud — ÂM THẦM, không hiện chỉ báo nào.
+  // Trước đây có dòng "đang lưu…" hiện/ẩn liên tục khi gõ, làm hàng tiến độ
+  // co giãn và cả trang nhảy lên nhảy xuống trên điện thoại.
   const persist = useCallback((id: string, rec: PracticeRecord) => {
-    pending.current += 1
-    setSaving(true)
-    saveProgress(id, rec)
-      .catch(() => {
-        /* lỗi mạng -> bỏ qua, lần thao tác sau sẽ ghi lại */
-      })
-      .finally(() => {
-        pending.current -= 1
-        if (pending.current <= 0) {
-          pending.current = 0
-          setSaving(false)
-        }
-      })
+    saveProgress(id, rec).catch(() => {
+      /* lỗi mạng -> bỏ qua, lần thao tác sau sẽ ghi lại */
+    })
   }, [])
 
   // Danh sách sau khi lọc theo cấp độ / chủ đề — dùng cho cả 2 chế độ hiển thị
@@ -905,7 +895,6 @@ function PracticeView({
           <span className="cc-pb-num">
             <b>{correctCount}</b> đúng
           </span>
-          {saving && <span className="cc-saving">đang lưu…</span>}
         </div>
 
         <SentenceCard
@@ -963,7 +952,6 @@ function PracticeView({
         <span className="cc-bar cc-bar-ok cc-bar-lg">
           <i style={{ width: `${pct}%` }} />
         </span>
-        {saving && <span className="cc-saving">đang lưu…</span>}
         <button className="cc-btn cc-btn-primary cc-btn-sm" onClick={checkAll}>
           <Icon name="check" /> Kiểm tra tất cả
         </button>

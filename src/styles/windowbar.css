@@ -1,0 +1,177 @@
+/* ============================================================
+   Thanh cửa sổ tự vẽ — thay native title bar để có thể ẩn trọn hàng.
+   ============================================================ */
+.win-bar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding-left: 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+.win-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.win-brand-badge {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--text);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+}
+.win-brand-name {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.win-drag-region {
+  align-self: stretch;
+  flex: 1 1 auto;
+  min-width: 12px;
+}
+
+.win-controls {
+  align-self: stretch;
+  display: flex;
+  margin-left: auto;
+  -webkit-app-region: no-drag;
+}
+.win-control {
+  width: 46px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: default;
+  transition: background 0.12s, color 0.12s;
+  -webkit-app-region: no-drag;
+}
+.win-control:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.win-control.win-close:hover {
+  background: #e81123;
+  color: #fff;
+}
+.win-control svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.win-menu {
+  display: none;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+.win-menu:hover {
+  background: var(--surface-hover);
+}
+.win-menu svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* Thanh fixed không chiếm layout: chừa đúng chiều cao cho nội dung. */
+.app-root.has-window-bar,
+.auth-window.has-window-bar {
+  padding-top: 40px;
+}
+.app-root.has-window-bar .write-ed {
+  top: 40px;
+}
+.auth-window {
+  height: 100vh;
+  height: 100dvh;
+  overflow: auto;
+}
+.auth-window > .auth {
+  min-height: 100%;
+  height: auto;
+}
+.auth-window > .app-shell {
+  min-height: 100%;
+  height: 100%;
+}
+
+@media (max-width: 860px) {
+  .win-bar {
+    height: 54px;
+    gap: 10px;
+    padding-left: 8px;
+  }
+  .win-menu {
+    display: grid;
+  }
+  .win-control {
+    width: 42px;
+  }
+  .app-root.has-window-bar,
+  .auth-window.has-window-bar {
+    padding-top: 54px;
+  }
+  .app-root.has-window-bar .write-ed {
+    top: 54px;
+  }
+  .app-root.nav-open .nav-overlay {
+    z-index: 400;
+  }
+  .app-root.nav-open .sidebar {
+    z-index: 410;
+  }
+}
+
+@media (max-width: 390px) {
+  .win-bar {
+    gap: 7px;
+  }
+  .win-brand {
+    gap: 6px;
+  }
+  .win-brand-name {
+    font-size: 12.5px;
+  }
+  .win-control {
+    width: 38px;
+  }
+}

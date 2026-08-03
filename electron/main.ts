@@ -32,12 +32,53 @@ function createWindow() {
     minHeight: 500,
     title: 'EngMaster',
     autoHideMenuBar: true,
+    // Tự vẽ toàn bộ thanh cửa sổ để có thể thu gọn nó ngay lập tức mà không
+    // phải dựng lại BrowserWindow (việc đó sẽ làm mất trang/nội dung đang nhập).
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
   })
+
+  // Phím điều khiển chrome phải bắt ở main để vẫn hoạt động khi con trỏ đang
+  // nằm trong input/textarea. Đây là shortcut cục bộ, không chiếm phím toàn hệ thống.
+  win.webContents.on('before-input-event', (event, input) => {
+    if (
+      input.type === 'keyDown' &&
+      !input.isAutoRepeat &&
+      (input.control || input.meta) &&
+      input.shift &&
+      input.key.toLowerCase() === 'h'
+    ) {
+      event.preventDefault()
+      win?.webContents.send('window:chrome-toggle')
+      return
+    }
+    if (
+      input.type === 'keyDown' &&
+      !input.isAutoRepeat &&
+      input.key === 'F11' &&
+      !input.control &&
+      !input.alt
+    ) {
+      event.preventDefault()
+      toggleFullScreen()
+    }
+  })
+  const sendFullScreen = () => {
+    if (win && !win.isDestroyed()) win.webContents.send('window:fullscreen-state', win.isFullScreen())
+  }
+  win.on('enter-full-screen', sendFullScreen)
+  win.on('leave-full-screen', sendFullScreen)
+  win.on('maximize', () => {
+    // Double-click vùng kéo dùng maximize native, không đi qua IPC của nút tự vẽ.
+    // Chuẩn hóa lại normal bounds để lần unmaximize sau không rơi về khung mini.
+    if (normalizeNativeMaximizeFromMini()) return
+    win?.webContents.send('window:maximized-state', true)
+  })
+  win.on('unmaximize', () => win?.webContents.send('window:maximized-state', false))
 
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL)
@@ -49,12 +90,53 @@ function createWindow() {
   // Đóng cửa sổ chính = thoát hẳn app (kể cả khi popup dịch nổi còn sống).
   // Không xóa dòng này: nếu không, `win` sẽ trỏ tới cửa sổ đã hủy và popup
   // giữ tiến trình sống như "bóng ma" (không có main window, không icon taskbar).
+  const self = win
   win.on('closed', () => {
-    win = null
+    if (win === self) win = null
     disposeGlobalTranslate()
     app.quit()
   })
 }
+
+function toggleFullScreen(next?: boolean): boolean {
+  if (!win || win.isDestroyed()) return false
+  const value = next ?? !win.isFullScreen()
+  // Toàn màn hình và mini là hai chế độ loại trừ nhau. Khôi phục cửa sổ gốc
+  // trước khi vào fullscreen để F11 lần nữa trở về đúng kích thước ban đầu.
+  if (value && boundsBeforeMini) exitMiniMode(true)
+  win.setFullScreen(value)
+  return value
+}
+
+// ---------- Điều khiển thanh cửa sổ tự vẽ ----------
+ipcMain.handle('window:minimize', (): boolean => {
+  if (!win || win.isDestroyed()) return false
+  win.minimize()
+  return true
+})
+ipcMain.handle('window:maximize:toggle', (): boolean => {
+  if (!win || win.isDestroyed()) return false
+  const wasMini = boundsBeforeMini !== null
+  if (wasMini) exitMiniMode(true)
+  if (win.isMaximized() && !wasMini) win.unmaximize()
+  else if (!win.isMaximized()) win.maximize()
+  return win.isMaximized()
+})
+ipcMain.handle(
+  'window:maximized:get',
+  (): boolean => !!win && !win.isDestroyed() && win.isMaximized(),
+)
+ipcMain.handle('window:close', (): boolean => {
+  if (!win || win.isDestroyed()) return false
+  win.close()
+  return true
+})
+
+ipcMain.handle('window:fullscreen:toggle', (_e, next?: boolean): boolean => toggleFullScreen(next))
+ipcMain.handle(
+  'window:fullscreen:get',
+  (): boolean => !!win && !win.isDestroyed() && win.isFullScreen(),
+)
 
 // Dịch nhanh toàn màn hình: khởi tạo IPC + hook (bật/tắt điều khiển từ Cài đặt)
 function setupGlobalTranslate() {
@@ -114,6 +196,51 @@ const MINI_MARGIN = 24
 let boundsBeforeMini: Electron.Rectangle | null = null
 // Trạng thái "luôn nổi" trước khi thu gọn, để trả lại nguyên trạng khi thoát mini
 let onTopBeforeMini = false
+let maximizedBeforeMini = false
+
+type WindowState = { alwaysOnTop: boolean; mini: boolean }
+
+function currentWindowState(): WindowState {
+  return {
+    alwaysOnTop: !!win && !win.isDestroyed() && win.isAlwaysOnTop(),
+    mini: boundsBeforeMini !== null,
+  }
+}
+
+function sendWindowState() {
+  if (win && !win.isDestroyed()) win.webContents.send('window:state', currentWindowState())
+}
+
+function exitMiniMode(restoreWindow: boolean) {
+  if (!boundsBeforeMini) return
+  const restoreBounds = boundsBeforeMini
+  const restoreMaximized = maximizedBeforeMini
+  boundsBeforeMini = null
+  setAlwaysOnTop(onTopBeforeMini)
+  if (restoreWindow && win && !win.isDestroyed()) {
+    if (win.isMaximized()) win.unmaximize()
+    win.setBounds(restoreBounds, false)
+    if (restoreMaximized) win.maximize()
+  }
+  sendWindowState()
+}
+
+function normalizeNativeMaximizeFromMini(): boolean {
+  if (!boundsBeforeMini || !win || win.isDestroyed()) return false
+  const restoreBounds = boundsBeforeMini
+  boundsBeforeMini = null
+  setAlwaysOnTop(onTopBeforeMini)
+
+  // Đặt lại kích thước thường rồi maximize lại. Nhờ vậy Windows ghi nhớ đúng
+  // normal bounds trước mini cho thao tác khôi phục sau này.
+  win.unmaximize()
+  win.setBounds(restoreBounds, false)
+  sendWindowState()
+  setImmediate(() => {
+    if (win && !win.isDestroyed()) win.maximize()
+  })
+  return true
+}
 
 function setAlwaysOnTop(on: boolean) {
   if (!win || win.isDestroyed()) return false
@@ -154,11 +281,19 @@ ipcMain.handle('window:always-on-top-hotkey:set', (_e, accel: string): boolean =
 })
 
 // Thu gọn về góc phải-dưới màn hình đang chứa cửa sổ / khôi phục kích thước cũ
-ipcMain.handle('window:mini', (_e, on: boolean): boolean => {
+ipcMain.handle('window:mini', async (_e, on: boolean): Promise<boolean> => {
   if (!win || win.isDestroyed()) return false
   if (on) {
+    if (win.isFullScreen()) {
+      await new Promise<void>((resolve) => {
+        win?.once('leave-full-screen', () => resolve())
+        win?.setFullScreen(false)
+      })
+      if (!win || win.isDestroyed()) return false
+    }
     if (!boundsBeforeMini) {
-      boundsBeforeMini = win.getBounds()
+      maximizedBeforeMini = win.isMaximized()
+      boundsBeforeMini = maximizedBeforeMini ? win.getNormalBounds() : win.getBounds()
       onTopBeforeMini = win.isAlwaysOnTop()
     }
     if (win.isMaximized()) win.unmaximize()
@@ -176,18 +311,14 @@ ipcMain.handle('window:mini', (_e, on: boolean): boolean => {
     // Hình-trong-hình thì phải nổi trên mọi ứng dụng khác, không cần bật tay
     setAlwaysOnTop(true)
   } else if (boundsBeforeMini) {
-    win.setBounds(boundsBeforeMini, true)
-    boundsBeforeMini = null
-    setAlwaysOnTop(onTopBeforeMini)
+    exitMiniMode(true)
   }
-  return on
+  sendWindowState()
+  return boundsBeforeMini !== null
 })
 
 // Trạng thái thật của cửa sổ — trang Cài đặt đọc lúc mở để công tắc không lệch
-ipcMain.handle('window:get-state', (): { alwaysOnTop: boolean; mini: boolean } => ({
-  alwaysOnTop: !!win && !win.isDestroyed() && win.isAlwaysOnTop(),
-  mini: boundsBeforeMini !== null,
-}))
+ipcMain.handle('window:get-state', (): WindowState => currentWindowState())
 
 // ---------- Lưu thông tin đăng nhập (mã hóa bằng safeStorage/DPAPI) ----------
 const credFile = () => path.join(app.getPath('userData'), 'cred.dat')

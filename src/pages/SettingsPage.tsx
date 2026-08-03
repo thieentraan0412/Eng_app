@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { useWindowChrome } from '../contexts/WindowChromeContext'
 import { isDesktop } from '../platform'
 import Icon from '../components/Icon'
 import type { UpdateStatus } from '../vite-env'
@@ -32,6 +33,7 @@ function accelFromEvent(e: KeyboardEvent): string | null {
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
   const { theme, toggle } = useTheme()
+  const { hidden: chromeHidden, setHidden: setChromeHidden } = useWindowChrome()
   const [suggest, setSuggest] = useState(localStorage.getItem('suggest_enabled') !== '0')
   const [spell, setSpell] = useState(localStorage.getItem('spell_enabled') !== '0')
   const [grammar, setGrammar] = useState(localStorage.getItem('grammar_enabled') !== '0')
@@ -50,6 +52,7 @@ export default function SettingsPage() {
   // alwaysOnTop được nhớ giữa các lần mở app; mini chỉ tính trong phiên đang chạy.
   const [onTop, setOnTop] = useState(localStorage.getItem('always_on_top') === '1')
   const [mini, setMini] = useState(false)
+  const [fullScreen, setFullScreen] = useState(false)
   const [recording, setRecording] = useState(false)
   const [hkErr, setHkErr] = useState<string | null>(null)
   const [recordingOnTop, setRecordingOnTop] = useState(false)
@@ -98,6 +101,12 @@ export default function SettingsPage() {
     }
   }
 
+  const toggleFull = async () => {
+    const next = !fullScreen
+    setFullScreen(next)
+    await window.api?.toggleFullScreen(next)
+  }
+
   // Cửa sổ có thể đã đổi trạng thái ở nơi khác (hoặc trang này vừa mở lại)
   // -> đọc trạng thái thật từ main để công tắc không hiển thị sai.
   useEffect(() => {
@@ -111,8 +120,17 @@ export default function SettingsPage() {
         setMini(s.mini)
       })
       .catch(() => {})
+    void window.api.getFullScreen().then((v) => active && setFullScreen(v))
+    const offWindowState = window.api.onWindowState((state) => {
+      if (!active) return
+      setOnTop(state.alwaysOnTop)
+      setMini(state.mini)
+    })
+    const off = window.api.onFullScreenState(setFullScreen)
     return () => {
       active = false
+      offWindowState()
+      off()
     }
   }, [])
 
@@ -366,6 +384,53 @@ export default function SettingsPage() {
                     disabled={mini}
                     onChange={toggleOnTop}
                   />
+                  <span className="track" />
+                </label>
+              </span>
+            </div>
+
+            <div className="set-row">
+              <span className="set-ico">
+                <Icon name="menu" />
+              </span>
+              <span className="set-main">
+                <span className="set-title">Ẩn toàn bộ thanh trên cùng</span>
+                <span className="set-desc">
+                  Ẩn cả nút menu, logo và các nút thu nhỏ / phóng to / đóng để dành thêm không
+                  gian cho nội dung. Bật lại bất cứ lúc nào bằng phím tắt.
+                </span>
+                <span className="set-hotkey">
+                  Phím tắt bật/tắt: <kbd className="set-kbd">Ctrl + Shift + H</kbd>
+                </span>
+              </span>
+              <span className="set-side">
+                <label className="set-switch">
+                  <input
+                    type="checkbox"
+                    checked={chromeHidden}
+                    onChange={() => setChromeHidden(!chromeHidden)}
+                  />
+                  <span className="track" />
+                </label>
+              </span>
+            </div>
+
+            <div className="set-row">
+              <span className="set-ico">
+                <Icon name="grid" />
+              </span>
+              <span className="set-main">
+                <span className="set-title">Toàn màn hình</span>
+                <span className="set-desc">
+                  Phủ kín màn hình, ẩn cả thanh tiêu đề lẫn thanh tác vụ — hợp lúc cần tập trung
+                </span>
+                <span className="set-hotkey">
+                  Phím tắt bật/tắt: <kbd className="set-kbd">F11</kbd>
+                </span>
+              </span>
+              <span className="set-side">
+                <label className="set-switch">
+                  <input type="checkbox" checked={fullScreen} onChange={toggleFull} />
                   <span className="track" />
                 </label>
               </span>

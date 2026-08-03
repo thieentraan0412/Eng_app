@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import Sidebar from './Sidebar'
 import TranslatePopup from './TranslatePopup'
+import WindowBar from './WindowBar'
+import { useWindowChrome } from '../contexts/WindowChromeContext'
+import { isDesktop } from '../platform'
 import { CloudApi, type Deck } from '../services/cloud/CloudApiClient'
 import { translate, translateOnline } from '../services/translation'
 import { fetchEnrichment, searchSentences, shortPos } from '../services/enrich'
@@ -34,6 +37,7 @@ export default function AppLayout() {
   const [page, setPage] = useState<PageKey>('dashboard')
   const [toast, setToast] = useState<string | null>(null)
   const [navOpen, setNavOpen] = useState(false) // drawer menu trên mobile
+  const { hidden: chromeHidden, fullScreen } = useWindowChrome()
   const [translateEnabled, setTranslateEnabled] = useState(
     localStorage.getItem('desktop_translate_enabled') === '1',
   )
@@ -46,6 +50,10 @@ export default function AppLayout() {
     setPage(p)
     setNavOpen(false)
   }
+
+  useEffect(() => {
+    if (chromeHidden) setNavOpen(false)
+  }, [chromeHidden])
 
   // Chọn bộ đích: deckId đã chọn > bộ dùng gần nhất > bộ mới nhất > tạo bộ mặc định
   const resolveDeck = async (deckId?: string): Promise<Deck> => {
@@ -209,24 +217,37 @@ export default function AppLayout() {
   }
 
   return (
-    <div className={navOpen ? 'app-root nav-open' : 'app-root'}>
-      {/* Thanh trên cùng chỉ hiện trên mobile: nút mở menu + thương hiệu */}
-      <header className="mobile-topbar">
-        <button
-          className="hamburger"
-          onClick={() => setNavOpen(true)}
-          aria-label="Mở menu"
-          aria-expanded={navOpen}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 7h16M4 12h16M4 17h16" />
-          </svg>
-        </button>
-        <div className="mobile-brand">
-          <span className="brand-badge">E</span>
-          <span>EngMaster</span>
-        </div>
-      </header>
+    <div
+      className={[
+        'app-root',
+        navOpen ? 'nav-open' : '',
+        isDesktop && !chromeHidden && !fullScreen ? 'has-window-bar' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {/* Một hàng duy nhất: vừa kéo/điều khiển cửa sổ, vừa mở menu ở màn nhỏ. */}
+      <WindowBar onOpenMenu={() => setNavOpen((open) => !open)} menuOpen={navOpen} />
+
+      {/* Bản web vẫn dùng thanh mobile cũ vì trình duyệt tự có nút cửa sổ. */}
+      {!isDesktop && !chromeHidden && (
+        <header className="mobile-topbar">
+          <button
+            className="hamburger"
+            onClick={() => setNavOpen(true)}
+            aria-label="Mở menu"
+            aria-expanded={navOpen}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+          <div className="mobile-brand">
+            <span className="brand-badge">E</span>
+            <span>EngMaster</span>
+          </div>
+        </header>
+      )}
 
       {/* Nền mờ khi mở drawer — chạm để đóng */}
       <div

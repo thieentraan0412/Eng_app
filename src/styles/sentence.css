@@ -699,12 +699,6 @@
   font-weight: 700;
   color: var(--text);
 }
-.cc-saving {
-  font-size: 12px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
 /* ---------- Thẻ câu (mockup .sent) ---------- */
 .cc-sent {
   padding: 15px 17px;

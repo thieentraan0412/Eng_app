@@ -12,7 +12,13 @@ import { useTheme } from '../contexts/ThemeContext'
 import { CloudApi, type Writing } from '../services/cloud/CloudApiClient'
 import { errText } from '../services/cloud/cloudError'
 import { suggest, type Suggestion } from '../services/suggestion'
-import { ignoreWord, isMisspelled, suggestFix, tokenizeWords } from '../services/spellcheck'
+import {
+  ignoreWord,
+  isMisspelled,
+  isNonEnglish,
+  suggestFix,
+  tokenizeWords,
+} from '../services/spellcheck'
 import { checkGrammar, type GrammarMatch } from '../services/grammarcheck'
 import { checkLocalGrammar } from '../services/localgrammar'
 import '../styles/writing.css'
@@ -33,6 +39,17 @@ function mergeGrammar(a: GrammarMatch[], b: GrammarMatch[]): GrammarMatch[] {
 interface SpellItem {
   word: string
   suggestions: string[]
+  foreign: boolean // chứa ký tự ngoài bảng chữ cái tiếng Anh -> không phải lỗi gõ máy
+  pending: boolean // đang tìm gợi ý sửa
+}
+
+// Chạy một việc nặng vào lúc trình duyệt rảnh. Có timeout để không bị hoãn mãi
+// khi người dùng gõ liên tục.
+function whenIdle(fn: () => void): void {
+  const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number })
+    .requestIdleCallback
+  if (typeof ric === 'function') ric(fn, { timeout: 300 })
+  else setTimeout(fn, 0)
 }
 
 // Đề bài điền sẵn khi mở bài mới (từ nút gợi ý hoặc thẻ chủ đề)
@@ -656,31 +673,50 @@ const MIRROR_PROPS = [
   'wordSpacing',
 ] as const
 
-function caretPoint(ta: HTMLTextAreaElement, pos: number): { left: number; top: number; lh: number } {
-  const cs = getComputedStyle(ta)
-  const mirror = document.createElement('div')
-  for (const prop of MIRROR_PROPS) {
-    mirror.style.setProperty(
-      prop.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`),
-      cs.getPropertyValue(prop.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)),
-    )
+// Bản sao ẩn của ô soạn thảo, dùng để tìm tọa độ con trỏ.
+// Giữ lại và dùng lại một phần tử duy nhất: hàm này chạy mỗi lần gõ phím, nếu
+// tạo mới rồi xóa đi thì trình duyệt phải tính lại layout cả trang hai lượt.
+let mirrorEl: HTMLDivElement | null = null
+let mirrorMark: HTMLSpanElement | null = null
+let mirrorSig = ''
+
+function getMirror(ta: HTMLTextAreaElement): { box: HTMLDivElement; mark: HTMLSpanElement; lh: number } {
+  if (!mirrorEl) {
+    mirrorEl = document.createElement('div')
+    mirrorEl.setAttribute('aria-hidden', 'true')
+    mirrorEl.style.position = 'absolute'
+    mirrorEl.style.top = '0'
+    mirrorEl.style.left = '-9999px'
+    mirrorEl.style.visibility = 'hidden'
+    mirrorEl.style.whiteSpace = 'pre-wrap'
+    mirrorEl.style.overflowWrap = 'break-word'
+    mirrorEl.style.height = 'auto'
+    mirrorMark = document.createElement('span')
+    mirrorEl.appendChild(mirrorMark)
+    document.body.appendChild(mirrorEl)
   }
-  mirror.style.position = 'absolute'
-  mirror.style.top = '0'
-  mirror.style.left = '-9999px'
-  mirror.style.visibility = 'hidden'
-  mirror.style.whiteSpace = 'pre-wrap'
-  mirror.style.overflowWrap = 'break-word'
-  mirror.style.height = 'auto'
-  mirror.textContent = ta.value.slice(0, pos)
-  const marker = document.createElement('span')
-  marker.textContent = ta.value.slice(pos) || '.'
-  mirror.appendChild(marker)
-  document.body.appendChild(mirror)
-  const left = marker.offsetLeft
-  const top = marker.offsetTop
-  document.body.removeChild(mirror)
+  const cs = getComputedStyle(ta)
+  // Chỉ chép lại kiểu chữ khi có gì đó thật sự đổi (đổi cỡ chữ, đổi độ rộng…)
+  const sig = `${cs.font}|${cs.width}|${cs.padding}|${cs.letterSpacing}|${cs.lineHeight}`
+  if (sig !== mirrorSig) {
+    mirrorSig = sig
+    for (const prop of MIRROR_PROPS) {
+      const kebab = prop.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
+      mirrorEl.style.setProperty(kebab, cs.getPropertyValue(kebab))
+    }
+  }
   const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.6
+  return { box: mirrorEl, mark: mirrorMark!, lh }
+}
+
+function caretPoint(ta: HTMLTextAreaElement, pos: number): { left: number; top: number; lh: number } {
+  const { box, mark, lh } = getMirror(ta)
+  // Phần văn bản trước con trỏ nằm thẳng trong box, phần sau nằm trong mark
+  if (box.firstChild !== mark) box.insertBefore(document.createTextNode(''), mark)
+  ;(box.firstChild as Text).data = ta.value.slice(0, pos)
+  mark.textContent = ta.value.slice(pos) || '.'
+  const left = mark.offsetLeft
+  const top = mark.offsetTop
   const r = ta.getBoundingClientRect()
   return { left: r.left + left - ta.scrollLeft, top: r.top + top - ta.scrollTop, lh }
 }
@@ -810,35 +846,80 @@ function Editor({
     setGhostIdx(0)
   }, [suggestions, caret, suggestOn, focused])
 
-  // Chính tả (debounce 350ms) — chỉ liệt kê trong trợ lý, KHÔNG gạch chân trong bài
+  // Chính tả (debounce 350ms) — chỉ liệt kê trong trợ lý, KHÔNG gạch chân trong bài.
+  //
+  // Chia làm HAI BƯỚC vì suggestFix() tốn khoảng 150ms cho mỗi từ chưa có trong đệm:
+  //   1. Dò từ sai (rẻ) rồi hiện danh sách ngay.
+  //   2. Tìm gợi ý sửa từng từ một trong lúc trình duyệt rảnh.
+  // Làm gộp một lượt như trước sẽ khóa main thread vài giây mỗi lần ngừng gõ.
   useEffect(() => {
     if (!spellEnabled) {
       setSpellList([])
       return
     }
+    let alive = true
     const handle = setTimeout(() => {
       const uniq = [...new Set(tokenizeWords(content))]
-      const bad = uniq.filter((t) => isMisspelled(t))
-      setSpellList(bad.slice(0, 20).map((w) => ({ word: w, suggestions: suggestFix(w, 3) })))
+      const bad = uniq.filter((t) => isMisspelled(t)).slice(0, 20)
+      if (!alive) return
+
+      // Bước 1: danh sách hiện ngay. Từ tiếng Việt không bao giờ có gợi ý tiếng Anh
+      // nên đánh dấu xong luôn, không cần chờ.
+      setSpellList(
+        bad.map((w) => ({
+          word: w,
+          suggestions: [],
+          foreign: isNonEnglish(w),
+          pending: !isNonEnglish(w),
+        })),
+      )
+
+      // Bước 2: rải việc tìm gợi ý ra từng nhịp rảnh
+      const queue = bad.filter((w) => !isNonEnglish(w))
+      let i = 0
+      const step = () => {
+        if (!alive || i >= queue.length) return
+        const w = queue[i++]
+        const fix = suggestFix(w, 3)
+        if (!alive) return
+        setSpellList((prev) =>
+          prev.map((it) => (it.word === w ? { ...it, suggestions: fix, pending: false } : it)),
+        )
+        whenIdle(step)
+      }
+      if (queue.length) whenIdle(step)
     }, 350)
-    return () => clearTimeout(handle)
+    return () => {
+      alive = false
+      clearTimeout(handle)
+    }
   }, [content, spellEnabled, spellVersion])
 
-  // Kiểm tra câu: luật OFFLINE hiện ngay + LanguageTool (online, debounce 1.5s) rồi gộp lại
+  // Kiểm tra câu: luật OFFLINE (debounce ngắn) + LanguageTool (online, debounce 1.5s) rồi gộp lại.
+  // checkLocalGrammar() quét lại toàn bài nên không chạy thẳng trong lúc gõ.
   useEffect(() => {
     if (!grammarEnabled || !content.trim()) {
       setGrammar([])
+      setGrammarChecking(false)
       return
     }
-    const local = checkLocalGrammar(content)
-    setGrammar(local)
+    let alive = true
     setGrammarChecking(true)
-    const handle = setTimeout(async () => {
+    const fast = setTimeout(() => {
+      if (alive) setGrammar(checkLocalGrammar(content))
+    }, 250)
+    const slow = setTimeout(async () => {
+      const local = checkLocalGrammar(content)
       const remote = await checkGrammar(content)
+      if (!alive) return
       setGrammar(mergeGrammar(local, remote))
       setGrammarChecking(false)
     }, 1500)
-    return () => clearTimeout(handle)
+    return () => {
+      alive = false
+      clearTimeout(fast)
+      clearTimeout(slow)
+    }
   }, [content, grammarEnabled])
 
   const runGrammarNow = async () => {
@@ -1618,8 +1699,14 @@ function Editor({
                   spellList.map((item, i) => (
                     <div className="write-issue" key={item.word}>
                       <div className="write-issue-top">
-                        <span className="write-badge write-badge-err write-badge-dot">
-                          Sai chính tả
+                        <span
+                          className={
+                            item.foreign
+                              ? 'write-badge write-badge-warn write-badge-dot'
+                              : 'write-badge write-badge-err write-badge-dot'
+                          }
+                        >
+                          {item.foreign ? 'Không phải tiếng Anh' : 'Sai chính tả'}
                         </span>
                         <span className="write-spacer" />
                         <span className="write-issue-kind">Lỗi {i + 1}</span>
@@ -1628,7 +1715,9 @@ function Editor({
                         <span className="write-bad">{item.word}</span>
                       </div>
                       <div className="write-fix-row">
-                        {item.suggestions.length > 0 ? (
+                        {item.pending ? (
+                          <span className="write-issue-kind">Đang tìm gợi ý…</span>
+                        ) : item.suggestions.length > 0 ? (
                           item.suggestions.map((sug) => (
                             <button
                               type="button"

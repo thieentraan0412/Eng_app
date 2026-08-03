@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import {
   CloudApi,
   type Deck,
@@ -635,7 +635,10 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
 
   // Bôi chọn xong -> tính offset ký tự trong content và hiện thanh màu.
   // Chọn 1 từ/cụm ngắn cũng được tính là "tra từ" (popup dịch sẽ hiện).
-  const handleMouseUp = () => {
+  // Vùng vừa tra gần nhất — chặn tra lại cùng một đoạn khi sự kiện bắn nhiều lần
+  const lastSelRef = useRef('')
+
+  const handleSelection = useCallback(() => {
     const el = contentRef.current
     const sel = window.getSelection()
     if (!el || !sel || sel.rangeCount === 0 || sel.isCollapsed) return
@@ -647,16 +650,46 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
     const start = pre.toString().length
     const end = start + range.toString().length
     if (end <= start) return
+    const key = `${start}-${end}`
+    if (key === lastSelRef.current) return
+    lastSelRef.current = key
     const rect = range.getBoundingClientRect()
     setBar({ x: rect.left + rect.width / 2, y: rect.top - 8, start, end })
 
     const selText = range.toString().trim()
-    lookupText(
-      selText,
-      sentenceAround(text, start, end),
-      findSavedReadingWord(selText),
-    )
-  }
+    lookupText(selText, sentenceAround(text, start, end), findSavedReadingWord(selText))
+  }, [lookupText, text])
+
+  // Điện thoại/máy tính bảng: bôi chữ bằng ngón tay KHÔNG sinh ra mouseup, và
+  // người dùng còn kéo hai nút tròn để chỉnh vùng chọn. Nghe selectionchange
+  // (chờ im 350ms) mới bắt được, đồng thời cũng phục vụ chọn bằng bàn phím.
+  // Gọi qua ref để listener gắn ĐÚNG MỘT LẦN — nếu gắn lại theo mỗi lần render
+  // thì bộ hẹn giờ đang chờ sẽ bị hủy giữa chừng và tra từ không bao giờ chạy.
+  const selectionRef = useRef(handleSelection)
+  selectionRef.current = handleSelection
+
+  // Đóng khung tra rồi bôi lại đúng đoạn cũ vẫn phải tra được
+  useEffect(() => {
+    if (!lookup) lastSelRef.current = ''
+  }, [lookup])
+
+  useEffect(() => {
+    let timer: number | undefined
+    const onSelectionChange = () => {
+      window.clearTimeout(timer)
+      const sel = window.getSelection()
+      if (!sel || sel.isCollapsed) {
+        lastSelRef.current = ''
+        return
+      }
+      timer = window.setTimeout(() => selectionRef.current(), 350)
+    }
+    document.addEventListener('selectionchange', onSelectionChange)
+    return () => {
+      document.removeEventListener('selectionchange', onSelectionChange)
+      window.clearTimeout(timer)
+    }
+  }, [])
 
   const save = (next: ReadingHighlight[]) => {
     setHighlights(next)
@@ -851,7 +884,7 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
           <article
             className="reading-text"
             ref={contentRef}
-            onMouseUp={handleMouseUp}
+            onMouseUp={handleSelection}
             style={{ ['--read-size' as string]: `${fontSize}px` }}
           >
             {parts}
