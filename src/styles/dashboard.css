@@ -124,7 +124,9 @@
 /* ---------- 4 thẻ chỉ số (mockup .stat) ---------- */
 .dash-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* minmax(0,…) chứ không phải 1fr: dòng phụ dùng white-space:nowrap nên
+     sàn min-content sẽ kéo cột rộng quá khung ở màn hẹp */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 12px;
 }
@@ -153,10 +155,14 @@
   color: var(--muted);
 }
 .dash-stat-label {
+  min-width: 0;
   font-size: 12px;
   font-weight: 500;
   color: var(--text-soft);
   letter-spacing: -0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .dash-stat-value {
   font-size: 26px;
@@ -227,7 +233,7 @@ button.dash-card-hint:hover {
 /* ---------- 4 chỉ số "hôm nay" trong 1 thẻ ---------- */
 .dash-today {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .dash-today > div {
   padding: 16px 18px;
@@ -262,7 +268,7 @@ button.dash-card-hint:hover {
 /* ---------- Hàng biểu đồ + tiến độ theo bộ ---------- */
 .dash-row {
   display: grid;
-  grid-template-columns: 1.45fr 1fr;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
   gap: 12px;
   margin-bottom: 12px;
   align-items: start;
@@ -378,7 +384,7 @@ button.dash-card-hint:hover {
 }
 .dash-shortcuts {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 .dash-shortcut {
@@ -443,32 +449,62 @@ button.dash-card-hint:hover {
 }
 
 /* ============================================================
-   MOBILE  <= 860px — xếp chồng, giảm mật độ, vùng chạm to hơn
+   TABLET / cửa sổ hẹp  <= 860px
+   Sidebar đã thành drawer nên bề ngang nội dung hẹp lại: chỉ giảm
+   mật độ và bỏ bố cục 2 cột của hàng biểu đồ. VẪN giữ 4 chỉ số một
+   hàng, 3 lối tắt một hàng và nút "Ôn tập ngay" gọn theo nội dung —
+   đây là màn tablet, không phải điện thoại.
    ============================================================ */
 @media (max-width: 860px) {
+  .dash-card-head {
+    padding: 12px 16px;
+  }
+  .dash-card-body {
+    padding: 15px 16px;
+  }
+  .dash-deck {
+    padding: 11px 16px;
+  }
+
+  .dash-row {
+    grid-template-columns: 1fr;
+  }
+  .dash-chart {
+    height: 118px;
+  }
+}
+
+/* ============================================================
+   ĐIỆN THOẠI  <= 600px — xếp chồng, vùng chạm to hơn
+   ============================================================ */
+@media (max-width: 600px) {
   .dash-hero {
     padding: 16px;
+    gap: 14px;
   }
   .dash-hero h1 {
     font-size: 19px;
   }
+  /* CTA chiếm trọn bề ngang cho dễ chạm bằng ngón cái */
   .dash-hero-due {
     width: 100%;
   }
   .dash-hero-due .dash-btn {
     flex: 1 1 auto;
-    height: 38px;
+    height: 40px;
   }
 
+  /* 2 cột — giữ nguyên tới máy hẹp nhất, 1 cột làm trang dài gấp đôi
+     mà vẫn thừa nửa bề ngang */
   .dash-stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .dash-stat-value {
     font-size: 23px;
   }
 
   .dash-today {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .dash-today > div:nth-child(2n) {
     border-right: none;
@@ -477,23 +513,31 @@ button.dash-card-hint:hover {
     border-bottom: 1px solid var(--border);
   }
 
+  /* Tiêu đề thẻ giữ nguyên một dòng; chú thích tự rớt xuống dòng
+     dưới và canh phải khi không đủ chỗ (thay vì vỡ chữ tiêu đề) */
   .dash-card-head {
-    padding: 12px 16px;
+    flex-wrap: wrap;
+    row-gap: 3px;
   }
-  .dash-card-body {
-    padding: 15px 16px;
+  .dash-card-head h2 {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+  }
+  .dash-card-hint {
+    margin-left: auto;
+  }
+  /* Nới vùng chạm của nút chữ mà không đẩy bố cục */
+  button.dash-card-hint {
+    padding: 7px 0;
+    margin: -7px 0;
   }
 
-  .dash-row {
-    grid-template-columns: 1fr;
-  }
   .dash-chart {
     height: 104px;
+    gap: 4px;
   }
 
-  .dash-deck {
-    padding: 11px 16px;
-  }
   .dash-bar {
     width: 64px;
   }
@@ -505,10 +549,47 @@ button.dash-card-hint:hover {
   .dash-shortcuts {
     grid-template-columns: 1fr;
   }
+  .dash-shortcut {
+    min-height: 56px;
+    padding: 13px 14px;
+  }
 }
 
-@media (max-width: 400px) {
-  .dash-stats {
-    grid-template-columns: 1fr;
+/* ============================================================
+   ĐIỆN THOẠI HẸP  <= 420px — bóp mật độ, thưa nhãn biểu đồ
+   ============================================================ */
+@media (max-width: 420px) {
+  .dash-stat {
+    padding: 13px;
+  }
+  .dash-stat-label {
+    font-size: 11.5px;
+  }
+  .dash-stat-value {
+    font-size: 22px;
+  }
+
+  .dash-today > div {
+    padding: 13px 14px;
+  }
+
+  .dash-chart {
+    gap: 3px;
+  }
+
+  .dash-bar {
+    width: 48px;
+  }
+  .dash-deck-num {
+    width: 56px;
+  }
+}
+
+/* Dưới 360px mỗi cột biểu đồ chỉ còn ~15px, hai chữ số dính nhau:
+   hiện nhãn cách một cột, đếm NGƯỢC từ cuối để cột hôm nay luôn có
+   nhãn. Dùng visibility để chiều cao cột không đổi. */
+@media (max-width: 360px) {
+  .dash-chart-col:nth-last-child(even) .dash-chart-x {
+    visibility: hidden;
   }
 }
