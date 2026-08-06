@@ -315,6 +315,19 @@ export default function GrammarPage() {
     }
   }
 
+  // Lỗi của một thao tác lẻ (đánh dấu đã học, xóa, ẩn…). Nổi cố định ở góc màn
+  // hình nên thấy được kể cả khi đang cuộn giữa lưới chủ điểm, và dùng chung cho
+  // mọi màn của trang. Ở lại tới khi người dùng tắt hoặc làm thao tác kế tiếp.
+  const errorUi = error && (
+    <div className="gr-toast" role="alert">
+      <Icon name="alert" />
+      <span>{error}</span>
+      <button className="gr-toast-x" title="Đóng" onClick={() => setError(null)}>
+        <Icon name="x" />
+      </button>
+    </div>
+  )
+
   const confirmUi = (
     <ConfirmDialog
       open={!!ask}
@@ -393,6 +406,7 @@ export default function GrammarPage() {
           onReview={startErrorReview}
           onDelete={removeError}
         />
+        {errorUi}
         {confirmUi}
       </>
     )
@@ -413,6 +427,7 @@ export default function GrammarPage() {
           onRevert={() => backToBuiltin(openTopic)}
           onToggleLearned={(learned) => void toggleLearned(openTopic, learned)}
         />
+        {errorUi}
         {confirmUi}
       </>
     )
@@ -420,13 +435,6 @@ export default function GrammarPage() {
 
   return (
     <>
-      {error && (
-        <div className="page gr-page" style={{ paddingBottom: 0 }}>
-          <div className="gr-panel" style={{ marginBottom: 12, color: 'var(--danger)' }}>
-            {error}
-          </div>
-        </div>
-      )}
       <TopicLibrary
         topics={data.topics}
         progress={data.progress}
@@ -445,6 +453,7 @@ export default function GrammarPage() {
         onRestoreTopic={unhideTopic}
         onToggleLearned={toggleLearned}
       />
+      {errorUi}
       {confirmUi}
     </>
   )

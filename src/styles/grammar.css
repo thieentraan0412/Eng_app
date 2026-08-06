@@ -890,6 +890,72 @@
   color: currentColor;
 }
 
+/* ---------- Toast báo lỗi thao tác ---------- */
+/* Nổi cố định ở góc màn hình: thao tác hỏng (đánh dấu đã học, xóa, ẩn…) thường
+   xảy ra khi đang cuộn giữa lưới chủ điểm, banner ở đầu trang thì không ai thấy.
+   Dưới hộp thoại xác nhận (z-index 200) để không che nút Xóa/Hủy. */
+.gr-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 150;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  max-width: min(420px, calc(100vw - 40px));
+  padding: 12px 13px;
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--danger) 9%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--border));
+  box-shadow: var(--shadow-lg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+  animation: gr-toast-in 0.16s ease;
+}
+.gr-toast > .ico {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: var(--danger);
+}
+.gr-toast-x {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin: -2px -3px 0 2px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+.gr-toast-x:hover {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--text);
+}
+.gr-toast-x .ico {
+  width: 13px;
+  height: 13px;
+}
+@keyframes gr-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (max-width: 920px) {
+  .gr-toast {
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    max-width: none;
+  }
+}
+
 /* ---------- Chọn nhiều chủ điểm để xóa ---------- */
 .gr-topic.is-selecting {
   padding-right: 44px;
