@@ -1276,3 +1276,187 @@
     opacity: 1;
   }
 }
+
+/* ============================================================
+   PHONE PRACTICE UX — ưu tiên đề + ô nhập khi bàn phím đang mở
+   ============================================================ */
+@media (max-width: 560px) {
+  .cc-detail .cc-head {
+    margin-bottom: 8px;
+  }
+  .cc-detail .cc-head h1 {
+    font-size: 18px;
+  }
+  .cc-detail .cc-head p {
+    margin-top: 2px;
+    font-size: 11.5px;
+    line-height: 1.45;
+  }
+  .cc-page .cc-crumb {
+    margin-bottom: 6px;
+  }
+  .cc-tabs {
+    margin-bottom: 11px;
+  }
+  .cc-page .cc-tabs button {
+    min-height: 40px;
+    padding: 7px 10px 9px;
+  }
+
+  .cc-focus {
+    width: 100%;
+    gap: 10px;
+  }
+  .cc-focus .cc-filters {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 7px;
+    margin-bottom: 0;
+  }
+  .cc-focus .cc-seg {
+    align-self: start;
+  }
+  .cc-page .cc-seg button {
+    min-height: 34px;
+    height: 34px;
+    padding: 0 9px;
+  }
+  .cc-focus .cc-chipset {
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .cc-focus .cc-chipset::-webkit-scrollbar {
+    display: none;
+  }
+  .cc-page .cc-chip {
+    min-height: 34px;
+    height: 34px;
+  }
+  .cc-focus .cc-spacer {
+    display: none;
+  }
+  .cc-focus .cc-select {
+    grid-column: 1 / -1;
+    min-height: 42px;
+    height: 42px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+
+  .cc-focus .cc-progress {
+    position: static;
+    display: grid;
+    grid-template-columns: auto minmax(70px, 1fr) auto;
+    gap: 9px;
+    padding: 9px 11px;
+    margin: 0;
+    border-radius: 12px;
+  }
+  .cc-focus .cc-progress .cc-bar {
+    min-width: 0;
+  }
+  .cc-pb-num {
+    font-size: 11.5px;
+  }
+
+  .cc-focus .cc-sent {
+    padding: 13px;
+    margin: 0;
+    border-radius: 14px;
+    scroll-margin-block: 12px;
+  }
+  .cc-focus .cc-sent-vi {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 7px;
+  }
+  .cc-focus .cc-sent-i {
+    padding-top: 2px;
+  }
+  .cc-focus .cc-sent-txt {
+    min-width: 0;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .cc-focus .cc-listen {
+    grid-column: 1 / -1;
+    padding-left: 27px;
+  }
+  .cc-focus .cc-hints {
+    margin: 7px 0 8px 27px;
+  }
+
+  .cc-focus .cc-input-wrap {
+    margin-top: 9px;
+    scroll-margin-block: 16px;
+  }
+  .cc-page .cc-answer,
+  .cc-backdrop {
+    min-height: 78px;
+    max-height: 118px;
+    padding: 11px 12px;
+    border-radius: 12px;
+    font-size: 16px;
+    line-height: 1.48;
+    resize: none;
+  }
+  .cc-page .cc-answer:focus {
+    background: var(--surface);
+  }
+  .cc-suggest {
+    position: fixed;
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    top: auto;
+    width: auto;
+    max-width: none;
+    max-height: 132px;
+    overflow-y: auto;
+  }
+
+  .cc-sent-actions {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 7px;
+    margin-top: 8px;
+  }
+  .cc-page .cc-sent-actions .cc-btn {
+    width: 100%;
+    min-height: 42px;
+    height: 42px;
+  }
+  .cc-focus-nav {
+    gap: 7px;
+  }
+  .cc-page .cc-focus-nav .cc-btn {
+    min-height: 42px;
+    height: 42px;
+  }
+
+  /* Khi nhập, bỏ các khối điều hướng không cần thiết để đề và textarea luôn
+     nằm trọn trong phần màn hình phía trên bàn phím. */
+  .content:has(.cc-answer:focus) {
+    padding-top: 7px;
+    padding-bottom: 7px;
+    scroll-padding-block: 7px;
+  }
+  .cc-detail:has(.cc-answer:focus) > .cc-crumb,
+  .cc-detail:has(.cc-answer:focus) > .cc-head,
+  .cc-detail:has(.cc-answer:focus) > .cc-tabs,
+  .cc-focus:has(.cc-answer:focus) > .cc-filters,
+  .cc-focus:has(.cc-answer:focus) > .cc-focus-nav,
+  .cc-focus:has(.cc-answer:focus) > .cc-focus-tools {
+    display: none;
+  }
+  .cc-focus:has(.cc-answer:focus) {
+    gap: 7px;
+  }
+  .cc-focus:has(.cc-answer:focus) .cc-progress {
+    padding-block: 7px;
+  }
+}

@@ -19,6 +19,8 @@ import WritingPage from '../pages/WritingPage'
 import SentencePage from '../pages/SentencePage'
 import UsagePage from '../pages/UsagePage'
 import SettingsPage from '../pages/SettingsPage'
+import QuickTranslateModal from './QuickTranslateModal'
+import { matchesAccelerator } from '../services/hotkey'
 
 const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
 
@@ -37,6 +39,10 @@ export default function AppLayout() {
   const [page, setPage] = useState<PageKey>('dashboard')
   const [toast, setToast] = useState<string | null>(null)
   const [navOpen, setNavOpen] = useState(false) // drawer menu trên mobile
+  const [quickTranslateOpen, setQuickTranslateOpen] = useState(false)
+  const [quickTranslateHotkey, setQuickTranslateHotkey] = useState(
+    localStorage.getItem('quick_translate_hotkey') ?? 'Ctrl+Alt+E',
+  )
   const { hidden: chromeHidden, fullScreen } = useWindowChrome()
   const [translateEnabled, setTranslateEnabled] = useState(
     localStorage.getItem('desktop_translate_enabled') === '1',
@@ -54,6 +60,43 @@ export default function AppLayout() {
   useEffect(() => {
     if (chromeHidden) setNavOpen(false)
   }, [chromeHidden])
+
+  // Dịch bằng bàn phím: desktop đăng ký phím tắt toàn hệ thống; web lắng nghe
+  // tổ hợp khi tab đang hoạt động. Cài đặt có thể mở thử modal bằng custom event.
+  useEffect(() => {
+    const openModal = () => {
+      setNavOpen(false)
+      setQuickTranslateOpen(true)
+    }
+    const onOpen = () => openModal()
+    const onHotkeyChanged = (event: Event) => {
+      setQuickTranslateHotkey(String((event as CustomEvent<string>).detail ?? ''))
+    }
+    window.addEventListener('quick-translate-hotkey-changed', onHotkeyChanged)
+
+    let onWebKey: ((event: KeyboardEvent) => void) | undefined
+    if (isDesktop && window.api) {
+      void window.api.setQuickTranslateHotkey(quickTranslateHotkey)
+    } else {
+      window.addEventListener('quick-translate-open', onOpen)
+      onWebKey = (event: KeyboardEvent) => {
+        const accelerator = localStorage.getItem('quick_translate_hotkey') ?? 'Ctrl+Alt+E'
+        if (!event.repeat && matchesAccelerator(event, accelerator)) {
+          event.preventDefault()
+          openModal()
+        }
+      }
+      window.addEventListener('keydown', onWebKey, true)
+    }
+
+    return () => {
+      window.removeEventListener('quick-translate-open', onOpen)
+      window.removeEventListener('quick-translate-hotkey-changed', onHotkeyChanged)
+      if (onWebKey) window.removeEventListener('keydown', onWebKey, true)
+    }
+    // Chỉ đăng ký lúc khởi tạo; thay đổi trong Cài đặt gọi API trực tiếp.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Chọn bộ đích: deckId đã chọn > bộ dùng gần nhất > bộ mới nhất > tạo bộ mặc định
   const resolveDeck = async (deckId?: string): Promise<Deck> => {
@@ -260,6 +303,13 @@ export default function AppLayout() {
       <div className="main-area">
         <main className="content">{renderPage()}</main>
       </div>
+      {!isDesktop && (
+        <QuickTranslateModal
+          open={quickTranslateOpen}
+          hotkey={quickTranslateHotkey}
+          onClose={() => setQuickTranslateOpen(false)}
+        />
+      )}
       {translateEnabled && <TranslatePopup onSave={handleSaveWord} />}
       {toast && <div className="app-toast">{toast}</div>}
     </div>

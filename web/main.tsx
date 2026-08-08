@@ -21,6 +21,20 @@ import '@fontsource/space-grotesk/700.css'
 import App from '../src/App'
 import '../src/styles.css'
 
+// Safari/Chrome mobile thay đổi phần viewport nhìn thấy khi thanh địa chỉ hoặc
+// bàn phím mở. Đồng bộ chiều cao thật ngay từ lúc khởi động để app không bị kéo
+// giãn, lệch breakpoint hoặc nhảy layout ở lần tải đầu.
+const syncViewportHeight = () => {
+  const height = window.visualViewport?.height ?? window.innerHeight
+  document.documentElement.style.setProperty('--app-height', `${Math.round(height)}px`)
+}
+syncViewportHeight()
+window.requestAnimationFrame(syncViewportHeight)
+window.setTimeout(syncViewportHeight, 250)
+window.addEventListener('resize', syncViewportHeight, { passive: true })
+window.addEventListener('pageshow', syncViewportHeight, { passive: true })
+window.visualViewport?.addEventListener('resize', syncViewportHeight, { passive: true })
+
 // Bản Web: chỉ có ứng dụng chính. Không có cửa sổ popup dịch toàn màn hình
 // (đó là tính năng riêng của desktop, cần Electron).
 ReactDOM.createRoot(document.getElementById('root')!).render(

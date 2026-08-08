@@ -141,11 +141,11 @@ export default function TopicLesson({
             <tbody>
               {topic.formulas.map((f, i) => (
                 <tr key={i}>
-                  <td className="gr-k">{f.form}</td>
-                  <td>
+                  <td className="gr-k" data-label="Dạng">{f.form}</td>
+                  <td data-label="Cấu trúc">
                     <Struct text={f.structure} />
                   </td>
-                  <td>
+                  <td data-label="Ví dụ">
                     <span>
                       <Hl text={f.example} />
                     </span>

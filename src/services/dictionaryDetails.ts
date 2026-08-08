@@ -71,9 +71,11 @@ interface TranslationTarget {
 }
 
 const REQUEST_TIMEOUT_MS = 6500
-const MAX_USAGES_PER_POS = 4
-const MAX_USAGES_TOTAL = 12
-const MAX_BATCH_ITEMS = 20
+// Keep the full set returned by the dictionary for normal words. The limits
+// remain as a guard against malformed or unexpectedly huge API responses.
+const MAX_USAGES_PER_POS = 12
+const MAX_USAGES_TOTAL = 40
+const MAX_BATCH_ITEMS = 40
 const MAX_BATCH_CHARS = 3500
 const BATCH_SEPARATOR = '\u241e'
 

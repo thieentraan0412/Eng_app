@@ -20,6 +20,7 @@ import '@fontsource/space-grotesk/600.css'
 import '@fontsource/space-grotesk/700.css'
 import App from './App'
 import DesktopTranslatePopup from './components/DesktopTranslatePopup'
+import QuickTranslateWindow from './components/QuickTranslateWindow'
 import './styles.css'
 
 // Cùng một bundle renderer phục vụ 2 cửa sổ:
@@ -28,7 +29,14 @@ import './styles.css'
 const view = new URLSearchParams(window.location.search).get('view')
 const root = ReactDOM.createRoot(document.getElementById('root')!)
 
-if (view === 'translate') {
+if (view === 'quick-translate') {
+  document.body.classList.add('quick-translate-body')
+  root.render(
+    <React.StrictMode>
+      <QuickTranslateWindow />
+    </React.StrictMode>,
+  )
+} else if (view === 'translate') {
   document.body.classList.add('popup-body')
   root.render(
     <React.StrictMode>

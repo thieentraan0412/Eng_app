@@ -87,6 +87,28 @@ function useIsNarrow(maxWidth = 860): boolean {
   return narrow
 }
 
+function alignAnswerToVisualViewport(answer: HTMLTextAreaElement): void {
+  if (!window.matchMedia('(max-width:860px)').matches || !answer.isConnected) return
+  const scrollHost = answer.closest<HTMLElement>('.content')
+  if (!scrollHost) return
+  const viewport = window.visualViewport
+  const visibleTop = viewport?.offsetTop ?? 0
+  const visibleHeight = viewport?.height ?? window.innerHeight
+  const rect = answer.getBoundingClientRect()
+  const idealTop = visibleTop + Math.min(250, Math.max(116, visibleHeight * 0.45))
+  const latestTop = visibleTop + visibleHeight - rect.height - 18
+  scrollHost.scrollBy({ top: rect.top - Math.min(idealTop, latestTop), behavior: 'auto' })
+}
+
+function settleFocusedAnswer(answer: HTMLTextAreaElement): void {
+  const align = () => {
+    if (document.activeElement === answer) alignAnswerToVisualViewport(answer)
+  }
+  window.requestAnimationFrame(align)
+  window.setTimeout(align, 120)
+  window.setTimeout(align, 320)
+}
+
 // ================= TRANG CHÉP CÂU =================
 // Bố cục theo mockup 08-chep-cau/index.html: lưới thẻ THƯ MỤC + ô "Tạo thư
 // mục mới"; bấm mở 1 thư mục -> chi tiết (Luyện tập / Quản lý câu bên trong).
@@ -521,6 +543,7 @@ function PracticeView({
   const [jumpId, setJumpId] = useState<string | null>(null)
   // Sau khi gõ Enter ĐÚNG -> id câu kế tiếp cần cuộn ra giữa + focus
   const [advanceTo, setAdvanceTo] = useState<string | null>(null)
+  const focusMoveRef = useRef(0)
   // Số câu đang hiện trong danh sách (mockup: nút "Hiện thêm (… câu còn lại)")
   const [limit, setLimit] = useState(PAGE_SIZE)
   // Chế độ NGHE-CHÉP (dictation): nghe TTS đọc câu tiếng Anh rồi gõ lại
@@ -674,15 +697,39 @@ function PracticeView({
     setAdvanceTo(next.id)
   }, [])
 
-  // Cuộn câu kế tiếp ra GIỮA màn hình + focus ô nhập. Chạy sau khi DOM đã cập
-  // nhật (câu vừa đúng đã hiện khối kết quả) nên căn giữa mới chính xác.
+  // Focus câu mới và đặt ô nhập vào vùng nhìn thấy phía trên bàn phím ảo.
+  // visualViewport phản ánh phần màn hình thật còn lại trên Safari/Chrome mobile,
+  // trong khi scrollIntoView(block:center) chỉ căn theo layout viewport nên dễ
+  // đẩy textarea xuống sát hoặc lọt sau bàn phím.
   useEffect(() => {
     if (!advanceTo) return
     const card = document.getElementById(`cc-${advanceTo}`)
-    setAdvanceTo(null)
-    if (!card) return
-    card.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    card.querySelector<HTMLTextAreaElement>('.cc-answer')?.focus({ preventScroll: true })
+    if (!card) {
+      setAdvanceTo(null)
+      return
+    }
+
+    const token = ++focusMoveRef.current
+    const answer = card.querySelector<HTMLTextAreaElement>('.cc-answer')
+    answer?.focus({ preventScroll: true })
+
+    const alignAnswer = () => {
+      if (token !== focusMoveRef.current || !answer?.isConnected) return
+      // Đặt ô nhập ở khoảng 45% vùng nhìn thấy: còn đủ chỗ đọc đề ở trên và
+      // gợi ý/đáp án ở dưới, kể cả khi bàn phím đang mở.
+      alignAnswerToVisualViewport(answer)
+    }
+
+    const frame = window.requestAnimationFrame(alignAnswer)
+    const afterKeyboardStarts = window.setTimeout(alignAnswer, 120)
+    const afterKeyboardSettles = window.setTimeout(alignAnswer, 320)
+    const finish = window.setTimeout(() => setAdvanceTo(null), 400)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(afterKeyboardStarts)
+      window.clearTimeout(afterKeyboardSettles)
+      window.clearTimeout(finish)
+    }
   }, [advanceTo])
 
   // Cuộn tới thẻ của câu làm gần nhất sau khi nạp xong (chế độ danh sách)
@@ -911,13 +958,27 @@ function PracticeView({
         />
 
         <div className="cc-focus-nav">
-          <button className="cc-btn" disabled={idx === 0} onClick={() => setCur(idx - 1)}>
+          <button
+            className="cc-btn"
+            disabled={idx === 0}
+            onClick={() => {
+              const previous = shown[idx - 1]
+              if (!previous) return
+              setCur(idx - 1)
+              setAdvanceTo(previous.id)
+            }}
+          >
             <Icon name="left" /> Trước
           </button>
           <button
             className="cc-btn"
             disabled={idx >= shown.length - 1}
-            onClick={() => setCur(idx + 1)}
+            onClick={() => {
+              const next = shown[idx + 1]
+              if (!next) return
+              setCur(idx + 1)
+              setAdvanceTo(next.id)
+            }}
           >
             Tiếp <Icon name="right" />
           </button>
@@ -1246,7 +1307,10 @@ const SentenceCard = memo(function SentenceCard({
           onClick={syncCaret}
           onKeyDown={onKeyDown}
           onScroll={syncScroll}
-          onFocus={() => setFocused(true)}
+          onFocus={(e) => {
+            setFocused(true)
+            settleFocusedAnswer(e.currentTarget)
+          }}
           onBlur={() => {
             setFocused(false)
             setTimeout(() => setOpen(false), 120)

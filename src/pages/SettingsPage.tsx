@@ -5,30 +5,8 @@ import { useWindowChrome } from '../contexts/WindowChromeContext'
 import { isDesktop } from '../platform'
 import Icon from '../components/Icon'
 import type { UpdateStatus } from '../vite-env'
+import { accelFromEvent } from '../services/hotkey'
 import '../styles/settings.css'
-
-// Dựng chuỗi accelerator Electron từ sự kiện bàn phím (Ctrl+Alt+D, Ctrl+Shift+F2…).
-// Bắt buộc có Ctrl/Alt/Super để không chiếm phím gõ thường của mọi ứng dụng.
-function accelFromEvent(e: KeyboardEvent): string | null {
-  if (!e.ctrlKey && !e.altKey && !e.metaKey) return null
-  const k = e.key
-  let key: string
-  if (/^[a-z]$/i.test(k)) key = k.toUpperCase()
-  else if (/^[0-9]$/.test(k)) key = k
-  else if (/^F([1-9]|1[0-9]|2[0-4])$/.test(k)) key = k
-  else if (k === ' ') key = 'Space'
-  else if (k === 'ArrowUp') key = 'Up'
-  else if (k === 'ArrowDown') key = 'Down'
-  else if (k === 'ArrowLeft') key = 'Left'
-  else if (k === 'ArrowRight') key = 'Right'
-  else return null // mới nhấn mỗi modifier, hoặc phím không hỗ trợ
-  const mods: string[] = []
-  if (e.ctrlKey) mods.push('Ctrl')
-  if (e.altKey) mods.push('Alt')
-  if (e.shiftKey) mods.push('Shift')
-  if (e.metaKey) mods.push('Super')
-  return [...mods, key].join('+')
-}
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
@@ -45,6 +23,12 @@ export default function SettingsPage() {
   const [hotkey, setHotkey] = useState(
     localStorage.getItem('desktop_translate_hotkey') ?? 'Ctrl+Alt+D',
   )
+  const [quickHotkey, setQuickHotkey] = useState(
+    localStorage.getItem('quick_translate_hotkey') ?? 'Ctrl+Alt+E',
+  )
+  const [quickDirection, setQuickDirection] = useState<'en-vi' | 'vi-en'>(
+    localStorage.getItem('quick_translate_direction') === 'vi-en' ? 'vi-en' : 'en-vi',
+  )
   const [onTopHotkey, setOnTopHotkey] = useState(
     localStorage.getItem('always_on_top_hotkey') ?? 'Ctrl+Alt+T',
   )
@@ -55,6 +39,8 @@ export default function SettingsPage() {
   const [fullScreen, setFullScreen] = useState(false)
   const [recording, setRecording] = useState(false)
   const [hkErr, setHkErr] = useState<string | null>(null)
+  const [recordingQuick, setRecordingQuick] = useState(false)
+  const [quickHkErr, setQuickHkErr] = useState<string | null>(null)
   const [recordingOnTop, setRecordingOnTop] = useState(false)
   const [onTopHkErr, setOnTopHkErr] = useState<string | null>(null)
   const [appVersion, setAppVersion] = useState(__APP_VERSION__)
@@ -200,6 +186,32 @@ export default function SettingsPage() {
     localStorage.setItem('always_on_top_hotkey', accel)
   }
 
+  const applyQuickHotkey = async (accel: string) => {
+    setQuickHkErr(null)
+    const ok = await window.api?.setQuickTranslateHotkey(accel)
+    if (isDesktop && accel && !ok) {
+      await window.api?.setQuickTranslateHotkey(quickHotkey)
+      setQuickHkErr('Không đăng ký được — tổ hợp có thể đã bị ứng dụng khác dùng')
+      return
+    }
+    setQuickHotkey(accel)
+    localStorage.setItem('quick_translate_hotkey', accel)
+    window.dispatchEvent(new CustomEvent('quick-translate-hotkey-changed', { detail: accel }))
+  }
+
+  const chooseQuickDirection = (direction: 'en-vi' | 'vi-en') => {
+    setQuickDirection(direction)
+    localStorage.setItem('quick_translate_direction', direction)
+    window.dispatchEvent(
+      new CustomEvent('quick-translate-direction-changed', { detail: direction }),
+    )
+  }
+
+  const openQuickTranslate = () => {
+    if (isDesktop) void window.api.openQuickTranslateWindow()
+    else window.dispatchEvent(new Event('quick-translate-open'))
+  }
+
   // Chế độ ghi phím tắt: nhấn tổ hợp để đặt, Esc hủy, Backspace/Delete gỡ phím tắt
   useEffect(() => {
     if (!recording) return
@@ -248,6 +260,39 @@ export default function SettingsPage() {
     return () => window.removeEventListener('keydown', onKey, true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordingOnTop])
+
+  useEffect(() => {
+    if (!recordingQuick) return
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.key === 'Escape') {
+        setRecordingQuick(false)
+        return
+      }
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        void applyQuickHotkey('')
+        setRecordingQuick(false)
+        return
+      }
+      const accel = accelFromEvent(e)
+      if (!accel) return
+      void applyQuickHotkey(accel)
+      setRecordingQuick(false)
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordingQuick])
+
+  useEffect(() => {
+    const onDirection = (event: Event) => {
+      const direction = (event as CustomEvent<'en-vi' | 'vi-en'>).detail
+      if (direction === 'en-vi' || direction === 'vi-en') setQuickDirection(direction)
+    }
+    window.addEventListener('quick-translate-direction-changed', onDirection)
+    return () => window.removeEventListener('quick-translate-direction-changed', onDirection)
+  }, [])
 
   const toggleSuggest = () => {
     const next = !suggest
@@ -508,6 +553,53 @@ export default function SettingsPage() {
               <input type="checkbox" checked={grammar} onChange={toggleGrammar} />
               <span className="track" />
             </label>
+          </span>
+        </div>
+
+        <div className="set-row">
+          <span className="set-ico">
+            <Icon name="lang" />
+          </span>
+          <span className="set-main">
+            <span className="set-title">Dịch nhanh bằng bàn phím</span>
+            <span className="set-desc">
+              {isDesktop
+                ? 'Mở hộp dịch từ mọi ứng dụng, nhập tiếng Anh hoặc tiếng Việt rồi nhấn Enter'
+                : 'Mở hộp dịch khi đang dùng EngMaster trên trình duyệt, nhập nội dung rồi nhấn Enter'}
+            </span>
+            <span className="set-hotkey">
+              Phím tắt mở:{' '}
+              {recordingQuick ? (
+                <span className="set-recording">
+                  nhấn tổ hợp phím (kèm Ctrl/Alt)… · Esc hủy · Backspace gỡ
+                </span>
+              ) : (
+                <>
+                  <kbd className="set-kbd">{quickHotkey || 'chưa đặt'}</kbd>
+                  <button className="set-btn set-btn-sm" onClick={() => setRecordingQuick(true)}>
+                    Đổi
+                  </button>
+                  <button
+                    className="set-btn set-btn-sm"
+                    onClick={openQuickTranslate}
+                  >
+                    Mở thử
+                  </button>
+                </>
+              )}
+              {quickHkErr && <span className="set-hotkey-err">{quickHkErr}</span>}
+            </span>
+          </span>
+          <span className="set-side">
+            <select
+              className="set-select"
+              value={quickDirection}
+              aria-label="Chiều dịch mặc định"
+              onChange={(e) => chooseQuickDirection(e.target.value as 'en-vi' | 'vi-en')}
+            >
+              <option value="en-vi">Anh → Việt</option>
+              <option value="vi-en">Việt → Anh</option>
+            </select>
           </span>
         </div>
 

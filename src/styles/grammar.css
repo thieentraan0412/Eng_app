@@ -2500,6 +2500,208 @@
   }
 }
 
+/* Điện thoại: bài học chuyển thành luồng một cột, không còn bảng desktop
+   ép trang rộng hơn viewport. Các nút chính có vùng chạm tối thiểu 44px. */
+@media (max-width: 600px) {
+  .page.gr-page,
+  .page.gr-page.is-narrow {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .gr-page .gr-crumb {
+    min-height: 40px;
+    margin: -6px 0 8px;
+    font-size: 13px;
+  }
+
+  .gr-head {
+    display: block;
+    margin-bottom: 14px;
+  }
+  .gr-head h1 {
+    font-size: clamp(21px, 6.4vw, 26px);
+    line-height: 1.2;
+  }
+  .gr-head p {
+    margin-top: 6px;
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .gr-head .gr-row {
+    gap: 6px;
+    margin-top: 9px !important;
+  }
+
+  .gr-head-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    width: 100%;
+    margin-top: 14px;
+    gap: 8px;
+  }
+  .gr-head-actions .gr-ring {
+    grid-column: 1;
+    justify-self: start;
+  }
+  .gr-page .gr-head-actions .gr-btn {
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    height: auto;
+    padding: 8px 10px;
+    white-space: normal;
+    line-height: 1.25;
+  }
+  .gr-page .gr-head-actions .gr-btn-primary {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .gr-card {
+    min-width: 0;
+    border-radius: 13px;
+  }
+  .gr-card-head {
+    align-items: flex-start;
+    padding: 12px 14px;
+  }
+  .gr-card-head h2 {
+    min-width: 0;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .gr-card-head .gr-hint {
+    max-width: 46%;
+    text-align: right;
+    line-height: 1.4;
+  }
+  .gr-card-body {
+    padding: 14px;
+  }
+
+  /* Mỗi dòng công thức thành một thẻ có nhãn Dạng / Cấu trúc / Ví dụ. */
+  .gr-table,
+  .gr-table tbody,
+  .gr-table tr,
+  .gr-table td {
+    display: block;
+    width: 100%;
+  }
+  .gr-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .gr-table tr {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .gr-table tr:last-child {
+    border-bottom: 0;
+  }
+  .gr-table td,
+  .gr-table .gr-k {
+    display: grid;
+    grid-template-columns: minmax(82px, 30%) minmax(0, 1fr);
+    gap: 10px;
+    padding: 6px 14px;
+    border: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .gr-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .gr-form-str {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .gr-ex-vi {
+    grid-column: 2;
+  }
+
+  .gr-tl-wrap {
+    padding: 6px 14px 12px;
+    scrollbar-width: thin;
+  }
+  .gr-tl {
+    min-width: 500px;
+  }
+  .gr-tl-legend {
+    display: grid;
+    gap: 8px;
+    padding: 0 14px 14px;
+  }
+
+  .gr-use,
+  .gr-trap,
+  .gr-cmp-head,
+  .gr-cmp-row {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+  .gr-sent {
+    align-items: flex-start;
+    overflow-wrap: anywhere;
+  }
+  .gr-trap-why {
+    padding-left: 0;
+  }
+
+  .gr-cta {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    padding: 14px;
+  }
+  .gr-cta .gr-mark {
+    width: 36px;
+    height: 36px;
+  }
+  .gr-cta-txt {
+    align-self: center;
+  }
+  .gr-page .gr-cta .gr-btn {
+    grid-column: 1 / -1;
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    height: auto;
+    padding: 8px 12px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.3;
+  }
+}
+
+@media (max-width: 380px) {
+  .gr-card-head {
+    display: block;
+  }
+  .gr-card-head .gr-hint {
+    display: block;
+    max-width: none;
+    margin-top: 4px;
+    text-align: left;
+  }
+  .gr-table td,
+  .gr-table .gr-k {
+    grid-template-columns: 74px minmax(0, 1fr);
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+}
+
 @media (hover: none) {
   .gr-topic-tools {
     opacity: 1;

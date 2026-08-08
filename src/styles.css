@@ -87,10 +87,16 @@
 }
 body {
   margin: 0;
+  min-width: 320px;
   background: var(--bg);
   color: var(--text);
   font-size: 15px;
   line-height: 1.6;
+}
+body.quick-translate-body {
+  min-width: 0;
+  overflow: hidden;
+  background: transparent;
 }
 ::selection {
   background: var(--primary-soft);
@@ -618,6 +624,7 @@ textarea::placeholder {
   display: flex;
   height: 100vh;
   height: 100dvh; /* mobile: trừ thanh địa chỉ động, không bị cắt đáy */
+  height: var(--app-height, 100dvh);
   overflow: hidden;
 }
 /* Sidebar — port từ mockup EngMaster_Redesign (.side): viền mảnh, mục gọn,
@@ -3131,6 +3138,11 @@ textarea::placeholder {
   }
   .mobile-topbar {
     display: flex;
+    min-height: calc(54px + env(safe-area-inset-top));
+    height: auto;
+    padding-top: env(safe-area-inset-top);
+    padding-right: max(0.9rem, env(safe-area-inset-right));
+    padding-left: max(0.9rem, env(safe-area-inset-left));
   }
   /* QUAN TRỌNG: cho phép .content cuộn được trong layout cột.
      Không có min-height:0, .main-area phình theo nội dung cao (vd 100 câu)
@@ -3140,6 +3152,7 @@ textarea::placeholder {
   }
   .content {
     min-height: 0;
+    overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -3155,6 +3168,8 @@ textarea::placeholder {
     transform: translateX(-100%);
     transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
     box-shadow: var(--shadow-lg);
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
   .app-root.nav-open .sidebar {
     transform: translateX(0);
@@ -3178,7 +3193,8 @@ textarea::placeholder {
 
   /* Nội dung: bỏ padding rộng của desktop */
   .content {
-    padding: 1.15rem 1rem 1.6rem;
+    padding: 1.15rem max(1rem, env(safe-area-inset-right))
+      max(1.6rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
   }
   .page {
     max-width: 100%;
@@ -3261,7 +3277,8 @@ textarea::placeholder {
 /* ====== ĐIỆN THOẠI HẸP: tinh chỉnh thêm ====== */
 @media (max-width: 480px) {
   .content {
-    padding: 0.9rem 0.8rem 1.4rem;
+    padding: 0.9rem max(0.8rem, env(safe-area-inset-right))
+      max(1.4rem, env(safe-area-inset-bottom)) max(0.8rem, env(safe-area-inset-left));
   }
   .stat-grid {
     grid-template-columns: 1fr 1fr;

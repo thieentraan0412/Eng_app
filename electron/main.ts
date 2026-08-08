@@ -18,6 +18,7 @@ const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 
 let win: BrowserWindow | null = null
+let quickTranslateWin: BrowserWindow | null = null
 
 function createWindow() {
   // Bỏ thanh menu mặc định (File/Edit/View/Window/Help)
@@ -188,6 +189,113 @@ ipcMain.handle('hotkey:set', (_e, accel: string): boolean => {
 // ---------- Cửa sổ nổi (Always on Top) + thu gọn kiểu hình-trong-hình ----------
 // Mini dùng lại giao diện mobile của app (breakpoint <= 860px) nên không cần
 // layout riêng: chỉ thu nhỏ + ghim cửa sổ vào góc màn hình.
+// ---------- Dịch nhanh bằng bàn phím: mở modal trong cửa sổ chính ----------
+let quickTranslateHotkey = ''
+
+function createQuickTranslateWindow() {
+  const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+  const width = Math.min(640, display.workArea.width - 32)
+  const height = Math.min(300, display.workArea.height - 32)
+  const x = Math.round(display.workArea.x + (display.workArea.width - width) / 2)
+  const y = Math.round(display.workArea.y + (display.workArea.height - height) / 2)
+
+  quickTranslateWin = new BrowserWindow({
+    width,
+    height,
+    x,
+    y,
+    minWidth: 360,
+    minHeight: 280,
+    show: false,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    resizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    hasShadow: true,
+    title: 'Dịch nhanh — EngMaster',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  })
+
+  quickTranslateWin.setAlwaysOnTop(true, 'floating')
+  quickTranslateWin.once('ready-to-show', () => {
+    quickTranslateWin?.show()
+    quickTranslateWin?.focus()
+  })
+  quickTranslateWin.on('closed', () => {
+    quickTranslateWin = null
+  })
+
+  if (VITE_DEV_SERVER_URL) {
+    void quickTranslateWin.loadURL(`${VITE_DEV_SERVER_URL}?view=quick-translate`)
+  } else {
+    void quickTranslateWin.loadFile(path.join(RENDERER_DIST, 'index.html'), {
+      query: { view: 'quick-translate' },
+    })
+  }
+}
+
+function openQuickTranslate() {
+  if (!quickTranslateWin || quickTranslateWin.isDestroyed()) {
+    createQuickTranslateWindow()
+    return
+  }
+  quickTranslateWin.show()
+  quickTranslateWin.focus()
+  quickTranslateWin.webContents.send('quick-translate:focus')
+}
+
+ipcMain.handle('quick-translate:open', (): boolean => {
+  openQuickTranslate()
+  return true
+})
+
+ipcMain.handle('quick-translate:close', (): boolean => {
+  if (!quickTranslateWin || quickTranslateWin.isDestroyed()) return false
+  quickTranslateWin.close()
+  return true
+})
+
+ipcMain.handle('quick-translate:resize', (_e, expanded: boolean): boolean => {
+  if (!quickTranslateWin || quickTranslateWin.isDestroyed()) return false
+  const current = quickTranslateWin.getBounds()
+  const display = screen.getDisplayMatching(current)
+  const targetHeight = Math.min(expanded ? 600 : 300, display.workArea.height - 32)
+  if (current.height === targetHeight) return true
+
+  // Giữ tâm cửa sổ ổn định khi bung/thu để modal không nhảy khỏi vị trí mắt nhìn.
+  const centerY = current.y + current.height / 2
+  const minY = display.workArea.y + 16
+  const maxY = display.workArea.y + display.workArea.height - targetHeight - 16
+  const y = Math.round(Math.min(Math.max(centerY - targetHeight / 2, minY), maxY))
+  quickTranslateWin.setBounds({ ...current, y, height: targetHeight })
+  return true
+})
+
+ipcMain.handle('quick-translate:hotkey:set', (_e, accel: string): boolean => {
+  if (quickTranslateHotkey) {
+    try {
+      globalShortcut.unregister(quickTranslateHotkey)
+    } catch {
+      /* bỏ qua */
+    }
+    quickTranslateHotkey = ''
+  }
+  if (!accel) return true
+  try {
+    const ok = globalShortcut.register(accel, openQuickTranslate)
+    if (ok) quickTranslateHotkey = accel
+    return ok
+  } catch {
+    return false
+  }
+})
+
 const MINI_W = 420
 const MINI_H = 640
 const MINI_MARGIN = 24
@@ -363,6 +471,15 @@ ipcMain.handle('cred:clear', (): boolean => {
 
 app.whenReady().then(() => {
   createWindow()
+  // Có phím mặc định ngay cả trước khi renderer/phiên đăng nhập tải xong.
+  // AppLayout sẽ thay bằng lựa chọn đã lưu của người dùng ngay sau khi mount.
+  try {
+    if (globalShortcut.register('Ctrl+Alt+E', openQuickTranslate)) {
+      quickTranslateHotkey = 'Ctrl+Alt+E'
+    }
+  } catch {
+    /* tổ hợp đang bị ứng dụng khác chiếm */
+  }
   setupGlobalTranslate()
   initAutoUpdate(() => win)
 })
