@@ -16,6 +16,9 @@ import '../styles/quicktranslate.css'
 
 export type QuickTranslateDirection = 'en-vi' | 'vi-en'
 
+// Từ đơn tiếng Anh -> có bảng từ điển -> cửa sổ nổi cần rộng để xếp 2 cột.
+const SINGLE_WORD = /^[a-z]+(?:['-][a-z]+)*$/i
+
 interface Props {
   open: boolean
   hotkey: string
@@ -56,6 +59,7 @@ export default function QuickTranslateModal({
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [activePos, setActivePos] = useState('all')
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const posListRef = useRef<HTMLDivElement>(null)
   const requestRef = useRef(0)
 
   useEffect(() => {
@@ -88,7 +92,9 @@ export default function QuickTranslateModal({
   }, [open, onClose])
 
   // Dừng gõ một nhịp ngắn là dịch. Mỗi lần gõ/đổi chiều sẽ hủy kết quả của
-  // yêu cầu trước để bản dịch cũ không ghi đè nội dung mới.
+  // yêu cầu trước để bản dịch cũ không ghi đè nội dung mới. Bật lại cửa sổ
+  // (focusToken) cũng dịch lại chữ đang có, vì lượt reset ở trên đã xoá kết quả
+  // cũ — nếu không sẽ thấy chữ trong ô nhập mà khung kết quả trống trơn.
   useEffect(() => {
     if (!open) return
     const source = text.trim()
@@ -106,7 +112,7 @@ export default function QuickTranslateModal({
       setLoading(true)
       setError('')
       setCopied(false)
-      const shouldLoadDetails = direction === 'en-vi' && /^[a-z]+(?:['-][a-z]+)*$/i.test(source)
+      const shouldLoadDetails = direction === 'en-vi' && SINGLE_WORD.test(source)
       setDetails(null)
       setDetailsLoading(shouldLoadDetails)
 
@@ -127,6 +133,17 @@ export default function QuickTranslateModal({
       if (translated) {
         setResult(translated)
         setError('')
+        // Chiều Việt -> Anh: tra tiếp chính từ tiếng Anh vừa dịch được, người
+        // học có luôn phiên âm, từ loại và ví dụ thay vì chỉ một dòng chữ.
+        const word = translated.trim()
+        if (direction === 'vi-en' && SINGLE_WORD.test(word)) {
+          setDetailsLoading(true)
+          void lookupWordDetails(word).then((wordDetails) => {
+            if (request !== requestRef.current) return
+            setDetailsLoading(false)
+            if (wordDetails.groups.length > 0) setDetails(wordDetails)
+          })
+        }
       } else {
         setResult(null)
         setError('Không dịch được. Hãy kiểm tra kết nối mạng và thử lại.')
@@ -134,16 +151,17 @@ export default function QuickTranslateModal({
     }, 380)
 
     return () => window.clearTimeout(timer)
-  }, [direction, open, text])
+  }, [direction, focusToken, open, text])
 
-  const hasQuery = text.trim().length > 0
   const hasOutput = Boolean(loading || result || error || detailsLoading || details)
-  const hasDictionary = Boolean(details)
+  // Bố cục từ điển bật ngay từ lúc đang tra, không đợi có dữ liệu, để khung
+  // kết quả không phải đổi kiểu cuộn giữa chừng.
+  const hasDictionary = Boolean(details) || detailsLoading
 
+  // Đổi từ loại thì đọc lại từ đầu danh sách.
   useEffect(() => {
-    if (!standalone || !window.api?.resizeQuickTranslateWindow) return
-    void window.api.resizeQuickTranslateWindow(hasQuery)
-  }, [hasQuery, standalone])
+    posListRef.current?.scrollTo({ top: 0 })
+  }, [activePos])
 
   if (!open) return null
 
@@ -195,7 +213,7 @@ export default function QuickTranslateModal({
   return (
     <div className={standalone ? 'qt-backdrop is-window' : 'qt-backdrop'} onMouseDown={onClose}>
       <section
-        className={`qt-modal${hasOutput ? ' has-output' : ''}${hasDictionary ? ' has-dictionary' : ''}`}
+        className={`qt-modal${hasDictionary ? ' has-dictionary' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="qt-title"
@@ -273,6 +291,16 @@ export default function QuickTranslateModal({
         </div>
 
         <div className="qt-output">
+          {/* Chỗ kết quả luôn có mặt để bố cục đứng yên; khi chưa gõ gì thì
+              nói rõ sắp có gì ở đây thay vì để một mảng trống. */}
+          {!hasOutput && (
+            <div className="qt-empty">
+              <span className="qt-empty-icon"><Icon name="lang" /></span>
+              <strong>Gõ từ hoặc câu cần dịch</strong>
+              <p>Bản dịch, phiên âm, từ loại và ví dụ sẽ hiện ở đây.</p>
+            </div>
+          )}
+
           {(loading || result || error) && !details && (
             <div className={error ? 'qt-result is-error' : 'qt-result'} aria-live="polite">
               <div className="qt-result-head">
@@ -289,7 +317,7 @@ export default function QuickTranslateModal({
             </div>
           )}
 
-          {(detailsLoading || details) && direction === 'en-vi' && (
+          {(detailsLoading || details) && (
             <section className="qt-dictionary" aria-live="polite">
               {detailsLoading && !details ? (
                 <div className="qt-dict-loading">
@@ -304,22 +332,30 @@ export default function QuickTranslateModal({
                       <button type="button" onClick={speakWord} aria-label={`Phát âm ${details.word}`}>
                         <Icon name="speak" />
                       </button>
-                    </div>
-                    {result && (
-                      <div className="qt-dict-primary">
-                        <span>Nghĩa phổ biến</span>
-                        <strong>{result}</strong>
-                        <button type="button" onClick={copyResult}>
+                      {result && (
+                        <button type="button" className="qt-dict-copy" onClick={copyResult}>
                           <Icon name={copied ? 'check' : 'stack'} />
                           {copied ? 'Đã chép' : 'Sao chép'}
                         </button>
+                      )}
+                    </div>
+                    {/* Chiều Anh -> Việt thì nghĩa phổ biến là thông tin chính. Chiều
+                        Việt -> Anh thì chính từ đứng đầu đã là bản dịch, chỉ cần nhắc
+                        lại chữ tiếng Việt đã nhập. */}
+                    {direction === 'en-vi' && result && (
+                      <div className="qt-dict-primary">
+                        <span>Nghĩa phổ biến</span>
+                        <strong>{result}</strong>
                       </div>
                     )}
-                    {!result && (loading || error) && (
+                    {direction === 'en-vi' && !result && (loading || error) && (
                       <div className={error ? 'qt-dict-status is-error' : 'qt-dict-status'}>
                         {loading && <span />}
                         {loading ? 'Đang dịch nghĩa phổ biến…' : error}
                       </div>
+                    )}
+                    {direction === 'vi-en' && (
+                      <small>Dịch từ <b>{text.trim()}</b></small>
                     )}
                     {details.lemma && (
                       <small>Dạng gốc <b>{details.lemma}</b></small>
@@ -348,7 +384,7 @@ export default function QuickTranslateModal({
                     </nav>
                   )}
 
-                  <div className="qt-pos-list">
+                  <div className="qt-pos-list qt-scroll" ref={posListRef}>
                     {visibleGroups.map((group) => (
                       <article className="qt-pos-group" key={group.pos}>
                         <div className="qt-pos-head">

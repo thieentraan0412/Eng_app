@@ -1,3 +1,7 @@
+/* Dịch nhanh — modal trong app và cửa sổ nổi của Electron.
+   Hẹp thì xếp dọc như cũ. Khi có kết quả từ điển và đủ chỗ, modal chuyển sang
+   2 cột: cột trái giữ phần nhập liệu, cột phải dành gần trọn chiều cao cho
+   kết quả nên người dùng đọc được nhiều nghĩa mà không phải trượt nhiều. */
 .qt-backdrop {
   position: fixed;
   inset: 0;
@@ -14,17 +18,15 @@
 /* Cửa sổ Electron riêng: phần ngoài thẻ trong suốt, không tạo lớp mờ phủ
    ứng dụng đang dùng phía sau. */
 .qt-backdrop.is-window {
+  place-items: start center;
   padding: 8px;
   background: transparent;
   backdrop-filter: none;
 }
 .qt-backdrop.is-window .qt-modal {
   width: 100%;
-  height: auto;
-  max-height: 100%;
-}
-.qt-backdrop.is-window .qt-modal.has-dictionary {
   height: 100%;
+  max-height: 100%;
 }
 .qt-backdrop.is-window .qt-head {
   -webkit-app-region: drag;
@@ -36,12 +38,12 @@
 }
 
 .qt-modal {
-  width: min(620px, 100%);
+  width: min(1060px, 100%);
   max-height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 17px;
+  padding: 16px 18px 18px;
   border: 1px solid var(--border-strong);
   border-radius: 20px;
   background: var(--surface);
@@ -56,8 +58,8 @@
   gap: 11px;
 }
 .qt-head-icon {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
@@ -66,8 +68,8 @@
   color: var(--primary);
 }
 .qt-head-icon .ico {
-  width: 19px;
-  height: 19px;
+  width: 18px;
+  height: 18px;
 }
 .qt-head-copy {
   min-width: 0;
@@ -78,14 +80,17 @@
   display: block;
 }
 .qt-head-copy strong {
-  font-size: 16px;
+  font-size: 15.5px;
   line-height: 1.25;
   letter-spacing: -0.025em;
 }
 .qt-head-copy span {
   margin-top: 2px;
+  overflow: hidden;
   color: var(--text-soft);
   font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .qt-kbd {
   padding: 3px 7px;
@@ -122,7 +127,7 @@
 .qt-directions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
   margin-top: 12px;
   padding: 4px;
   border: 1px solid var(--border);
@@ -219,34 +224,6 @@
   font: 600 10.5px ui-monospace, Menlo, Consolas, monospace;
   text-align: center;
 }
-.qt-submit {
-  min-width: 112px;
-  min-height: 42px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 8px 16px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--primary);
-  color: #fff;
-  font: 650 13.5px var(--font-sans);
-  box-shadow: var(--shadow-primary);
-  cursor: pointer;
-}
-.qt-submit:hover {
-  background: var(--primary-hover);
-}
-.qt-submit:disabled {
-  opacity: 0.5;
-  cursor: default;
-  box-shadow: none;
-}
-.qt-submit .ico {
-  width: 16px;
-  height: 16px;
-}
 
 .qt-result {
   margin: 0;
@@ -302,35 +279,95 @@
 
 .qt-output {
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+}
+/* Chỉ có một dòng dịch: cả khối cùng cuộn. */
+.qt-modal:not(.has-dictionary) .qt-output {
   overflow-y: auto;
   overscroll-behavior: contain;
-  margin: 12px -5px -2px 0;
-  padding-right: 5px;
+  margin-right: -6px;
+  padding-right: 6px;
+}
+/* Có từ điển: khung tự cuộn bên trong (xem .qt-pos-list). */
+.qt-modal.has-dictionary .qt-output {
+  overflow: hidden;
+}
+
+/* Chưa gõ gì: giữ chỗ cho cột kết quả để bố cục không nhảy khi có bản dịch. */
+.qt-empty {
+  flex: 1 1 auto;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 28px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 14px;
+  background: var(--surface-2);
+  text-align: center;
+}
+.qt-empty-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--primary-tint);
+  color: var(--primary);
+}
+.qt-empty-icon .ico {
+  width: 21px;
+  height: 21px;
+}
+.qt-empty strong {
+  font-size: 14.5px;
+  letter-spacing: -0.015em;
+}
+.qt-empty p {
+  max-width: 30ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.qt-scroll,
+.qt-modal:not(.has-dictionary) .qt-output {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
 }
-.qt-output:empty {
-  display: none;
+.qt-scroll::-webkit-scrollbar,
+.qt-modal:not(.has-dictionary) .qt-output::-webkit-scrollbar {
+  width: 8px;
 }
-.qt-output::-webkit-scrollbar {
-  width: 6px;
-}
-.qt-output::-webkit-scrollbar-thumb {
+.qt-scroll::-webkit-scrollbar-thumb,
+.qt-modal:not(.has-dictionary) .qt-output::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
   border-radius: 999px;
   background: var(--border-strong);
+  background-clip: content-box;
 }
 
-/* Kết quả từ điển: nghĩa chính ở đầu, sau đó mới đến từ loại, định nghĩa và
-   ví dụ. Chỉ vùng này cuộn để phần nhập luôn ở đúng vị trí. */
+/* Kết quả từ điển: nghĩa chính và bộ lọc từ loại luôn đứng yên ở đầu khung,
+   chỉ danh sách định nghĩa bên dưới cuộn. */
 .qt-dictionary {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface);
   overflow: hidden;
 }
 .qt-dict-loading {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 9px;
   padding: 18px;
   color: var(--text-soft);
@@ -347,7 +384,8 @@
 }
 .qt-dict-hero {
   position: relative;
-  padding: 16px;
+  flex: 0 0 auto;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border);
   background:
     radial-gradient(circle at 100% 0, color-mix(in srgb, var(--primary) 10%, transparent), transparent 42%),
@@ -371,6 +409,7 @@
 .qt-dict-wordline > button {
   width: 30px;
   height: 30px;
+  flex: 0 0 auto;
   display: grid;
   place-items: center;
   padding: 0;
@@ -388,13 +427,35 @@
   width: 15px;
   height: 15px;
 }
+.qt-dict-wordline > .qt-dict-copy {
+  width: auto;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-soft);
+  font: 500 11.5px var(--font-sans);
+}
+.qt-dict-wordline > .qt-dict-copy:hover {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.qt-dict-wordline > .qt-dict-copy .ico {
+  width: 13px;
+  height: 13px;
+}
 .qt-dict-primary {
   display: flex;
   align-items: center;
   gap: 9px;
-  margin-top: 11px;
+  margin-top: 9px;
 }
 .qt-dict-primary > span {
+  flex: 0 0 auto;
   color: var(--muted);
   font-size: 11px;
   font-weight: 650;
@@ -408,31 +469,11 @@
   font-size: 17px;
   line-height: 1.35;
 }
-.qt-dict-primary > button {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 8px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-soft);
-  font: 500 11.5px var(--font-sans);
-  cursor: pointer;
-}
-.qt-dict-primary > button:hover {
-  background: var(--surface);
-  color: var(--text);
-}
-.qt-dict-primary .ico {
-  width: 13px;
-  height: 13px;
-}
 .qt-dict-status {
   display: flex;
   align-items: center;
   gap: 7px;
-  margin-top: 11px;
+  margin-top: 9px;
   color: var(--text-soft);
   font-size: 12px;
 }
@@ -449,7 +490,7 @@
 }
 .qt-dict-hero > small {
   display: block;
-  margin-top: 7px;
+  margin-top: 6px;
   color: var(--muted);
   font-size: 11.5px;
 }
@@ -458,9 +499,7 @@
 }
 
 .qt-pos-tabs {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  flex: 0 0 auto;
   display: flex;
   gap: 6px;
   overflow-x: auto;
@@ -491,11 +530,18 @@
   background: var(--primary-tint);
   color: var(--primary);
 }
+
+.qt-pos-list {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .qt-pos-group + .qt-pos-group {
   border-top: 1px solid var(--border);
 }
 .qt-pos-group {
-  padding: 15px;
+  padding: 14px 15px;
 }
 .qt-pos-head {
   display: flex;
@@ -539,7 +585,7 @@
 }
 .qt-meaning-block,
 .qt-usage-block {
-  margin-top: 13px;
+  margin-top: 12px;
 }
 .qt-meaning-block h4,
 .qt-usage-block h4 {
@@ -615,7 +661,7 @@
   font-size: 11.5px;
 }
 .qt-example {
-  margin-top: 9px;
+  margin-top: 8px;
   padding: 8px 10px;
   border-radius: 8px;
   background: var(--surface-2);
@@ -641,6 +687,61 @@
   color: var(--muted);
 }
 
+/* Đủ rộng cho 2 cột: phần nhập dồn sang trái, vùng kết quả cao gần hết modal.
+   Bật ngay từ lúc chưa gõ gì nên bố cục đứng yên suốt cả lượt dịch. */
+@media (min-width: 880px) {
+  .qt-modal {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      'head head'
+      'dirs output'
+      'form output';
+    column-gap: 18px;
+    min-height: min(620px, 100%);
+  }
+  .qt-modal > .qt-head {
+    grid-area: head;
+  }
+  .qt-modal > .qt-directions {
+    grid-area: dirs;
+    grid-template-columns: 1fr;
+  }
+  /* Ô nhập cao lên cho hết cột trái — dán cả đoạn văn vẫn đọc được, và cột
+     không còn mảng trống lớn dưới đáy. */
+  .qt-modal > .qt-form {
+    grid-area: form;
+    display: flex;
+    flex-direction: column;
+  }
+  .qt-modal > .qt-output {
+    grid-area: output;
+  }
+  .qt-form textarea {
+    flex: 1 1 auto;
+    min-height: 104px;
+    max-height: 200px;
+  }
+  .qt-form-foot {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .qt-empty {
+    display: flex;
+  }
+  .qt-dict-hero {
+    padding: 15px 18px;
+  }
+  .qt-dict-wordline > strong {
+    font-size: 23px;
+  }
+  .qt-pos-group {
+    padding: 15px 18px;
+  }
+}
+
 @keyframes qt-spin {
   to { transform: rotate(360deg); }
 }
@@ -660,8 +761,8 @@
   .qt-modal {
     width: 100%;
     max-height: calc(100dvh - max(10px, env(safe-area-inset-top)));
-    padding: 17px max(14px, env(safe-area-inset-right))
-      max(17px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+    padding: 16px max(14px, env(safe-area-inset-right))
+      max(16px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
     border-radius: 20px 20px 0 0;
     border-bottom: 0;
   }
@@ -677,9 +778,6 @@
   .qt-dict-primary {
     flex-wrap: wrap;
   }
-  .qt-dict-primary > strong {
-    width: calc(100% - 110px);
-  }
   .qt-pos-head {
     flex-wrap: wrap;
   }
@@ -693,5 +791,6 @@
   .qt-backdrop,
   .qt-modal {
     animation: none;
+    transition: none;
   }
 }

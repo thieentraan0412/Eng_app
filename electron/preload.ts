@@ -108,8 +108,6 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('quick-translate:hotkey:set', accel),
   openQuickTranslateWindow: (): Promise<boolean> => ipcRenderer.invoke('quick-translate:open'),
   closeQuickTranslateWindow: (): Promise<boolean> => ipcRenderer.invoke('quick-translate:close'),
-  resizeQuickTranslateWindow: (expanded: boolean): Promise<boolean> =>
-    ipcRenderer.invoke('quick-translate:resize', expanded),
   onQuickTranslateFocus: (cb: () => void): (() => void) => {
     const h = () => cb()
     ipcRenderer.on('quick-translate:focus', h)

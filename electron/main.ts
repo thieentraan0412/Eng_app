@@ -192,10 +192,14 @@ ipcMain.handle('hotkey:set', (_e, accel: string): boolean => {
 // ---------- Dịch nhanh bằng bàn phím: mở modal trong cửa sổ chính ----------
 let quickTranslateHotkey = ''
 
+// Cửa sổ mở thẳng ở khổ 2 cột: ô nhập bên trái, kết quả bên phải cao gần hết
+// cửa sổ. Không đổi kích thước giữa chừng nên bố cục đứng yên từ đầu tới cuối.
+const QUICK_TRANSLATE_SIZE = { width: 1040, height: 740 }
+
 function createQuickTranslateWindow() {
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
-  const width = Math.min(640, display.workArea.width - 32)
-  const height = Math.min(300, display.workArea.height - 32)
+  const width = Math.min(QUICK_TRANSLATE_SIZE.width, display.workArea.width - 32)
+  const height = Math.min(QUICK_TRANSLATE_SIZE.height, display.workArea.height - 32)
   const x = Math.round(display.workArea.x + (display.workArea.width - width) / 2)
   const y = Math.round(display.workArea.y + (display.workArea.height - height) / 2)
 
@@ -205,7 +209,7 @@ function createQuickTranslateWindow() {
     x,
     y,
     minWidth: 360,
-    minHeight: 280,
+    minHeight: 260,
     show: false,
     frame: false,
     transparent: true,
@@ -240,9 +244,15 @@ function createQuickTranslateWindow() {
   }
 }
 
-function openQuickTranslate() {
+// Phím tắt hoạt động kiểu bật/tắt: đang hiện thì bấm lần nữa là ẩn đi. Ẩn chứ
+// không đóng hẳn nên lần gọi sau bật lên tức thì, không phải tải lại cửa sổ.
+function toggleQuickTranslate() {
   if (!quickTranslateWin || quickTranslateWin.isDestroyed()) {
     createQuickTranslateWindow()
+    return
+  }
+  if (quickTranslateWin.isVisible()) {
+    quickTranslateWin.hide()
     return
   }
   quickTranslateWin.show()
@@ -251,29 +261,13 @@ function openQuickTranslate() {
 }
 
 ipcMain.handle('quick-translate:open', (): boolean => {
-  openQuickTranslate()
+  toggleQuickTranslate()
   return true
 })
 
 ipcMain.handle('quick-translate:close', (): boolean => {
   if (!quickTranslateWin || quickTranslateWin.isDestroyed()) return false
   quickTranslateWin.close()
-  return true
-})
-
-ipcMain.handle('quick-translate:resize', (_e, expanded: boolean): boolean => {
-  if (!quickTranslateWin || quickTranslateWin.isDestroyed()) return false
-  const current = quickTranslateWin.getBounds()
-  const display = screen.getDisplayMatching(current)
-  const targetHeight = Math.min(expanded ? 600 : 300, display.workArea.height - 32)
-  if (current.height === targetHeight) return true
-
-  // Giữ tâm cửa sổ ổn định khi bung/thu để modal không nhảy khỏi vị trí mắt nhìn.
-  const centerY = current.y + current.height / 2
-  const minY = display.workArea.y + 16
-  const maxY = display.workArea.y + display.workArea.height - targetHeight - 16
-  const y = Math.round(Math.min(Math.max(centerY - targetHeight / 2, minY), maxY))
-  quickTranslateWin.setBounds({ ...current, y, height: targetHeight })
   return true
 })
 
@@ -288,7 +282,7 @@ ipcMain.handle('quick-translate:hotkey:set', (_e, accel: string): boolean => {
   }
   if (!accel) return true
   try {
-    const ok = globalShortcut.register(accel, openQuickTranslate)
+    const ok = globalShortcut.register(accel, toggleQuickTranslate)
     if (ok) quickTranslateHotkey = accel
     return ok
   } catch {
@@ -474,7 +468,7 @@ app.whenReady().then(() => {
   // Có phím mặc định ngay cả trước khi renderer/phiên đăng nhập tải xong.
   // AppLayout sẽ thay bằng lựa chọn đã lưu của người dùng ngay sau khi mount.
   try {
-    if (globalShortcut.register('Ctrl+Alt+E', openQuickTranslate)) {
+    if (globalShortcut.register('Ctrl+Alt+E', toggleQuickTranslate)) {
       quickTranslateHotkey = 'Ctrl+Alt+E'
     }
   } catch {
