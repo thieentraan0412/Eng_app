@@ -1827,3 +1827,71 @@ body.read-focus .read-doc-head {
     display: none;
   }
 }
+
+/* ============================================================
+   ĐÁNH DẤU ĐÃ ĐỌC XONG
+   ============================================================ */
+
+/* Nút trên thanh công cụ khi bài đã đọc xong */
+.read-btn-done {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+  color: var(--success);
+  font-weight: 600;
+}
+.read-btn-done:hover {
+  background: color-mix(in srgb, var(--success) 18%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 55%, var(--border));
+}
+.read-btn-done .ico {
+  color: currentColor;
+}
+.read-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Nhãn "Đã đọc xong" (dưới tiêu đề bài + trên thẻ thư viện) */
+.read-badge-done {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 38%, var(--border));
+  color: var(--success);
+}
+
+/* Nút bật/tắt nhanh trên thẻ */
+.read-ibtn.is-done {
+  background: color-mix(in srgb, var(--success) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+  color: var(--success);
+}
+.read-ibtn:hover .ico,
+.read-ibtn.is-done .ico {
+  color: currentColor;
+}
+
+/* Thẻ đã đọc xong: viền xanh nhạt + dấu tích góc ảnh bìa */
+.read-card.is-done {
+  border-color: color-mix(in srgb, var(--success) 34%, var(--border));
+}
+.read-card.is-done .read-cover {
+  background: color-mix(in srgb, var(--success) 7%, var(--surface-2));
+}
+.read-cover-done {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--success);
+  color: #fff;
+}
+.read-cover-done .ico {
+  width: 13px;
+  height: 13px;
+  color: #fff;
+  stroke-width: 2.6;
+}

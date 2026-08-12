@@ -89,6 +89,7 @@ export interface Reading {
   content: string | null
   level: string | null
   highlights: ReadingHighlight[] | null
+  finished_at: string | null // thời điểm đánh dấu đã đọc xong; null = chưa xong
   created_at: string
 }
 
@@ -605,10 +606,40 @@ export const CloudApi = {
     if (error) throw error
   },
 
-  // Lưu các vùng bôi màu của bài đọc
+  // Lưu các vùng bôi màu của bài đọc.
+  // Dùng .select() để BIẾT CHẮC có dòng nào được ghi hay không: khi thiếu cột
+  // `highlights` trong DB, hoặc RLS chặn (không phải bài của mình), Postgres
+  // không báo lỗi mà chỉ trả về 0 dòng -> phải tự ném lỗi, nếu không vùng bôi
+  // sẽ "biến mất" khi đăng nhập lại ở máy/web khác.
   async updateReadingHighlights(id: string, highlights: ReadingHighlight[]): Promise<void> {
-    const { error } = await supabase.from('readings').update({ highlights }).eq('id', id)
+    const { data, error } = await supabase
+      .from('readings')
+      .update({ highlights })
+      .eq('id', id)
+      .select('id')
     if (error) throw error
+    if (!data?.length) {
+      throw new Error(
+        'Không ghi được vùng bôi lên cloud (không tìm thấy bài đọc hoặc không có quyền sửa).',
+      )
+    }
+  },
+
+  // Đánh dấu / bỏ đánh dấu "đã đọc xong". Trả về mốc thời gian đã ghi (null nếu bỏ).
+  async setReadingFinished(id: string, finished: boolean): Promise<string | null> {
+    const finishedAt = finished ? new Date().toISOString() : null
+    const { data, error } = await supabase
+      .from('readings')
+      .update({ finished_at: finishedAt })
+      .eq('id', id)
+      .select('finished_at')
+    if (error) throw error
+    if (!data?.length) {
+      throw new Error(
+        'Không lưu được trạng thái đã đọc xong (không tìm thấy bài đọc hoặc không có quyền sửa).',
+      )
+    }
+    return (data[0] as { finished_at: string | null }).finished_at
   },
 
   // ---------- Writings (bài viết) ----------

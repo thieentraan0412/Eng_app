@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(sed 's/=.*//')",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(unset ELECTRON_RUN_AS_NODE)",
+      "Bash(npm run *)"
     ]
   }
 }

@@ -40,6 +40,19 @@ function readMinutes(text: string): number {
   return Math.max(1, Math.round(words / 150))
 }
 
+// Hiện mốc thời gian đánh dấu đã đọc xong (dd/mm/yyyy hh:mm)
+function formatDone(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 // Bỏ phần giao nhau với [start, end) khỏi danh sách vùng bôi (cắt đôi nếu cần)
 function subtractRange(ranges: ReadingHighlight[], start: number, end: number): ReadingHighlight[] {
   const out: ReadingHighlight[] = []
@@ -187,29 +200,44 @@ interface ViewerProps {
   reading: Reading
   onBack: () => void
   onHighlightsChange: (highlights: ReadingHighlight[]) => void
+  onFinishedChange: (finishedAt: string | null) => void
   onSaveWord: (entry: SaveWordEntry, deckId?: string) => Promise<void>
 }
 
 // Trình đọc 1 bài: bôi chọn văn bản -> thanh chọn màu hiện phía trên vùng chọn;
 // bấm vào vùng đã bôi -> thêm/sửa ghi chú; nghe đọc cả bài bằng TTS.
-function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: ViewerProps) {
+function ReadingViewer({
+  reading,
+  onBack,
+  onHighlightsChange,
+  onFinishedChange,
+  onSaveWord,
+}: ViewerProps) {
   const contentRef = useRef<HTMLDivElement>(null)
   const lookupCardRef = useRef<HTMLDivElement>(null)
   const lookupRequestRef = useRef(0)
+  const hlSaveSeqRef = useRef(0)
   const translationCacheRef = useRef(new Map<string, Promise<string | null>>())
   const text = reading.content ?? ''
   const storageKey = `reading_hl_${reading.id}`
   const savedWordsKey = `reading_saved_words_${reading.id}`
 
   const [highlights, setHighlights] = useState<ReadingHighlight[]>(() => {
-    if (reading.highlights?.length) return reading.highlights
-    // Dự phòng: bản lưu cục bộ (khi cloud chưa có cột highlights)
+    // Bản cục bộ CHỈ tồn tại khi lần ghi cloud gần nhất thất bại -> nó mới hơn
+    // bản trên cloud, nên ưu tiên dùng rồi đẩy lại lên cloud khi mở bài.
     try {
-      return JSON.parse(localStorage.getItem(storageKey) ?? '[]') as ReadingHighlight[]
+      const pending = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as unknown
+      if (Array.isArray(pending) && pending.length) return pending as ReadingHighlight[]
     } catch {
-      return []
+      /* bản cục bộ hỏng -> bỏ qua, dùng bản cloud */
     }
+    return reading.highlights ?? []
   })
+  // Lỗi đồng bộ vùng bôi lên cloud (hiện cảnh báo thay vì im lặng mất dữ liệu)
+  const [hlError, setHlError] = useState<string | null>(null)
+  // Trạng thái "đã đọc xong" — mốc thời gian đánh dấu, null = chưa xong
+  const [finishedAt, setFinishedAt] = useState<string | null>(reading.finished_at ?? null)
+  const [finishBusy, setFinishBusy] = useState(false)
   // Thanh chọn màu nổi: vị trí (viewport) + vùng ký tự đang chọn
   const [bar, setBar] = useState<{ x: number; y: number; start: number; end: number } | null>(null)
   // Popover ghi chú của 1 vùng bôi đang mở
@@ -691,12 +719,55 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
     }
   }, [])
 
+  // Đẩy vùng bôi lên cloud. Ghi bản cục bộ TRƯỚC để không mất khi mất mạng /
+  // đóng app đột ngột, chỉ xóa khi cloud xác nhận đã ghi. Mỗi lần lưu có số thứ
+  // tự riêng để phản hồi về trễ của lần cũ không ghi đè kết quả lần mới.
+  const pushHighlights = (next: ReadingHighlight[]) => {
+    localStorage.setItem(storageKey, JSON.stringify(next))
+    const seq = ++hlSaveSeqRef.current
+    return CloudApi.updateReadingHighlights(reading.id, next)
+      .then(() => {
+        if (seq !== hlSaveSeqRef.current) return
+        localStorage.removeItem(storageKey)
+        setHlError(null)
+      })
+      .catch((e: unknown) => {
+        if (seq !== hlSaveSeqRef.current) return
+        setHlError(
+          `Chưa đồng bộ được vùng bôi lên cloud — chỉ mới lưu trên máy này. ${(e as Error).message}`,
+        )
+      })
+  }
+
   const save = (next: ReadingHighlight[]) => {
     setHighlights(next)
     onHighlightsChange(next)
-    CloudApi.updateReadingHighlights(reading.id, next)
-      .then(() => localStorage.removeItem(storageKey))
-      .catch(() => localStorage.setItem(storageKey, JSON.stringify(next))) // cloud lỗi -> giữ bản cục bộ
+    pushHighlights(next)
+  }
+
+  // Mở bài: nếu còn bản cục bộ chưa lên được cloud thì thử đẩy lại ngay, để
+  // các vùng bôi cũ xuất hiện lại khi đăng nhập ở máy khác / trên web.
+  useEffect(() => {
+    if (!localStorage.getItem(storageKey)) return
+    pushHighlights(highlights)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reading.id])
+
+  // Bật/tắt "đã đọc xong" — chỉ đổi giao diện khi cloud đã ghi xong, để trạng
+  // thái hiển thị luôn khớp với dữ liệu thật trên mọi thiết bị.
+  const toggleFinished = async () => {
+    if (finishBusy) return
+    setFinishBusy(true)
+    try {
+      const next = await CloudApi.setReadingFinished(reading.id, !finishedAt)
+      setFinishedAt(next)
+      onFinishedChange(next)
+      setHlError(null)
+    } catch (e) {
+      setHlError(`Không lưu được trạng thái đã đọc xong. ${(e as Error).message}`)
+    } finally {
+      setFinishBusy(false)
+    }
   }
 
   const applyColor = (color: string) => {
@@ -821,7 +892,17 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
             {wordCount.toLocaleString('vi-VN')} từ · khoảng {readMinutes(text)} phút đọc
           </span>
           <span>· {highlights.length} vùng đã bôi</span>
+          {finishedAt && (
+            <span className="read-badge read-badge-done" title={`Đánh dấu lúc ${formatDone(finishedAt)}`}>
+              <Icon name="check" /> Đã đọc xong
+            </span>
+          )}
         </p>
+        {hlError && (
+          <p className="read-lookup-error" role="alert">
+            {hlError}
+          </p>
+        )}
       </div>
 
       <div className="read-grid2">
@@ -870,6 +951,21 @@ function ReadingViewer({ reading, onBack, onHighlightsChange, onSaveWord }: View
             >
               <Icon name={focus ? 'x' : 'target'} />{' '}
               <span className="read-btn-label">{focus ? 'Thoát tập trung' : 'Tập trung'}</span>
+            </button>
+
+            <button
+              className={
+                finishedAt ? 'read-btn read-btn-sm read-btn-done' : 'read-btn read-btn-sm'
+              }
+              onClick={toggleFinished}
+              disabled={finishBusy}
+              aria-pressed={Boolean(finishedAt)}
+              title={finishedAt ? 'Bấm để bỏ đánh dấu đã đọc xong' : 'Đánh dấu bài này đã đọc xong'}
+            >
+              <Icon name="check" />{' '}
+              <span className="read-btn-label">
+                {finishedAt ? 'Đã đọc xong' : 'Đánh dấu đã đọc xong'}
+              </span>
             </button>
 
             <div className="read-spacer" />
@@ -1414,6 +1510,8 @@ export default function ReadingPage({ onSaveWord }: ReadingPageProps) {
   // Lọc danh sách theo cấp độ (chip A1–C2) + ô tìm theo tiêu đề/nội dung
   const [levelFilter, setLevelFilter] = useState('')
   const [query, setQuery] = useState('')
+  // Lọc theo trạng thái đọc: '' = tất cả · 'todo' = chưa xong · 'done' = đã đọc xong
+  const [doneFilter, setDoneFilter] = useState<'' | 'todo' | 'done'>('')
   // Số từ đang có trong bộ "Từ đã lưu khi đọc" — hiện ở nhãn cạnh ô tìm
   const [savedWords, setSavedWords] = useState(0)
 
@@ -1450,6 +1548,17 @@ export default function ReadingPage({ onSaveWord }: ReadingPageProps) {
     setReadings((x) => x.filter((y) => y.id !== r.id))
   }
 
+  // Đánh dấu đã đọc xong ngay từ thẻ trong thư viện (không cần mở bài)
+  const toggleDone = async (r: Reading) => {
+    try {
+      const at = await CloudApi.setReadingFinished(r.id, !r.finished_at)
+      setReadings((x) => x.map((y) => (y.id === r.id ? { ...y, finished_at: at } : y)))
+      setError(null)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   if (selected) {
     return (
       <ReadingViewer
@@ -1460,6 +1569,10 @@ export default function ReadingPage({ onSaveWord }: ReadingPageProps) {
           setSelected((s) => (s ? { ...s, highlights: hs } : s))
           setReadings((x) => x.map((r) => (r.id === selected.id ? { ...r, highlights: hs } : r)))
         }}
+        onFinishedChange={(at) => {
+          setSelected((s) => (s ? { ...s, finished_at: at } : s))
+          setReadings((x) => x.map((r) => (r.id === selected.id ? { ...r, finished_at: at } : r)))
+        }}
       />
     )
   }
@@ -1468,12 +1581,14 @@ export default function ReadingPage({ onSaveWord }: ReadingPageProps) {
   const shown = readings.filter(
     (r) =>
       (!levelFilter || r.level === levelFilter) &&
+      (!doneFilter || (doneFilter === 'done' ? Boolean(r.finished_at) : !r.finished_at)) &&
       (!q ||
         r.title.toLowerCase().includes(q) ||
         (r.content ?? '').toLowerCase().includes(q)),
   )
   // Chỉ hiện hàng lọc khi có bài gắn cấp độ
   const hasLevels = readings.some((r) => r.level)
+  const doneCount = readings.filter((r) => r.finished_at).length
 
   const openForm = () => {
     setAdding(true)
@@ -1525,6 +1640,29 @@ export default function ReadingPage({ onSaveWord }: ReadingPageProps) {
                 {l}
               </button>
             ))}
+          </div>
+        )}
+
+        {readings.length > 0 && (
+          <div className="read-chipset" role="group" aria-label="Trạng thái đọc">
+            <button
+              className={doneFilter ? 'read-chip' : 'read-chip is-active'}
+              onClick={() => setDoneFilter('')}
+            >
+              Tất cả
+            </button>
+            <button
+              className={doneFilter === 'todo' ? 'read-chip is-active' : 'read-chip'}
+              onClick={() => setDoneFilter(doneFilter === 'todo' ? '' : 'todo')}
+            >
+              Chưa xong ({readings.length - doneCount})
+            </button>
+            <button
+              className={doneFilter === 'done' ? 'read-chip is-active' : 'read-chip'}
+              onClick={() => setDoneFilter(doneFilter === 'done' ? '' : 'done')}
+            >
+              Đã đọc xong ({doneCount})
+            </button>
           </div>
         )}
 
@@ -1594,7 +1732,7 @@ export default function ReadingPage({ onSaveWord }: ReadingPageProps) {
           {shown.map((r) => (
             <div
               key={r.id}
-              className="read-card"
+              className={r.finished_at ? 'read-card is-done' : 'read-card'}
               role="button"
               tabIndex={0}
               onClick={() => setSelected(r)}
@@ -1607,6 +1745,11 @@ export default function ReadingPage({ onSaveWord }: ReadingPageProps) {
             >
               <span className="read-cover">
                 <Icon name="book" />
+                {r.finished_at && (
+                  <span className="read-cover-done" aria-hidden="true">
+                    <Icon name="check" />
+                  </span>
+                )}
               </span>
               <span className="read-body">
                 <span className="read-card-title">{r.title}</span>
@@ -1616,7 +1759,27 @@ export default function ReadingPage({ onSaveWord }: ReadingPageProps) {
                   <span className="read-badge">
                     <Icon name="clock" /> ~{readMinutes(r.content ?? '')} phút
                   </span>
+                  {r.finished_at && (
+                    <span
+                      className="read-badge read-badge-done"
+                      title={`Đã đọc xong lúc ${formatDone(r.finished_at)}`}
+                    >
+                      <Icon name="check" /> Đã đọc xong
+                    </span>
+                  )}
                   <span className="read-tools">
+                    <button
+                      className={r.finished_at ? 'read-ibtn is-done' : 'read-ibtn'}
+                      title={
+                        r.finished_at ? 'Bỏ đánh dấu đã đọc xong' : 'Đánh dấu đã đọc xong'
+                      }
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleDone(r)
+                      }}
+                    >
+                      <Icon name="check" />
+                    </button>
                     <button
                       className="read-ibtn danger"
                       title="Xóa bài đọc"
