@@ -5,7 +5,7 @@ import { useWindowChrome } from '../contexts/WindowChromeContext'
 import { isDesktop } from '../platform'
 import Icon from '../components/Icon'
 import type { UpdateStatus } from '../vite-env'
-import { accelFromEvent } from '../services/hotkey'
+import { accelFromEvent, readQuickTranslateHotkey } from '../services/hotkey'
 import '../styles/settings.css'
 
 export default function SettingsPage() {
@@ -23,9 +23,7 @@ export default function SettingsPage() {
   const [hotkey, setHotkey] = useState(
     localStorage.getItem('desktop_translate_hotkey') ?? 'Ctrl+Alt+D',
   )
-  const [quickHotkey, setQuickHotkey] = useState(
-    localStorage.getItem('quick_translate_hotkey') ?? 'Ctrl+Alt+E',
-  )
+  const [quickHotkey, setQuickHotkey] = useState(readQuickTranslateHotkey)
   const [quickDirection, setQuickDirection] = useState<'en-vi' | 'vi-en'>(
     localStorage.getItem('quick_translate_direction') === 'vi-en' ? 'vi-en' : 'en-vi',
   )

@@ -25,6 +25,8 @@ interface Props {
   onClose: () => void
   standalone?: boolean
   focusToken?: number
+  /** Chữ đang bôi đen lúc gọi phím tắt — đổ sẵn vào ô nhập, rỗng thì giữ chữ cũ. */
+  seedText?: string
 }
 
 const readDirection = (): QuickTranslateDirection =>
@@ -48,6 +50,7 @@ export default function QuickTranslateModal({
   onClose,
   standalone = false,
   focusToken = 0,
+  seedText = '',
 }: Props) {
   const [direction, setDirection] = useState<QuickTranslateDirection>(readDirection)
   const [text, setText] = useState('')
@@ -61,6 +64,10 @@ export default function QuickTranslateModal({
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const posListRef = useRef<HTMLDivElement>(null)
   const requestRef = useRef(0)
+  // Đọc qua ref để lần mở nào cũng nhận chữ mới nhất mà không thêm phụ thuộc
+  // vào effect (thay đổi giữa chừng sẽ xoá mất kết quả đang hiện).
+  const seedRef = useRef(seedText)
+  seedRef.current = seedText
 
   useEffect(() => {
     requestRef.current += 1
@@ -73,6 +80,8 @@ export default function QuickTranslateModal({
     if (!open) return
     setDirection(readDirection())
     setCopied(false)
+    const seed = seedRef.current.trim()
+    if (seed) setText(seed)
     window.setTimeout(() => {
       inputRef.current?.focus()
       inputRef.current?.select()

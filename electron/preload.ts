@@ -108,11 +108,16 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('quick-translate:hotkey:set', accel),
   openQuickTranslateWindow: (): Promise<boolean> => ipcRenderer.invoke('quick-translate:open'),
   closeQuickTranslateWindow: (): Promise<boolean> => ipcRenderer.invoke('quick-translate:close'),
-  onQuickTranslateFocus: (cb: () => void): (() => void) => {
-    const h = () => cb()
+  onQuickTranslateFocus: (cb: (seed: string) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, seed: string) => cb(seed ?? '')
     ipcRenderer.on('quick-translate:focus', h)
     return () => ipcRenderer.removeListener('quick-translate:focus', h)
   },
+  // (Cửa sổ chính) Báo chữ đang bôi đen để cửa sổ dịch đổ sẵn vào ô nhập
+  setQuickTranslateSelection: (text: string): Promise<boolean> =>
+    ipcRenderer.invoke('quick-translate:selection', text),
+  // (Cửa sổ dịch) Lấy chữ bôi đen còn chờ, dùng cho lần mở đầu tiên
+  getQuickTranslateSeed: (): Promise<string> => ipcRenderer.invoke('quick-translate:seed'),
 
   onDesktopTranslateText: (cb: (text: string) => void): (() => void) => {
     const h = (_e: IpcRendererEvent, text: string) => cb(text)

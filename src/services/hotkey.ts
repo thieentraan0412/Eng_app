@@ -1,3 +1,11 @@
+// Phím tắt mặc định cho Dịch nhanh. Chuỗi rỗng đã lưu nghĩa là người dùng cố ý
+// gỡ phím tắt, nên chỉ dùng mặc định khi chưa từng có cài đặt nào.
+export const DEFAULT_QUICK_TRANSLATE_HOTKEY = 'Alt+X'
+
+export function readQuickTranslateHotkey(): string {
+  return localStorage.getItem('quick_translate_hotkey') ?? DEFAULT_QUICK_TRANSLATE_HOTKEY
+}
+
 // Chuyển sự kiện bàn phím thành accelerator dùng chung cho Electron và web.
 // Phím tắt luôn cần Ctrl/Alt/Super để không chiếm các phím nhập văn bản thông thường.
 export function accelFromEvent(e: KeyboardEvent): string | null {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Sidebar from './Sidebar'
 import TranslatePopup from './TranslatePopup'
 import WindowBar from './WindowBar'
@@ -20,7 +20,9 @@ import SentencePage from '../pages/SentencePage'
 import UsagePage from '../pages/UsagePage'
 import SettingsPage from '../pages/SettingsPage'
 import QuickTranslateModal from './QuickTranslateModal'
-import { matchesAccelerator } from '../services/hotkey'
+import { matchesAccelerator, readQuickTranslateHotkey } from '../services/hotkey'
+import { readSelectedText } from '../services/selection'
+import { watchKeyboardInset } from '../services/keyboardInset'
 
 const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
 
@@ -40,9 +42,11 @@ export default function AppLayout() {
   const [toast, setToast] = useState<string | null>(null)
   const [navOpen, setNavOpen] = useState(false) // drawer menu trên mobile
   const [quickTranslateOpen, setQuickTranslateOpen] = useState(false)
-  const [quickTranslateHotkey, setQuickTranslateHotkey] = useState(
-    localStorage.getItem('quick_translate_hotkey') ?? 'Ctrl+Alt+E',
-  )
+  const [quickTranslateSeed, setQuickTranslateSeed] = useState('')
+  // Bộ nghe phím tắt chỉ gắn một lần nên phải soi trạng thái qua ref.
+  const quickTranslateOpenRef = useRef(false)
+  quickTranslateOpenRef.current = quickTranslateOpen
+  const [quickTranslateHotkey, setQuickTranslateHotkey] = useState(readQuickTranslateHotkey)
   const { hidden: chromeHidden, fullScreen } = useWindowChrome()
   const [translateEnabled, setTranslateEnabled] = useState(
     localStorage.getItem('desktop_translate_enabled') === '1',
@@ -61,29 +65,54 @@ export default function AppLayout() {
     if (chromeHidden) setNavOpen(false)
   }, [chromeHidden])
 
+  // Đo bàn phím ảo cho toàn app (xem services/keyboardInset.ts)
+  useEffect(() => watchKeyboardInset(), [])
+
   // Dịch bằng bàn phím: desktop đăng ký phím tắt toàn hệ thống; web lắng nghe
   // tổ hợp khi tab đang hoạt động. Cài đặt có thể mở thử modal bằng custom event.
   useEffect(() => {
-    const openModal = () => {
+    const openModal = (seed = '') => {
       setNavOpen(false)
+      setQuickTranslateSeed(seed)
       setQuickTranslateOpen(true)
     }
-    const onOpen = () => openModal()
+    // Bản web cũng bật/tắt như desktop: đang mở mà bấm phím tắt lần nữa là đóng.
+    // Lúc mở thì lấy luôn chữ đang bôi đen để khỏi phải gõ lại.
+    const toggleModal = () => {
+      if (quickTranslateOpenRef.current) {
+        setQuickTranslateOpen(false)
+        return
+      }
+      openModal(readSelectedText())
+    }
+    const onOpen = () => openModal(readSelectedText())
     const onHotkeyChanged = (event: Event) => {
       setQuickTranslateHotkey(String((event as CustomEvent<string>).detail ?? ''))
     }
     window.addEventListener('quick-translate-hotkey-changed', onHotkeyChanged)
 
     let onWebKey: ((event: KeyboardEvent) => void) | undefined
+    let onSelect: (() => void) | undefined
     if (isDesktop && window.api) {
       void window.api.setQuickTranslateHotkey(quickTranslateHotkey)
+      // Phím tắt chạy ở main process nên không đọc được vùng chọn của trang;
+      // gửi sẵn chữ vừa bôi đen để cửa sổ dịch có cái mà đổ vào ô nhập.
+      let lastSent = ''
+      onSelect = () => {
+        const selected = readSelectedText()
+        if (selected === lastSent) return
+        lastSent = selected
+        void window.api.setQuickTranslateSelection(selected)
+      }
+      document.addEventListener('mouseup', onSelect)
+      document.addEventListener('keyup', onSelect)
     } else {
       window.addEventListener('quick-translate-open', onOpen)
       onWebKey = (event: KeyboardEvent) => {
-        const accelerator = localStorage.getItem('quick_translate_hotkey') ?? 'Ctrl+Alt+E'
+        const accelerator = readQuickTranslateHotkey()
         if (!event.repeat && matchesAccelerator(event, accelerator)) {
           event.preventDefault()
-          openModal()
+          toggleModal()
         }
       }
       window.addEventListener('keydown', onWebKey, true)
@@ -93,6 +122,10 @@ export default function AppLayout() {
       window.removeEventListener('quick-translate-open', onOpen)
       window.removeEventListener('quick-translate-hotkey-changed', onHotkeyChanged)
       if (onWebKey) window.removeEventListener('keydown', onWebKey, true)
+      if (onSelect) {
+        document.removeEventListener('mouseup', onSelect)
+        document.removeEventListener('keyup', onSelect)
+      }
     }
     // Chỉ đăng ký lúc khởi tạo; thay đổi trong Cài đặt gọi API trực tiếp.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -307,6 +340,7 @@ export default function AppLayout() {
         <QuickTranslateModal
           open={quickTranslateOpen}
           hotkey={quickTranslateHotkey}
+          seedText={quickTranslateSeed}
           onClose={() => setQuickTranslateOpen(false)}
         />
       )}

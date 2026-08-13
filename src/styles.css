@@ -3863,6 +3863,15 @@ textarea::placeholder {
   }
 }
 
+/* ---------- Bàn phím ảo che đáy trang (mobile) ----------
+   --kb-inset do services/keyboardInset.ts đặt, bằng 0 khi trình duyệt đã tự co
+   layout. Chừa đúng chừng đó ở đáy vùng cuộn để ô nhập nào cũng cuộn lên trên
+   bàn phím được, đồng thời báo cho scrollIntoView biết đâu là mép dưới thật. */
+html.kb-open .content {
+  padding-bottom: var(--kb-inset, 0px);
+  scroll-padding-bottom: var(--kb-inset, 0px);
+}
+
 /* ---------- Công cụ phụ: dạng nút chữ, có vạch ngăn ---------- */
 .pf-tools {
   display: grid;

@@ -61,7 +61,9 @@ export interface EngMasterApi {
   setQuickTranslateHotkey: (accel: string) => Promise<boolean>
   openQuickTranslateWindow: () => Promise<boolean>
   closeQuickTranslateWindow: () => Promise<boolean>
-  onQuickTranslateFocus: (cb: () => void) => () => void
+  onQuickTranslateFocus: (cb: (seed: string) => void) => () => void
+  setQuickTranslateSelection: (text: string) => Promise<boolean>
+  getQuickTranslateSeed: () => Promise<string>
   onQuickSave: (cb: (payload: { entry: SaveEntry; deckId?: string }) => void) => () => void
   onDesktopTranslateText: (cb: (text: string) => void) => () => void
   requestDesktopText: () => Promise<string>

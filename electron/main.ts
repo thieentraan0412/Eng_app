@@ -244,6 +244,20 @@ function createQuickTranslateWindow() {
   }
 }
 
+// Phải khớp DEFAULT_QUICK_TRANSLATE_HOTKEY bên src/services/hotkey.ts — main
+// không dùng chung module với renderer.
+const DEFAULT_QUICK_TRANSLATE_HOTKEY = 'Alt+X'
+
+// Chữ đang bôi đen ở cửa sổ chính, do renderer gửi lên mỗi khi vùng chọn đổi.
+// Dùng một lần rồi xoá: mở lại mà không chọn gì mới thì giữ chữ đang gõ dở.
+let quickTranslateSeed = ''
+
+function takeQuickTranslateSeed(): string {
+  const seed = quickTranslateSeed
+  quickTranslateSeed = ''
+  return seed
+}
+
 // Phím tắt hoạt động kiểu bật/tắt: đang hiện thì bấm lần nữa là ẩn đi. Ẩn chứ
 // không đóng hẳn nên lần gọi sau bật lên tức thì, không phải tải lại cửa sổ.
 function toggleQuickTranslate() {
@@ -257,8 +271,16 @@ function toggleQuickTranslate() {
   }
   quickTranslateWin.show()
   quickTranslateWin.focus()
-  quickTranslateWin.webContents.send('quick-translate:focus')
+  quickTranslateWin.webContents.send('quick-translate:focus', takeQuickTranslateSeed())
 }
+
+ipcMain.handle('quick-translate:selection', (_e, text: unknown): boolean => {
+  quickTranslateSeed = String(text ?? '').slice(0, 1000)
+  return true
+})
+
+// Lần mở đầu tiên cửa sổ mới tạo xong mới hỏi được chữ mồi.
+ipcMain.handle('quick-translate:seed', (): string => takeQuickTranslateSeed())
 
 ipcMain.handle('quick-translate:open', (): boolean => {
   toggleQuickTranslate()
@@ -468,8 +490,8 @@ app.whenReady().then(() => {
   // Có phím mặc định ngay cả trước khi renderer/phiên đăng nhập tải xong.
   // AppLayout sẽ thay bằng lựa chọn đã lưu của người dùng ngay sau khi mount.
   try {
-    if (globalShortcut.register('Ctrl+Alt+E', toggleQuickTranslate)) {
-      quickTranslateHotkey = 'Ctrl+Alt+E'
+    if (globalShortcut.register(DEFAULT_QUICK_TRANSLATE_HOTKEY, toggleQuickTranslate)) {
+      quickTranslateHotkey = DEFAULT_QUICK_TRANSLATE_HOTKEY
     }
   } catch {
     /* tổ hợp đang bị ứng dụng khác chiếm */

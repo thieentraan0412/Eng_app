@@ -100,13 +100,22 @@ function alignAnswerToVisualViewport(answer: HTMLTextAreaElement): void {
   scrollHost.scrollBy({ top: rect.top - Math.min(idealTop, latestTop), behavior: 'auto' })
 }
 
+// Bàn phím bật lên theo hiệu ứng trượt, mỗi máy một tốc độ, nên phải chỉnh lại
+// vài nhịp thay vì tin vào lần đo đầu tiên.
+const KEYBOARD_SETTLE_MS = [120, 320, 600]
+
 function settleFocusedAnswer(answer: HTMLTextAreaElement): void {
   const align = () => {
     if (document.activeElement === answer) alignAnswerToVisualViewport(answer)
   }
   window.requestAnimationFrame(align)
-  window.setTimeout(align, 120)
-  window.setTimeout(align, 320)
+  KEYBOARD_SETTLE_MS.forEach((ms) => window.setTimeout(align, ms))
+}
+
+// Ô nhập đang được gõ, nếu có — dùng khi bàn phím đổi kích thước.
+function focusedAnswer(): HTMLTextAreaElement | null {
+  const el = document.activeElement
+  return el instanceof HTMLTextAreaElement && el.classList.contains('cc-answer') ? el : null
 }
 
 // ================= TRANG CHÉP CÂU =================
@@ -721,16 +730,28 @@ function PracticeView({
     }
 
     const frame = window.requestAnimationFrame(alignAnswer)
-    const afterKeyboardStarts = window.setTimeout(alignAnswer, 120)
-    const afterKeyboardSettles = window.setTimeout(alignAnswer, 320)
-    const finish = window.setTimeout(() => setAdvanceTo(null), 400)
+    const retries = KEYBOARD_SETTLE_MS.map((ms) => window.setTimeout(alignAnswer, ms))
+    const finish = window.setTimeout(() => setAdvanceTo(null), 700)
     return () => {
       window.cancelAnimationFrame(frame)
-      window.clearTimeout(afterKeyboardStarts)
-      window.clearTimeout(afterKeyboardSettles)
+      retries.forEach(window.clearTimeout)
       window.clearTimeout(finish)
     }
   }, [advanceTo])
+
+  // Bàn phím bật/tắt/đổi cỡ (đổi bộ gõ, mở emoji, xoay máy) làm vùng nhìn thấy
+  // co giãn — chỉnh lại ô đang gõ, nếu không nó trôi xuống dưới bàn phím.
+  useEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport) return
+    const realign = () => {
+      const answer = focusedAnswer()
+      // Đợi một khung hình cho padding --kb-inset kịp áp dụng rồi mới đo.
+      if (answer) window.requestAnimationFrame(() => alignAnswerToVisualViewport(answer))
+    }
+    viewport.addEventListener('resize', realign)
+    return () => viewport.removeEventListener('resize', realign)
+  }, [])
 
   // Cuộn tới thẻ của câu làm gần nhất sau khi nạp xong (chế độ danh sách)
   useEffect(() => {

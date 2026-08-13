@@ -1411,7 +1411,9 @@
     position: fixed;
     left: max(12px, env(safe-area-inset-left));
     right: max(12px, env(safe-area-inset-right));
-    bottom: calc(10px + env(safe-area-inset-bottom));
+    /* Neo trên mép bàn phím, không phải mép màn hình, nếu không danh sách gợi ý
+       nằm khuất phía sau bàn phím. */
+    bottom: calc(10px + var(--kb-inset, 0px) + env(safe-area-inset-bottom));
     top: auto;
     width: auto;
     max-width: none;
@@ -1442,8 +1444,11 @@
      nằm trọn trong phần màn hình phía trên bàn phím. */
   .content:has(.cc-answer:focus) {
     padding-top: 7px;
-    padding-bottom: 7px;
+    /* Cộng thêm phần bàn phím che (0 khi trình duyệt đã tự co layout) — luật
+       này đè lên html.kb-open .content vì cụ thể hơn, nên phải tự cộng lấy. */
+    padding-bottom: calc(7px + var(--kb-inset, 0px));
     scroll-padding-block: 7px;
+    scroll-padding-bottom: calc(7px + var(--kb-inset, 0px));
   }
   .cc-detail:has(.cc-answer:focus) > .cc-crumb,
   .cc-detail:has(.cc-answer:focus) > .cc-head,
