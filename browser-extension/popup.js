@@ -2,10 +2,12 @@
 // lấy chữ đang bôi đen ở tab hiện tại rồi nhúng trang Dịch nhanh của EngMaster.
 
 const MAX_SELECTION = 1000
+// Địa chỉ mặc định; đổi được trong trang cài đặt của tiện ích.
+const DEFAULT_APP_URL = 'https://eng-app-sigma.vercel.app'
 
 async function readAppUrl() {
   const stored = await chrome.storage.sync.get('appUrl')
-  return String(stored.appUrl || '').trim()
+  return String(stored.appUrl || DEFAULT_APP_URL).trim()
 }
 
 // activeTab được cấp ngay khi người dùng gọi tiện ích, nên chỉ đọc được vùng

@@ -19,6 +19,7 @@ import '@fontsource/space-grotesk/500.css'
 import '@fontsource/space-grotesk/600.css'
 import '@fontsource/space-grotesk/700.css'
 import App from '../src/App'
+import QuickTranslateWindow from '../src/components/QuickTranslateWindow'
 import '../src/styles.css'
 
 // Safari/Chrome mobile thay đổi phần viewport nhìn thấy khi thanh địa chỉ hoặc
@@ -35,10 +36,24 @@ window.addEventListener('resize', syncViewportHeight, { passive: true })
 window.addEventListener('pageshow', syncViewportHeight, { passive: true })
 window.visualViewport?.addEventListener('resize', syncViewportHeight, { passive: true })
 
-// Bản Web: chỉ có ứng dụng chính. Không có cửa sổ popup dịch toàn màn hình
+// Bản Web: mặc định là ứng dụng chính. Không có cửa sổ popup dịch toàn màn hình
 // (đó là tính năng riêng của desktop, cần Electron).
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+// Riêng ?view=quick-translate chỉ dựng khung Dịch nhanh — extension trình duyệt
+// nhúng địa chỉ này vào popup của nó để bấm Alt+X ở tab nào cũng dịch được.
+const view = new URLSearchParams(window.location.search).get('view')
+const root = ReactDOM.createRoot(document.getElementById('root')!)
+
+if (view === 'quick-translate') {
+  document.body.classList.add('quick-translate-body', 'quick-translate-embed')
+  root.render(
+    <React.StrictMode>
+      <QuickTranslateWindow />
+    </React.StrictMode>,
+  )
+} else {
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  )
+}
