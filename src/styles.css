@@ -98,6 +98,11 @@ body.quick-translate-body {
   overflow: hidden;
   background: transparent;
 }
+/* Nhúng trong popup của extension trình duyệt: không có cửa sổ trong suốt như
+   Electron nên trả lại nền đặc theo chủ đề. */
+body.quick-translate-body.quick-translate-embed {
+  background: var(--bg);
+}
 ::selection {
   background: var(--primary-soft);
   color: var(--text);

@@ -1299,8 +1299,16 @@ const SentenceCard = memo(function SentenceCard({
           spellCheck={false}
           autoComplete="off"
           autoCorrect="off"
-          autoCapitalize="off"
+          autoCapitalize="none"
+          inputMode="text"
+          // Chặn gợi ý mật khẩu / tự điền của các trình quản lý mật khẩu và Grammarly
           data-lpignore="true"
+          data-1p-ignore="true"
+          data-bwignore="true"
+          data-dashlane-ignore="true"
+          data-gramm="false"
+          data-gramm_editor="false"
+          data-enable-grammarly="false"
           data-form-type="other"
           name="cc-translation"
           rows={2}

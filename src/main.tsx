@@ -21,6 +21,7 @@ import '@fontsource/space-grotesk/700.css'
 import App from './App'
 import DesktopTranslatePopup from './components/DesktopTranslatePopup'
 import QuickTranslateWindow from './components/QuickTranslateWindow'
+import { isDesktop } from './platform'
 import './styles.css'
 
 // Cùng một bundle renderer phục vụ 2 cửa sổ:
@@ -31,6 +32,9 @@ const root = ReactDOM.createRoot(document.getElementById('root')!)
 
 if (view === 'quick-translate') {
   document.body.classList.add('quick-translate-body')
+  // Trên web thì đây là iframe trong popup của extension, không phải cửa sổ
+  // trong suốt của Electron -> cần nền đặc, nếu không sẽ lộ nền trắng phía sau.
+  if (!isDesktop) document.body.classList.add('quick-translate-embed')
   root.render(
     <React.StrictMode>
       <QuickTranslateWindow />
