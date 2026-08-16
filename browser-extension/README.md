@@ -10,7 +10,11 @@ trình duyệt nhận phím thay, rồi mở một **cửa sổ riêng** (kéo �
 của EngMaster.
 
 Bấm lại `Alt+X` khi cửa sổ đang mở thì nó nạp chữ mới vào chính cửa sổ đó chứ
-không đẻ thêm cửa sổ. Đóng bằng `Esc`, nút X trong khung, hoặc X của cửa sổ.
+không đẻ thêm cửa sổ. Nếu lần đó không bôi đen gì thì cửa sổ giữ nguyên nội
+dung đang tra. Đóng bằng `Esc`, nút X trong khung, hoặc X của cửa sổ.
+
+Chữ bôi đen lấy được ở cả ba chỗ: nội dung trang, ô nhập (`<input>`,
+`<textarea>`) và khung nhúng trong trang.
 
 ## Cài đặt (không cần qua cửa hàng)
 

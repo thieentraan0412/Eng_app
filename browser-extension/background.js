@@ -14,30 +14,72 @@ async function readAppUrl() {
   return String(stored.appUrl || DEFAULT_APP_URL).trim()
 }
 
-// activeTab được cấp ngay khi người dùng gọi tiện ích, nên chỉ đọc được vùng
-// chọn của đúng tab đang xem — không đụng tới các tab khác.
-async function readSelection() {
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
-    if (!tab || tab.id == null) return ''
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id, allFrames: true },
-      func: () => String(window.getSelection() || ''),
-    })
-    for (const item of results) {
-      const text = String(item?.result || '').trim()
-      if (text) return text.slice(0, MAX_SELECTION)
+// Đoạn này chạy bên trong trang. Chrome không tính chữ bôi đen trong <input>
+// và <textarea> vào window.getSelection(), Shadow DOM cũng có vùng chọn riêng —
+// nên phải hỏi lần lượt cả ba chỗ, nếu không sẽ trả về rỗng dù đang bôi đen.
+function grabSelection() {
+  const active = document.activeElement
+  const tag = active && active.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA') {
+    const { selectionStart: from, selectionEnd: to } = active
+    if (typeof from === 'number' && typeof to === 'number' && to > from) {
+      const picked = String(active.value || '').slice(from, to)
+      if (picked.trim()) return picked
     }
-  } catch {
-    // Trang hệ thống (edge://, chrome://, cửa hàng tiện ích, trình xem PDF)
-    // không cho chèn script — cứ mở ô nhập trống để gõ tay.
+  }
+  const shadow = active && active.shadowRoot
+  if (shadow && typeof shadow.getSelection === 'function') {
+    const picked = String(shadow.getSelection() || '')
+    if (picked.trim()) return picked
+  }
+  return String(window.getSelection() || '')
+}
+
+async function selectionInTab(tabId, allFrames) {
+  const results = await chrome.scripting.executeScript({
+    target: allFrames ? { tabId, allFrames: true } : { tabId },
+    func: grabSelection,
+  })
+  for (const item of results) {
+    const text = String(item?.result || '').trim()
+    if (text) return text.slice(0, MAX_SELECTION)
   }
   return ''
 }
 
+// activeTab được cấp ngay khi người dùng gọi tiện ích, nên chỉ đọc được vùng
+// chọn của đúng tab đang xem — không đụng tới các tab khác.
+async function readSelection(hintedTab) {
+  let tabId = hintedTab?.id
+  if (tabId == null) {
+    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+    tabId = tab?.id
+  }
+  if (tabId == null) return ''
+
+  // Khung chính trước: chữ bôi đen gần như luôn nằm ở đó, mà activeTab chỉ chắc
+  // chắn mở đường vào khung chính. Chèn thẳng cả trang (allFrames) sẽ ném lỗi ở
+  // những trang có iframe khác origin — quảng cáo, video nhúng, khung đăng nhập —
+  // và làm mất luôn chữ đọc được ở khung chính.
+  try {
+    const text = await selectionInTab(tabId, false)
+    if (text) return text
+  } catch {
+    // Trang hệ thống (edge://, chrome://, cửa hàng tiện ích, trình xem PDF)
+    // không cho chèn script — thử tiếp bên dưới rồi mở ô nhập trống để gõ tay.
+  }
+
+  // Chữ nằm trong iframe (tài liệu nhúng, khung soạn thảo) thì mới cần lượt này.
+  try {
+    return await selectionInTab(tabId, true)
+  } catch {
+    return ''
+  }
+}
+
 // Trang EngMaster chạy trong iframe của window.html thay vì mở thẳng, để phần
 // khung (thuộc về tiện ích) tự đóng cửa sổ được khi người dùng bấm Esc.
-async function buildFramePage() {
+async function buildFramePage(selection) {
   let url
   try {
     url = new URL(await readAppUrl())
@@ -45,7 +87,6 @@ async function buildFramePage() {
     return null
   }
   url.searchParams.set('view', 'quick-translate')
-  const selection = await readSelection()
   if (selection) url.searchParams.set('q', selection)
   return chrome.runtime.getURL('window.html') + '?src=' + encodeURIComponent(url.toString())
 }
@@ -67,8 +108,11 @@ async function placement() {
   }
 }
 
-async function openQuickTranslate() {
-  const page = await buildFramePage()
+async function openQuickTranslate(hintedTab) {
+  // Đọc vùng chọn trước mọi việc khác: quyền activeTab gắn với đúng tab đang
+  // xem ở thời điểm bấm phím tắt.
+  const selection = await readSelection(hintedTab)
+  const page = await buildFramePage(selection)
   if (!page) {
     await chrome.runtime.openOptionsPage()
     return
@@ -81,7 +125,10 @@ async function openQuickTranslate() {
     try {
       const win = await chrome.windows.get(existing, { populate: true })
       const tabId = win.tabs?.[0]?.id
-      if (tabId != null) await chrome.tabs.update(tabId, { url: page })
+      // Lần này không bôi đen gì (bấm phím ngay trong cửa sổ dịch, hoặc đang ở
+      // trang hệ thống) thì giữ nguyên nội dung đang tra, chỉ đưa cửa sổ ra
+      // trước — nạp lại trang sẽ xoá mất chữ người dùng vừa gõ.
+      if (tabId != null && selection) await chrome.tabs.update(tabId, { url: page })
       await chrome.windows.update(existing, { focused: true, drawAttention: true })
       return
     } catch {
@@ -93,11 +140,13 @@ async function openQuickTranslate() {
   if (created?.id != null) await chrome.storage.session.set({ [WINDOW_KEY]: created.id })
 }
 
-chrome.commands.onCommand.addListener((command) => {
-  if (command === 'open-quick-translate') void openQuickTranslate()
+// Trình duyệt đưa sẵn tab đang xem lúc bấm phím — dùng luôn, khỏi phải dò lại
+// bằng tabs.query (dò lại dễ trúng nhầm cửa sổ Dịch nhanh vừa được focus).
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (command === 'open-quick-translate') void openQuickTranslate(tab)
 })
 
-chrome.action.onClicked.addListener(() => void openQuickTranslate())
+chrome.action.onClicked.addListener((tab) => void openQuickTranslate(tab))
 
 chrome.windows.onRemoved.addListener(async (windowId) => {
   const stored = await chrome.storage.session.get(WINDOW_KEY)

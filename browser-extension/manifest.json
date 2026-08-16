@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EngMaster — Dịch nhanh",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Bấm Alt+X ở bất kỳ tab nào để mở cửa sổ Dịch nhanh của EngMaster kèm chữ đang bôi đen.",
   "permissions": ["activeTab", "scripting", "storage"],
   "background": {
