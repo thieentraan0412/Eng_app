@@ -1,11 +1,13 @@
 {
   "manifest_version": 3,
   "name": "EngMaster — Dịch nhanh",
-  "version": "1.0.0",
-  "description": "Bấm Alt+X ở bất kỳ tab nào để mở Dịch nhanh của EngMaster kèm chữ đang bôi đen.",
+  "version": "1.1.0",
+  "description": "Bấm Alt+X ở bất kỳ tab nào để mở cửa sổ Dịch nhanh của EngMaster kèm chữ đang bôi đen.",
   "permissions": ["activeTab", "scripting", "storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
-    "default_popup": "popup.html",
     "default_title": "Dịch nhanh (Alt+X)",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -22,7 +24,7 @@
   },
   "options_page": "options.html",
   "commands": {
-    "_execute_action": {
+    "open-quick-translate": {
       "suggested_key": { "default": "Alt+X" },
       "description": "Mở Dịch nhanh"
     }

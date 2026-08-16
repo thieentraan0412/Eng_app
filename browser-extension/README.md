@@ -5,8 +5,12 @@ EngMaster, kèm sẵn chữ đang bôi đen ở trang đó.
 
 Bản web của EngMaster chỉ nhận phím tắt khi tab EngMaster đang được focus —
 trang web không có API phím tắt toàn cục. Tiện ích này lấp đúng khoảng đó:
-trình duyệt nhận phím thay, rồi nhúng trang `?view=quick-translate` của
-EngMaster vào popup.
+trình duyệt nhận phím thay, rồi mở một **cửa sổ riêng** (kéo đi và co giãn
+được, không tự tắt khi bấm ra chỗ khác) nhúng trang `?view=quick-translate`
+của EngMaster.
+
+Bấm lại `Alt+X` khi cửa sổ đang mở thì nó nạp chữ mới vào chính cửa sổ đó chứ
+không đẻ thêm cửa sổ. Đóng bằng `Esc`, nút X trong khung, hoặc X của cửa sổ.
 
 ## Cài đặt (không cần qua cửa hàng)
 
