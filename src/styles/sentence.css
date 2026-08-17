@@ -1441,27 +1441,32 @@
   }
 
   /* Khi nhập, bỏ các khối điều hướng không cần thiết để đề và textarea luôn
-     nằm trọn trong phần màn hình phía trên bàn phím. */
-  .content:has(.cc-answer:focus) {
+     nằm trọn trong phần màn hình phía trên bàn phím.
+
+     Mốc là lớp .cc-typing trên <html> (xem setTypingMode trong SentencePage),
+     KHÔNG phải :has(.cc-answer:focus): gõ Enter sang câu kế tiếp dựng lại thẻ
+     câu nên có một nhịp không ô nào đang focus, đủ để :has(...) tắt và cả thanh
+     tiêu đề/điều hướng chớp hiện lại, đẩy ô nhập trôi khỏi chỗ đang gõ. */
+  html.cc-typing .content {
     padding-top: 7px;
     /* Cộng thêm phần bàn phím che (0 khi trình duyệt đã tự co layout) — luật
-       này đè lên html.kb-open .content vì cụ thể hơn, nên phải tự cộng lấy. */
+       này đè lên .kb-open .content vì cụ thể hơn, nên phải tự cộng lấy. */
     padding-bottom: calc(7px + var(--kb-inset, 0px));
     scroll-padding-block: 7px;
     scroll-padding-bottom: calc(7px + var(--kb-inset, 0px));
   }
-  .cc-detail:has(.cc-answer:focus) > .cc-crumb,
-  .cc-detail:has(.cc-answer:focus) > .cc-head,
-  .cc-detail:has(.cc-answer:focus) > .cc-tabs,
-  .cc-focus:has(.cc-answer:focus) > .cc-filters,
-  .cc-focus:has(.cc-answer:focus) > .cc-focus-nav,
-  .cc-focus:has(.cc-answer:focus) > .cc-focus-tools {
+  html.cc-typing .cc-detail > .cc-crumb,
+  html.cc-typing .cc-detail > .cc-head,
+  html.cc-typing .cc-detail > .cc-tabs,
+  html.cc-typing .cc-focus > .cc-filters,
+  html.cc-typing .cc-focus > .cc-focus-nav,
+  html.cc-typing .cc-focus > .cc-focus-tools {
     display: none;
   }
-  .cc-focus:has(.cc-answer:focus) {
+  html.cc-typing .cc-focus {
     gap: 7px;
   }
-  .cc-focus:has(.cc-answer:focus) .cc-progress {
+  html.cc-typing .cc-focus .cc-progress {
     padding-block: 7px;
   }
 }

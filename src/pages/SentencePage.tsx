@@ -2,6 +2,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -116,6 +117,39 @@ function settleFocusedAnswer(answer: HTMLTextAreaElement): void {
 function focusedAnswer(): HTMLTextAreaElement | null {
   const el = document.activeElement
   return el instanceof HTMLTextAreaElement && el.classList.contains('cc-answer') ? el : null
+}
+
+// ---- Chế độ "đang gõ": thu gọn màn hình còn đề + ô nhập + kết quả ----
+// Trước đây CSS tự nhận biết bằng :has(.cc-answer:focus). Nhưng gõ Enter sang
+// câu kế tiếp sẽ DỰNG LẠI thẻ câu: ô nhập cũ mất focus trước khi ô mới nhận
+// được, nên trong nhịp đó :has(...) sai, toàn bộ thanh điều hướng/tiêu đề chớp
+// hiện lại và bố cục nhảy một cái ngay dưới ngón tay đang gõ. Giữ trạng thái
+// qua một khoảng trễ ngắn để nhịp chuyển câu liền mạch.
+const TYPING_OFF_DELAY_MS = 300
+let typingOffTimer = 0
+
+function setTypingMode(on: boolean): void {
+  if (typingOffTimer) {
+    window.clearTimeout(typingOffTimer)
+    typingOffTimer = 0
+  }
+  if (on) {
+    document.documentElement.classList.add('cc-typing')
+    return
+  }
+  // Rời ô nhập: chỉ tắt khi thật sự không còn ô chép câu nào đang được gõ.
+  typingOffTimer = window.setTimeout(() => {
+    typingOffTimer = 0
+    if (!focusedAnswer()) document.documentElement.classList.remove('cc-typing')
+  }, TYPING_OFF_DELAY_MS)
+}
+
+function clearTypingMode(): void {
+  if (typingOffTimer) {
+    window.clearTimeout(typingOffTimer)
+    typingOffTimer = 0
+  }
+  document.documentElement.classList.remove('cc-typing')
 }
 
 // ================= TRANG CHÉP CÂU =================
@@ -710,7 +744,13 @@ function PracticeView({
   // visualViewport phản ánh phần màn hình thật còn lại trên Safari/Chrome mobile,
   // trong khi scrollIntoView(block:center) chỉ căn theo layout viewport nên dễ
   // đẩy textarea xuống sát hoặc lọt sau bàn phím.
-  useEffect(() => {
+  //
+  // useLayoutEffect (không phải useEffect): iOS chỉ cho phép focus() mở lại bàn
+  // phím khi lệnh đó còn nằm trong cùng tác vụ với thao tác của người dùng. Gõ
+  // Enter là sự kiện rời rạc nên React cập nhật state đồng bộ ngay trong tác vụ
+  // đó — layout effect vẫn kịp, còn passive effect thì chạy sau khi vẽ xong, lúc
+  // ấy iOS coi là focus "tự động" và ĐÓNG bàn phím.
+  useLayoutEffect(() => {
     if (!advanceTo) return
     const card = document.getElementById(`cc-${advanceTo}`)
     if (!card) {
@@ -738,6 +778,10 @@ function PracticeView({
       window.clearTimeout(finish)
     }
   }, [advanceTo])
+
+  // Rời trang Chép câu (hoặc đóng thư mục) thì bỏ chế độ thu gọn, nếu không lớp
+  // .cc-typing còn sót lại trên <html> và làm hỏng bố cục các trang khác.
+  useEffect(() => clearTypingMode, [])
 
   // Bàn phím bật/tắt/đổi cỡ (đổi bộ gõ, mở emoji, xoay máy) làm vùng nhìn thấy
   // co giãn — chỉnh lại ô đang gõ, nếu không nó trôi xuống dưới bàn phím.
@@ -1338,10 +1382,12 @@ const SentenceCard = memo(function SentenceCard({
           onScroll={syncScroll}
           onFocus={(e) => {
             setFocused(true)
+            setTypingMode(true)
             settleFocusedAnswer(e.currentTarget)
           }}
           onBlur={() => {
             setFocused(false)
+            setTypingMode(false)
             setTimeout(() => setOpen(false), 120)
           }}
         />

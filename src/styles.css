@@ -85,6 +85,13 @@
 * {
   box-sizing: border-box;
 }
+html {
+  /* Chrome/Android tự "thổi" cỡ chữ lên (font boosting) theo bề ngang khối văn
+     bản. Bố cục ở đây đã responsive sẵn nên việc phóng thêm chỉ làm chữ to lệch
+     nhau giữa các khối. 100% = giữ đúng cỡ đã khai báo. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 body {
   margin: 0;
   min-width: 320px;
@@ -3135,6 +3142,28 @@ textarea::placeholder {
 
 /* ---------- Responsive ---------- */
 
+/* ====== CHỐNG TỰ PHÓNG TO TRÊN ĐIỆN THOẠI ======
+   iOS Safari (và mọi trình duyệt trên iOS vì đều chạy WebKit) tự phóng to CẢ
+   TRANG khi chạm vào ô nhập có font-size < 16px. Thẻ viewport không đặt
+   maximum-scale (cố tình — chặn phóng to bằng tay là rào cản trợ năng), nên sau
+   khi phóng, trang KHÔNG tự thu lại: người dùng bị kẹt ở giao diện to hơn màn
+   hình và phải kéo ngang.
+
+   Luật `input, textarea, select` trong media query hẹp trước đây thua mọi luật
+   đặt theo class (.vocab-input, .set-select, .cc-field textarea…) vì độ cụ thể
+   thấp hơn, nên thực tế không có ô nào đạt 16px. Dùng !important để chốt ngưỡng
+   này — đây là ràng buộc của nền tảng, không phải lựa chọn thẩm mỹ.
+
+   Áp cho cả (pointer: coarse) để iPad/máy màn rộng dùng cảm ứng cũng được chặn,
+   không chỉ các khổ máy hẹp. */
+@media (max-width: 860px), (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* ====== TABLET & MOBILE: sidebar thành drawer trượt ====== */
 @media (max-width: 860px) {
   /* Xếp dọc: thanh top trên, nội dung dưới */
@@ -3297,13 +3326,6 @@ textarea::placeholder {
   button.btn,
   .nav-item {
     min-height: 40px;
-  }
-
-  /* Tránh iOS tự phóng to khi focus input (font < 16px sẽ bị zoom) */
-  input,
-  textarea,
-  select {
-    font-size: 16px;
   }
 
   .auth-sub {
@@ -3872,7 +3894,11 @@ textarea::placeholder {
    --kb-inset do services/keyboardInset.ts đặt, bằng 0 khi trình duyệt đã tự co
    layout. Chừa đúng chừng đó ở đáy vùng cuộn để ô nhập nào cũng cuộn lên trên
    bàn phím được, đồng thời báo cho scrollIntoView biết đâu là mép dưới thật. */
-html.kb-open .content {
+/* Cố tình KHÔNG viết html.kb-open: lớp này chỉ nằm trên <html> nên bỏ phần tử đi
+   vẫn khớp đúng chỗ đó, mà độ cụ thể còn đủ thấp để luật thu gọn của trang Chép
+   câu (html.cc-typing .content, trong sentence.css) đè lên được — sentence.css
+   được nạp TRƯỚC styles.css nên nếu ngang điểm thì luật ở đây lại thắng. */
+.kb-open .content {
   padding-bottom: var(--kb-inset, 0px);
   scroll-padding-bottom: var(--kb-inset, 0px);
 }
