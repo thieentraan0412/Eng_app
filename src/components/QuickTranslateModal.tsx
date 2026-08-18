@@ -3,8 +3,9 @@ import Icon from './Icon'
 import {
   isSingleWord,
   translate,
-  translateOnline,
-  translateToEnglish,
+  translateOnlineDetailed,
+  translateToEnglishDetailed,
+  type TranslateOutcome,
 } from '../services/translation'
 import {
   lookupWordDetails,
@@ -35,13 +36,20 @@ const readDirection = (): QuickTranslateDirection =>
 async function getTranslation(
   source: string,
   direction: QuickTranslateDirection,
-): Promise<string | null> {
-  if (direction === 'vi-en') return translateToEnglish(source)
+): Promise<TranslateOutcome> {
+  if (direction === 'vi-en') return translateToEnglishDetailed(source)
   if (isSingleWord(source)) {
     const offline = translate(source).vi
-    if (offline) return offline
+    if (offline) return { status: 'ok', text: offline }
   }
-  return translateOnline(source)
+  return translateOnlineDetailed(source)
+}
+
+// Dịch vụ trả lời bình thường nhưng không có nghĩa nào khác chữ gốc: chữ gõ sai,
+// tên riêng, viết tắt, ký hiệu. Báo đúng như vậy thay vì đổ cho mạng.
+function noMeaningMessage(source: string, direction: QuickTranslateDirection): string {
+  const target = direction === 'vi-en' ? 'tiếng Anh' : 'tiếng Việt'
+  return `Không tìm thấy nghĩa ${target} của “${source}”. Có thể là chữ gõ sai, tên riêng hoặc viết tắt.`
 }
 
 export default function QuickTranslateModal({
@@ -64,6 +72,9 @@ export default function QuickTranslateModal({
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const posListRef = useRef<HTMLDivElement>(null)
   const requestRef = useRef(0)
+  // Từ điển có ra nghĩa hay không — để khỏi báo "không tìm thấy nghĩa" đè lên
+  // bảng nghĩa đang hiện.
+  const hasDetailsRef = useRef(false)
   // Đọc qua ref để lần mở nào cũng nhận chữ mới nhất mà không thêm phụ thuộc
   // vào effect (thay đổi giữa chừng sẽ xoá mất kết quả đang hiện).
   const seedRef = useRef(seedText)
@@ -75,6 +86,7 @@ export default function QuickTranslateModal({
     setResult(null)
     setError('')
     setDetails(null)
+    hasDetailsRef.current = false
     setDetailsLoading(false)
     setActivePos('all')
     if (!open) return
@@ -123,6 +135,7 @@ export default function QuickTranslateModal({
       setCopied(false)
       const shouldLoadDetails = direction === 'en-vi' && SINGLE_WORD.test(source)
       setDetails(null)
+      hasDetailsRef.current = false
       setDetailsLoading(shouldLoadDetails)
 
       if (shouldLoadDetails) {
@@ -130,32 +143,42 @@ export default function QuickTranslateModal({
           if (request !== requestRef.current) return
           setDetailsLoading(false)
           if (wordDetails.groups.length > 0) {
+            hasDetailsRef.current = true
             setDetails(wordDetails)
             setError('')
           }
         })
       }
 
-      const translated = await getTranslation(source, direction)
+      const outcome = await getTranslation(source, direction)
       if (request !== requestRef.current) return
       setLoading(false)
-      if (translated) {
-        setResult(translated)
+      if (outcome.status === 'ok') {
+        setResult(outcome.text)
         setError('')
         // Chiều Việt -> Anh: tra tiếp chính từ tiếng Anh vừa dịch được, người
         // học có luôn phiên âm, từ loại và ví dụ thay vì chỉ một dòng chữ.
-        const word = translated.trim()
+        const word = outcome.text.trim()
         if (direction === 'vi-en' && SINGLE_WORD.test(word)) {
           setDetailsLoading(true)
           void lookupWordDetails(word).then((wordDetails) => {
             if (request !== requestRef.current) return
             setDetailsLoading(false)
-            if (wordDetails.groups.length > 0) setDetails(wordDetails)
+            if (wordDetails.groups.length > 0) {
+              hasDetailsRef.current = true
+              setDetails(wordDetails)
+            }
           })
         }
       } else {
         setResult(null)
-        setError('Không dịch được. Hãy kiểm tra kết nối mạng và thử lại.')
+        // Từ điển đã tìm ra nghĩa thì đừng báo lỗi chồng lên, mâu thuẫn nhau.
+        if (hasDetailsRef.current) return
+        setError(
+          outcome.status === 'no-meaning'
+            ? noMeaningMessage(source, direction)
+            : 'Không dịch được. Hãy kiểm tra kết nối mạng và thử lại.',
+        )
       }
     }, 380)
 

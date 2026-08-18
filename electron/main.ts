@@ -7,6 +7,7 @@ import {
   disposeGlobalTranslate,
   setDesktopTranslateEnabled,
   isDesktopTranslateEnabled,
+  readForegroundSelection,
 } from './globalTranslate'
 import { initAutoUpdate } from './updater'
 
@@ -260,13 +261,21 @@ function takeQuickTranslateSeed(): string {
 
 // Phím tắt hoạt động kiểu bật/tắt: đang hiện thì bấm lần nữa là ẩn đi. Ẩn chứ
 // không đóng hẳn nên lần gọi sau bật lên tức thì, không phải tải lại cửa sổ.
-function toggleQuickTranslate() {
-  if (!quickTranslateWin || quickTranslateWin.isDestroyed()) {
-    createQuickTranslateWindow()
+async function toggleQuickTranslate() {
+  // Đang hiện thì chỉ việc ẩn đi, khỏi đụng tới clipboard.
+  if (quickTranslateWin && !quickTranslateWin.isDestroyed() && quickTranslateWin.isVisible()) {
+    quickTranslateWin.hide()
     return
   }
-  if (quickTranslateWin.isVisible()) {
-    quickTranslateWin.hide()
+
+  // Chữ bôi đen ở ứng dụng đang đứng trước (trình duyệt, Word, PDF) phải lấy
+  // NGAY LÚC NÀY: cửa sổ dịch chưa hiện nên app kia vẫn đang giữ focus. Lấy
+  // được thì ghi đè chữ mồi mà cửa sổ chính gửi lên trước đó.
+  const picked = await readForegroundSelection()
+  if (picked) quickTranslateSeed = picked.slice(0, 1000)
+
+  if (!quickTranslateWin || quickTranslateWin.isDestroyed()) {
+    createQuickTranslateWindow()
     return
   }
   quickTranslateWin.show()
@@ -283,7 +292,7 @@ ipcMain.handle('quick-translate:selection', (_e, text: unknown): boolean => {
 ipcMain.handle('quick-translate:seed', (): string => takeQuickTranslateSeed())
 
 ipcMain.handle('quick-translate:open', (): boolean => {
-  toggleQuickTranslate()
+  void toggleQuickTranslate()
   return true
 })
 

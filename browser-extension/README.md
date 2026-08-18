@@ -13,8 +13,27 @@ Bấm lại `Alt+X` khi cửa sổ đang mở thì nó nạp chữ mới vào ch
 không đẻ thêm cửa sổ. Nếu lần đó không bôi đen gì thì cửa sổ giữ nguyên nội
 dung đang tra. Đóng bằng `Esc`, nút X trong khung, hoặc X của cửa sổ.
 
+Bấm icon tiện ích trên thanh công cụ cho ra đúng kết quả như bấm `Alt+X`. Phím
+tắt không ăn thì vào `edge://extensions/shortcuts` gán lại, còn icon thì lúc nào
+cũng dùng được.
+
 Chữ bôi đen lấy được ở cả ba chỗ: nội dung trang, ô nhập (`<input>`,
 `<textarea>`) và khung nhúng trong trang.
+
+Từ bản 1.2.0, `content.js` chạy sẵn trên mọi trang và ghi lại chữ vừa bôi đen
+ngay lúc bôi. Lúc bấm phím tắt, tiện ích vẫn hỏi trang trước như cũ; hỏi không
+ra mới lấy chữ đã ghi. Vì vậy tiện ích xin thêm quyền đọc dữ liệu trên mọi
+trang — trình duyệt sẽ hỏi lại khi cài đè.
+
+Từ bản 1.3.0, `content.js` bắt luôn `Alt+X` ngay trong trang: bôi đen xong bấm
+là nó lấy chữ tại đúng thời điểm đó rồi mở cửa sổ dịch. Đường này không cần tới
+ô phím tắt của trình duyệt — chỗ hay bị bỏ trống khi cài tiện ích ngoài cửa hàng
+hoặc bị tiện ích khác chiếm mất. Phím tắt cấp trình duyệt vẫn giữ nguyên để dùng
+được ở những trang `content.js` không chạy được; một lần bấm mà cả hai đường
+cùng tới thì đường nào tới trước làm, đường sau bỏ qua.
+
+Cài, nạp lại hoặc **bật lại** tiện ích xong, các tab đang mở được chèn
+`content.js` ngay, không phải F5 từng tab.
 
 ## Cài đặt (không cần qua cửa hàng)
 
@@ -29,6 +48,19 @@ Chữ bôi đen lấy được ở cả ba chỗ: nội dung trang, ô nhập (`
 `edge://extensions/shortcuts` (Chrome: `chrome://extensions/shortcuts`) → mục
 "Mở Dịch nhanh". Nếu `Alt+X` đã bị tiện ích khác chiếm thì trình duyệt để
 trống, tự đặt lại ở đây.
+
+## Bấm Alt+X mà không thấy gì
+
+Đi lần lượt:
+
+1. Vào `edge://extensions` xem **công tắc của tiện ích có đang bật không** —
+   tắt thì không có gì chạy cả. Đây là nguyên nhân hay gặp nhất.
+2. Bấm thử **icon tiện ích trên thanh công cụ**. Ra cửa sổ dịch nghĩa là tiện ích
+   sống, chỉ phím tắt có vấn đề.
+3. Trang đang mở có phải `edge://`, cửa hàng tiện ích hay trình xem PDF không —
+   những chỗ đó trình duyệt cấm tiện ích đụng vào.
+4. Mở **Xem chi tiết → Service worker** ở trang extensions rồi bấm `Alt+X`. Log
+   `[EngMaster]` ghi rõ mỗi lần bấm đọc được chữ gì.
 
 ## Giới hạn
 
@@ -47,5 +79,8 @@ trống, tự đặt lại ở đây.
 | `activeTab` | Đọc vùng chọn của đúng tab đang xem, chỉ tại thời điểm bấm phím tắt |
 | `scripting` | Chạy đoạn lấy `window.getSelection()` trong tab đó |
 | `storage` | Nhớ địa chỉ trang EngMaster |
+| `<all_urls>` | Cho `content.js` chạy trên mọi trang để bắt `Alt+X` và ghi chữ vừa bôi đen |
 
-Không xin `<all_urls>`, không chạy nền, không thu thập gì.
+Chữ bôi đen chỉ được giữ trong bộ nhớ tạm của phiên trình duyệt (tối đa 10 phút,
+mất khi đóng trình duyệt) và chỉ đi tới trang EngMaster của bạn. Không chạy nền,
+không thu thập gì khác.

@@ -71,12 +71,37 @@ export function glossPhrase(text: string): WordGloss[] {
     })
 }
 
+// Kết quả dịch có kèm LÝ DO khi không ra chữ.
+//
+// Trả về null gộp chung hai chuyện khác hẳn nhau: mất mạng, và từ vốn không có
+// nghĩa (dịch vụ trả lời bình thường nhưng đưa lại đúng chữ gốc — từ gõ sai,
+// tên riêng, viết tắt). Gộp lại thì màn hình báo "kiểm tra kết nối mạng" cho cả
+// hai, sai hẳn bản chất ở trường hợp thứ hai.
+export type TranslateOutcome =
+  | { status: 'ok'; text: string }
+  | { status: 'no-meaning' } // gọi được dịch vụ, nhưng không có nghĩa nào khác chữ gốc
+  | { status: 'unreachable' } // không dịch vụ nào trả lời
+
+// reached = dịch vụ có trả lời tử tế (dù nghĩa có dùng được hay không)
+type RawTranslation = { reached: boolean; text: string | null }
+
+function outcomeOf(...tries: RawTranslation[]): TranslateOutcome {
+  for (const t of tries) if (t.text) return { status: 'ok', text: t.text }
+  return tries.some((t) => t.reached) ? { status: 'no-meaning' } : { status: 'unreachable' }
+}
+
 // Dịch online — dịch được mọi từ và cả câu. Cần internet.
 // Ưu tiên Google Translate (đáng tin cả với từ đơn), dự phòng MyMemory.
+export async function translateOnlineDetailed(text: string): Promise<TranslateOutcome> {
+  const google = await googleTranslateRaw(text)
+  if (google.text) return { status: 'ok', text: google.text }
+  return outcomeOf(google, await myMemoryTranslateRaw(text))
+}
+
 // Trả null nếu lỗi/không dịch được (kể cả khi API trả lại đúng từ gốc tiếng Anh).
 export async function translateOnline(text: string): Promise<string | null> {
-  const google = await googleTranslate(text)
-  return google ?? myMemoryTranslate(text)
+  const outcome = await translateOnlineDetailed(text)
+  return outcome.status === 'ok' ? outcome.text : null
 }
 
 // Tra ĐA NGHĨA online — dùng chế độ từ điển của Google (dt=bd):
@@ -237,71 +262,77 @@ function accept(vi: string | undefined | null, src: string): string | null {
 }
 
 // Google Translate (endpoint gtx miễn phí, không cần key, có CORS)
-async function googleTranslate(text: string): Promise<string | null> {
+async function googleTranslateRaw(text: string): Promise<RawTranslation> {
   try {
     const url =
       'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=' +
       encodeURIComponent(text)
     const res = await fetchWithTimeout(url)
-    if (!res.ok) return null
+    if (!res.ok) return { reached: false, text: null }
     const data = await res.json()
     // data[0] = danh sách các đoạn [đoạnDịch, đoạnGốc, …] -> nối lại thành câu
     const segs = data?.[0]
-    if (!Array.isArray(segs)) return null
+    if (!Array.isArray(segs)) return { reached: false, text: null }
     const vi = segs.map((s: unknown[]) => (typeof s?.[0] === 'string' ? s[0] : '')).join('')
-    return accept(vi, text)
+    return { reached: true, text: accept(vi, text) }
   } catch {
-    return null
+    return { reached: false, text: null }
   }
 }
 
 // MyMemory (dự phòng)
-async function myMemoryTranslate(text: string): Promise<string | null> {
+async function myMemoryTranslateRaw(text: string): Promise<RawTranslation> {
   try {
     const url =
       'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=en|vi'
     const res = await fetchWithTimeout(url)
-    if (!res.ok) return null
+    if (!res.ok) return { reached: false, text: null }
     const data = await res.json()
-    return accept(data?.responseData?.translatedText, text)
+    return { reached: true, text: accept(data?.responseData?.translatedText, text) }
   } catch {
-    return null
+    return { reached: false, text: null }
   }
 }
 
 // ---------- Dịch NGƯỢC: Việt -> Anh (dùng khi import câu tiếng Việt) ----------
-// Trả null nếu lỗi/không dịch được. Cần internet.
-export async function translateToEnglish(text: string): Promise<string | null> {
-  const [google, memory] = await Promise.all([googleTranslateVE(text), myMemoryTranslateVE(text)])
-  return google ?? memory
+// Cần internet. Bản có lý do khi không ra chữ — xem TranslateOutcome.
+export async function translateToEnglishDetailed(text: string): Promise<TranslateOutcome> {
+  const [google, memory] = await Promise.all([googleTranslateVERaw(text), myMemoryTranslateVERaw(text)])
+  return outcomeOf(google, memory)
 }
 
-async function googleTranslateVE(text: string): Promise<string | null> {
+// Trả null nếu lỗi/không dịch được.
+export async function translateToEnglish(text: string): Promise<string | null> {
+  const outcome = await translateToEnglishDetailed(text)
+  return outcome.status === 'ok' ? outcome.text : null
+}
+
+async function googleTranslateVERaw(text: string): Promise<RawTranslation> {
   try {
     const url =
       'https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=en&dt=t&q=' +
       encodeURIComponent(text)
     const res = await fetchWithTimeout(url)
-    if (!res.ok) return null
+    if (!res.ok) return { reached: false, text: null }
     const data = await res.json()
     const segs = data?.[0]
-    if (!Array.isArray(segs)) return null
+    if (!Array.isArray(segs)) return { reached: false, text: null }
     const en = segs.map((s: unknown[]) => (typeof s?.[0] === 'string' ? s[0] : '')).join('')
-    return accept(en, text)
+    return { reached: true, text: accept(en, text) }
   } catch {
-    return null
+    return { reached: false, text: null }
   }
 }
 
-async function myMemoryTranslateVE(text: string): Promise<string | null> {
+async function myMemoryTranslateVERaw(text: string): Promise<RawTranslation> {
   try {
     const url =
       'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=vi|en'
     const res = await fetchWithTimeout(url)
-    if (!res.ok) return null
+    if (!res.ok) return { reached: false, text: null }
     const data = await res.json()
-    return accept(data?.responseData?.translatedText, text)
+    return { reached: true, text: accept(data?.responseData?.translatedText, text) }
   } catch {
-    return null
+    return { reached: false, text: null }
   }
 }
