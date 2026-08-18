@@ -32,6 +32,21 @@ hoặc bị tiện ích khác chiếm mất. Phím tắt cấp trình duyệt v�
 được ở những trang `content.js` không chạy được; một lần bấm mà cả hai đường
 cùng tới thì đường nào tới trước làm, đường sau bỏ qua.
 
+Từ bản 1.3.2, chữ bôi đen được gửi về ngay khi người dùng **nhấn phím Alt**
+(bước đầu của tổ hợp): phím tắt cấp trình duyệt nuốt trọn Alt+X nên trang không
+bao giờ thấy chữ X, gửi ở nhịp Alt thì tiện ích luôn có sẵn chữ mới nhất. Ngoài
+ra đường tới sau không còn bị bỏ qua vô điều kiện — nó lấy được chữ mà đường
+trước không thì chữ đó vẫn được nạp vào cửa sổ vừa mở. Chữ bôi đen cũng được ghi
+riêng theo từng tab, tab chạy nền không đè mất chữ của tab đang xem.
+
+Từ bản 1.3.3, mở ra mà ô nhập trống thì cửa sổ hiện luôn một dòng nói vì sao:
+trang bị trình duyệt khoá (`edge://`, cửa hàng tiện ích, trình xem PDF) hay đơn
+giản là lúc bấm không có chữ nào đang bôi đen.
+
+Từ bản 1.4.0, ở những trang trình duyệt khoá hẳn (PDF, `edge://`, `file://`),
+cửa sổ tự lấy chữ trong clipboard: bôi đen → `Ctrl+C` → `Alt+X` là dịch được cả
+file PDF. Chỉ dùng clipboard ở đúng những chỗ đó, và luôn nói rõ chữ lấy từ đâu.
+
 Cài, nạp lại hoặc **bật lại** tiện ích xong, các tab đang mở được chèn
 `content.js` ngay, không phải F5 từng tab.
 
@@ -66,9 +81,12 @@ trống, tự đặt lại ở đây.
 
 - Chỉ chạy khi trình duyệt đang được focus. Bấm ở Word/Excel thì không ăn —
   dùng app EngMaster bản desktop cho trường hợp đó.
-- Không đọc được chữ bôi đen ở trang `edge://`, `chrome://`, cửa hàng tiện ích
-  và trình xem PDF (trình duyệt chặn chèn script). Cửa sổ dịch vẫn mở, chỉ là ô
-  nhập trống để gõ tay.
+- Không đọc được chữ bôi đen ở trang `edge://`, `chrome://`, cửa hàng tiện ích,
+  trang `file://` và **trình xem PDF**. Riêng PDF không phải do bị chặn: trình xem
+  vẽ trang bằng plugin chứ không phải HTML, chữ bôi đen không nằm trong DOM nên
+  `window.getSelection()` trả về rỗng — không tiện ích nào đọc được. Ở những chỗ
+  này, **bôi đen rồi bấm Ctrl+C trước, sau đó Alt+X**: cửa sổ tự lấy chữ trong
+  clipboard (từ bản 1.4.0) và nói rõ chữ đó lấy từ đâu.
 - Cần trang EngMaster đã deploy có hỗ trợ `?view=quick-translate` (từ bản này
   trở đi).
 
@@ -80,6 +98,7 @@ trống, tự đặt lại ở đây.
 | `scripting` | Chạy đoạn lấy `window.getSelection()` trong tab đó |
 | `storage` | Nhớ địa chỉ trang EngMaster |
 | `<all_urls>` | Cho `content.js` chạy trên mọi trang để bắt `Alt+X` và ghi chữ vừa bôi đen |
+| `clipboardRead` | Lấy chữ trong clipboard, CHỈ khi trang bị trình duyệt khoá (PDF, `edge://`, `file://`) và không đọc được vùng chọn |
 
 Chữ bôi đen chỉ được giữ trong bộ nhớ tạm của phiên trình duyệt (tối đa 10 phút,
 mất khi đóng trình duyệt) và chỉ đi tới trang EngMaster của bạn. Không chạy nền,
