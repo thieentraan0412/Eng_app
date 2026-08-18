@@ -21,7 +21,7 @@ import UsagePage from '../pages/UsagePage'
 import SettingsPage from '../pages/SettingsPage'
 import QuickTranslateModal from './QuickTranslateModal'
 import { matchesAccelerator, readQuickTranslateHotkey } from '../services/hotkey'
-import { readSelectedText } from '../services/selection'
+import { readSelectedText, takeSelectedText, watchSelection } from '../services/selection'
 import { watchKeyboardInset } from '../services/keyboardInset'
 
 const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
@@ -83,13 +83,16 @@ export default function AppLayout() {
         setQuickTranslateOpen(false)
         return
       }
-      openModal(readSelectedText())
+      openModal(takeSelectedText())
     }
-    const onOpen = () => openModal(readSelectedText())
+    const onOpen = () => openModal(takeSelectedText())
     const onHotkeyChanged = (event: Event) => {
       setQuickTranslateHotkey(String((event as CustomEvent<string>).detail ?? ''))
     }
     window.addEventListener('quick-translate-hotkey-changed', onHotkeyChanged)
+    // Ghi lại chữ vừa bôi đen ngay lúc bôi, để lúc bấm phím tắt không phải trông
+    // cả vào việc vùng chọn còn nguyên hay không.
+    const stopWatching = watchSelection()
 
     let onWebKey: ((event: KeyboardEvent) => void) | undefined
     let onSelect: (() => void) | undefined
@@ -100,12 +103,15 @@ export default function AppLayout() {
       let lastSent = ''
       onSelect = () => {
         const selected = readSelectedText()
-        if (selected === lastSent) return
+        // Bỏ chọn thì GIỮ chữ cũ bên main. Gửi chuỗi rỗng như trước là xoá mất
+        // chữ người dùng vừa bôi, chỉ vì họ lỡ bấm chuột ra chỗ trống.
+        if (!selected || selected === lastSent) return
         lastSent = selected
         void window.api.setQuickTranslateSelection(selected)
       }
-      document.addEventListener('mouseup', onSelect)
-      document.addEventListener('keyup', onSelect)
+      document.addEventListener('mouseup', onSelect, true)
+      document.addEventListener('keyup', onSelect, true)
+      document.addEventListener('selectionchange', onSelect, true)
     } else {
       window.addEventListener('quick-translate-open', onOpen)
       onWebKey = (event: KeyboardEvent) => {
@@ -122,9 +128,11 @@ export default function AppLayout() {
       window.removeEventListener('quick-translate-open', onOpen)
       window.removeEventListener('quick-translate-hotkey-changed', onHotkeyChanged)
       if (onWebKey) window.removeEventListener('keydown', onWebKey, true)
+      stopWatching()
       if (onSelect) {
-        document.removeEventListener('mouseup', onSelect)
-        document.removeEventListener('keyup', onSelect)
+        document.removeEventListener('mouseup', onSelect, true)
+        document.removeEventListener('keyup', onSelect, true)
+        document.removeEventListener('selectionchange', onSelect, true)
       }
     }
     // Chỉ đăng ký lúc khởi tạo; thay đổi trong Cài đặt gọi API trực tiếp.
