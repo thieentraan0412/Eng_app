@@ -3891,17 +3891,11 @@ textarea::placeholder {
 }
 
 /* ---------- Bàn phím ảo che đáy trang (mobile) ----------
-   --kb-inset do services/keyboardInset.ts đặt, bằng 0 khi trình duyệt đã tự co
-   layout. Chừa đúng chừng đó ở đáy vùng cuộn để ô nhập nào cũng cuộn lên trên
-   bàn phím được, đồng thời báo cho scrollIntoView biết đâu là mép dưới thật. */
-/* Cố tình KHÔNG viết html.kb-open: lớp này chỉ nằm trên <html> nên bỏ phần tử đi
-   vẫn khớp đúng chỗ đó, mà độ cụ thể còn đủ thấp để luật thu gọn của trang Chép
-   câu (html.cc-typing .content, trong sentence.css) đè lên được — sentence.css
-   được nạp TRƯỚC styles.css nên nếu ngang điểm thì luật ở đây lại thắng. */
-.kb-open .content {
-  padding-bottom: var(--kb-inset, 0px);
-  scroll-padding-bottom: var(--kb-inset, 0px);
-}
+   services/keyboardInset.ts đặt --app-height bằng phần màn hình bàn phím chưa
+   che, nên .app-root ở trên đã tự thu lại và cả vùng cuộn nằm gọn phía trên bàn
+   phím: không cần chừa thêm padding ở đáy nữa (chừa nữa là thừa đúng một chiều
+   cao bàn phím, đủ để trang cuộn lệch đi). --kb-inset vẫn dùng cho những thứ
+   position: fixed neo theo mép bàn phím, ví dụ danh sách gợi ý ở Chép câu. */
 
 /* ---------- Công cụ phụ: dạng nút chữ, có vạch ngăn ---------- */
 .pf-tools {

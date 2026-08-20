@@ -1407,20 +1407,6 @@
   .cc-page .cc-answer:focus {
     background: var(--surface);
   }
-  .cc-suggest {
-    position: fixed;
-    left: max(12px, env(safe-area-inset-left));
-    right: max(12px, env(safe-area-inset-right));
-    /* Neo trên mép bàn phím, không phải mép màn hình, nếu không danh sách gợi ý
-       nằm khuất phía sau bàn phím. */
-    bottom: calc(10px + var(--kb-inset, 0px) + env(safe-area-inset-bottom));
-    top: auto;
-    width: auto;
-    max-width: none;
-    max-height: 132px;
-    overflow-y: auto;
-  }
-
   .cc-sent-actions {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
@@ -1439,22 +1425,41 @@
     min-height: 42px;
     height: 42px;
   }
+}
 
-  /* Khi nhập, bỏ các khối điều hướng không cần thiết để đề và textarea luôn
-     nằm trọn trong phần màn hình phía trên bàn phím.
+/* ============================================================
+   ĐANG GÕ TRÊN ĐIỆN THOẠI — đề bài, ô nhập và nút bấm luôn nằm trong phần
+   màn hình mà bàn phím ảo chưa che.
 
-     Mốc là lớp .cc-typing trên <html> (xem setTypingMode trong SentencePage),
-     KHÔNG phải :has(.cc-answer:focus): gõ Enter sang câu kế tiếp dựng lại thẻ
-     câu nên có một nhịp không ô nào đang focus, đủ để :has(...) tắt và cả thanh
-     tiêu đề/điều hướng chớp hiện lại, đẩy ô nhập trôi khỏi chỗ đang gõ. */
-  html.cc-typing .content {
-    padding-top: 7px;
-    /* Cộng thêm phần bàn phím che (0 khi trình duyệt đã tự co layout) — luật
-       này đè lên .kb-open .content vì cụ thể hơn, nên phải tự cộng lấy. */
-    padding-bottom: calc(7px + var(--kb-inset, 0px));
-    scroll-padding-block: 7px;
-    scroll-padding-bottom: calc(7px + var(--kb-inset, 0px));
+   Ngưỡng 860px khớp với useIsNarrow() trong SentencePage: hễ máy hẹp tới mức
+   dùng chế độ tập trung 1 câu/màn thì cũng phải thu gọn được. Trước đây khối
+   này để ở 560px, nên máy 561–860px (điện thoại xoay ngang, máy bảng nhỏ) vẫn
+   giữ nguyên breadcrumb/tiêu đề/tab: ô nhập bị đẩy xuống sau bàn phím, mà cuộn
+   lên cho thấy ô nhập thì đề bài trôi mất.
+
+   Mốc là lớp .cc-typing trên <html> (xem setTypingMode trong SentencePage),
+   KHÔNG phải :has(.cc-answer:focus): gõ Enter sang câu kế tiếp dựng lại thẻ câu
+   nên có một nhịp không ô nào đang focus, đủ để :has(...) tắt và cả thanh tiêu
+   đề/điều hướng chớp hiện lại, đẩy ô nhập trôi khỏi chỗ đang gõ.
+   ============================================================ */
+@media (max-width: 860px) {
+  /* Danh sách gợi ý neo trên mép BÀN PHÍM, không phải mép màn hình. Dùng
+     position: fixed nên không khối overflow nào ở trên cắt mất nó. */
+  .cc-suggest {
+    position: fixed;
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    bottom: calc(10px + var(--kb-inset, 0px) + env(safe-area-inset-bottom));
+    top: auto;
+    width: auto;
+    max-width: none;
+    max-height: 132px;
+    overflow-y: auto;
   }
+
+  /* Cất mọi khối chỉ dùng để điều hướng — kể cả thanh trên cùng của bản web —
+     lấy chỗ cho đề bài và ô nhập. Rời ô nhập là chúng hiện lại ngay. */
+  html.cc-typing .mobile-topbar,
   html.cc-typing .cc-detail > .cc-crumb,
   html.cc-typing .cc-detail > .cc-head,
   html.cc-typing .cc-detail > .cc-tabs,
@@ -1463,10 +1468,92 @@
   html.cc-typing .cc-focus > .cc-focus-tools {
     display: none;
   }
+
+  /* Phần còn lại xếp thành MỘT CỘT vừa đúng chiều cao còn trống, thay vì một
+     trang dài rồi trông chờ cuộn: hễ còn cuộn được là còn lúc trình duyệt tự
+     cuộn để lộ ô nhập và đề bài trôi khỏi màn hình. Chiều cao "còn trống" do
+     --app-height lo (services/keyboardInset.ts). */
+  html.cc-typing .content {
+    display: flex;
+    flex-direction: column;
+    padding-top: 7px;
+    padding-bottom: max(7px, env(safe-area-inset-bottom));
+    scroll-padding-block: 7px;
+  }
+  html.cc-typing .content > .cc-detail,
+  html.cc-typing .cc-detail > .cc-focus {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
   html.cc-typing .cc-focus {
     gap: 7px;
   }
-  html.cc-typing .cc-focus .cc-progress {
+  html.cc-typing .cc-focus > .cc-progress {
+    flex: none;
     padding-block: 7px;
+  }
+  html.cc-typing .cc-focus > .cc-sent {
+    /* Không kéo giãn thẻ câu cho đầy màn hình (chừa khoảng trống trắng vô
+       duyên ở đáy), nhưng cho phép co lại khi chỗ không đủ. */
+    flex: 0 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+  }
+  /* Đề bài dính mép trên thẻ câu: kể cả khi trình duyệt tự cuộn để lộ ô nhập
+     (iOS hay làm thế lúc bàn phím trồi lên) thì câu hỏi vẫn còn nguyên đó. */
+  html.cc-typing .cc-focus .cc-sent-vi {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    /* Câu dài quá thì tự co lại và cuộn trong lòng nó, chứ không đẩy ô nhập
+       xuống dưới bàn phím. Luôn còn ít nhất khoảng hai dòng để đọc. */
+    flex: 0 1 auto;
+    min-height: 3.2em;
+    overflow-y: auto;
+    padding-bottom: 4px;
+    background: var(--surface);
+  }
+  html.cc-typing .cc-focus .cc-hints {
+    flex: none;
+  }
+  /* Màn hình chật (xoay ngang, bộ gõ có thêm hàng gợi ý): ô nhập tự co lại
+     thay vì đẩy nút bấm xuống dưới bàn phím. */
+  html.cc-typing .cc-focus .cc-input-wrap {
+    flex: 0 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  html.cc-typing .cc-page .cc-answer {
+    flex: 1 1 auto;
+    min-height: 46px;
+  }
+  html.cc-typing .cc-focus .cc-sent-actions {
+    flex: none;
+  }
+  /* Phần chấm điểm nhận nốt chỗ thừa và tự cuộn trong lòng nó. */
+  html.cc-typing .cc-focus .cc-result {
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+/* Màn hình quá thấp — điện thoại xoay ngang, hoặc bộ gõ tiếng Việt có thêm hàng
+   gợi ý làm bàn phím cao gần nửa màn hình. Bỏ nốt thanh tiến độ và gợi ý từ:
+   đề bài với ô nhập được ưu tiên, cả hai thứ kia rời ô nhập là hiện lại.
+   Đặt theo max-height nên cả iOS (layout không co, nhưng nằm ngang thì vốn đã
+   thấp) lẫn Android (layout co theo bàn phím) đều khớp. */
+@media (max-width: 860px) and (max-height: 430px) {
+  html.cc-typing .cc-focus > .cc-progress,
+  html.cc-typing .cc-focus .cc-hints {
+    display: none;
+  }
+  html.cc-typing .cc-focus > .cc-sent {
+    padding: 9px 11px;
   }
 }

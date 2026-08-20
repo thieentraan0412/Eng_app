@@ -88,17 +88,38 @@ function useIsNarrow(maxWidth = 860): boolean {
   return narrow
 }
 
+// Khoảng thở giữa ô nhập và mép bàn phím / mép trên màn hình.
+const ANSWER_GAP = 14
+
+// Kéo ô nhập vào phần màn hình bàn phím chưa che — nhưng chỉ đúng chừng cần
+// thiết, và không bao giờ cuộn quá mức làm đề bài trôi khỏi mép trên: người học
+// phải vừa đọc được câu hỏi vừa gõ. Đo bằng visualViewport vì đó mới là phần
+// màn hình thật còn lại trên Safari/Chrome mobile; scrollIntoView chỉ biết
+// layout viewport nên hay đẩy ô nhập xuống sau bàn phím.
 function alignAnswerToVisualViewport(answer: HTMLTextAreaElement): void {
   if (!window.matchMedia('(max-width:860px)').matches || !answer.isConnected) return
   const scrollHost = answer.closest<HTMLElement>('.content')
   if (!scrollHost) return
+  const card = answer.closest<HTMLElement>('.cc-sent')
   const viewport = window.visualViewport
   const visibleTop = viewport?.offsetTop ?? 0
   const visibleHeight = viewport?.height ?? window.innerHeight
+  const visibleBottom = visibleTop + visibleHeight
   const rect = answer.getBoundingClientRect()
-  const idealTop = visibleTop + Math.min(250, Math.max(116, visibleHeight * 0.45))
-  const latestTop = visibleTop + visibleHeight - rect.height - 18
-  scrollHost.scrollBy({ top: rect.top - Math.min(idealTop, latestTop), behavior: 'auto' })
+  const cardRect = (card ?? answer).getBoundingClientRect()
+
+  const missingBelow = rect.bottom + ANSWER_GAP - visibleBottom
+  let delta = 0
+  if (missingBelow > 0) {
+    // Chỗ thừa phía trên thẻ câu — cuộn quá số này là bắt đầu ăn vào đề bài.
+    const roomAbove = Math.max(0, cardRect.top - visibleTop - ANSWER_GAP)
+    const cardFits = cardRect.height + ANSWER_GAP * 2 <= visibleHeight
+    delta = cardFits ? Math.min(missingBelow, roomAbove) : missingBelow
+  } else if (rect.top < visibleTop + ANSWER_GAP) {
+    delta = rect.top - visibleTop - ANSWER_GAP
+  }
+  if (Math.abs(delta) < 1) return
+  scrollHost.scrollBy({ top: delta, behavior: 'auto' })
 }
 
 // Bàn phím bật lên theo hiệu ứng trượt, mỗi máy một tốc độ, nên phải chỉnh lại
@@ -740,10 +761,7 @@ function PracticeView({
     setAdvanceTo(next.id)
   }, [])
 
-  // Focus câu mới và đặt ô nhập vào vùng nhìn thấy phía trên bàn phím ảo.
-  // visualViewport phản ánh phần màn hình thật còn lại trên Safari/Chrome mobile,
-  // trong khi scrollIntoView(block:center) chỉ căn theo layout viewport nên dễ
-  // đẩy textarea xuống sát hoặc lọt sau bàn phím.
+  // Focus câu mới rồi kéo ô nhập vào vùng nhìn thấy (xem alignAnswerToVisualViewport).
   //
   // useLayoutEffect (không phải useEffect): iOS chỉ cho phép focus() mở lại bàn
   // phím khi lệnh đó còn nằm trong cùng tác vụ với thao tác của người dùng. Gõ
@@ -764,8 +782,6 @@ function PracticeView({
 
     const alignAnswer = () => {
       if (token !== focusMoveRef.current || !answer?.isConnected) return
-      // Đặt ô nhập ở khoảng 45% vùng nhìn thấy: còn đủ chỗ đọc đề ở trên và
-      // gợi ý/đáp án ở dưới, kể cả khi bàn phím đang mở.
       alignAnswerToVisualViewport(answer)
     }
 
