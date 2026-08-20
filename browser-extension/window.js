@@ -1,54 +1,12 @@
 // Khung của cửa sổ Dịch nhanh: nhúng trang EngMaster, đóng cửa sổ khi trang bên
-// trong báo ra (bấm Esc hoặc nút X), và lo nốt những chỗ trang EngMaster không
-// với tới được — nói vì sao ô nhập trống, lấy chữ từ clipboard cho file PDF.
+// trong báo ra (bấm Esc hoặc nút X), và lấy chữ từ clipboard cho những trang
+// trình duyệt không cho đọc vùng chọn.
 
 const params = new URLSearchParams(location.search)
 const src = params.get('src')
 const MAX_SELECTION = 1000
 let allowedOrigin = ''
 let target = null
-
-// Ô nhập trống thì nói luôn vì sao, thay vì để người dùng tưởng tiện ích hỏng.
-const NOTES = {
-  pdf: [
-    'Trình xem PDF không cho tiện ích đọc chữ bôi đen.',
-    'PDF được vẽ bằng plugin chứ không phải HTML, nên chữ bôi đen nằm ngoài tầm với của mọi tiện ích. Cách nhanh: bôi đen rồi bấm Ctrl+C, sau đó Alt+X — cửa sổ này sẽ tự lấy chữ trong clipboard.',
-  ],
-  blocked: [
-    'Trang vừa rồi không cho tiện ích đọc chữ bôi đen.',
-    'Trang hệ thống (edge://, chrome://), cửa hàng tiện ích và trang file:// đều bị trình duyệt khoá. Cách nhanh: bôi đen rồi bấm Ctrl+C, sau đó Alt+X — cửa sổ này sẽ tự lấy chữ trong clipboard.',
-  ],
-  clipboard: [
-    'Đã lấy chữ từ clipboard.',
-    'Trang vừa rồi bị trình duyệt khoá nên không đọc được vùng chọn — đây là nội dung bạn chép gần nhất. Không đúng thì bấm Ctrl+C ở chỗ cần dịch rồi bấm Alt+X lại.',
-  ],
-  none: [
-    'Không thấy chữ nào đang bôi đen ở trang vừa rồi.',
-    'Bôi đen lại rồi bấm Alt+X một lần nữa, hoặc gõ thẳng vào ô bên dưới.',
-  ],
-  notab: [
-    'Không xác định được tab đang xem.',
-    'Bấm vào trang cần dịch cho nó được chọn, bôi đen rồi bấm Alt+X lại.',
-  ],
-}
-
-function showNote(key) {
-  const box = document.getElementById('note')
-  box.replaceChildren()
-  box.classList.remove('is-on')
-  if (!Object.prototype.hasOwnProperty.call(NOTES, key)) return
-  const note = NOTES[key]
-  const body = document.createElement('span')
-  const title = document.createElement('b')
-  title.textContent = note[0]
-  body.append(title, document.createElement('br'), note[1])
-  const dismiss = document.createElement('button')
-  dismiss.type = 'button'
-  dismiss.textContent = 'Ẩn'
-  dismiss.addEventListener('click', () => box.classList.remove('is-on'))
-  box.append(body, dismiss)
-  box.classList.add('is-on')
-}
 
 // Trang bị khoá (PDF, edge://, file://) là chỗ duy nhất dùng tới clipboard —
 // chỗ khác đọc thẳng vùng chọn được rồi, đụng vào clipboard chỉ tổ đổ nhầm thứ
@@ -78,13 +36,9 @@ function seed(text) {
   return true
 }
 
-async function seedFromClipboard(note) {
+async function seedFromClipboard() {
   const text = await clipboardText()
-  if (text && seed(text)) {
-    showNote('clipboard')
-    return
-  }
-  showNote(note)
+  if (text) seed(text)
 }
 
 async function start() {
@@ -99,10 +53,8 @@ async function start() {
 
   const note = String(params.get('note') || '')
   if ((note === 'pdf' || note === 'blocked') && !target.searchParams.get('q')) {
-    await seedFromClipboard(note)
-    return
+    await seedFromClipboard()
   }
-  showNote(note)
 }
 
 void start()
@@ -112,8 +64,7 @@ void start()
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.type !== 'engmaster-note') return
   const note = String(msg.note || '')
-  if (note === 'pdf' || note === 'blocked') void seedFromClipboard(note)
-  else showNote(note)
+  if (note === 'pdf' || note === 'blocked') void seedFromClipboard()
 })
 
 window.addEventListener('message', async (event) => {

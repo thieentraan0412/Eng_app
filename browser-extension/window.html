@@ -16,40 +16,6 @@
         display: flex;
         flex-direction: column;
       }
-      /* Lời nhắc vì sao ô nhập trống. Nằm ở khung của tiện ích chứ không phải
-         trong trang EngMaster, vì chỉ tiện ích mới biết nó đọc hụt ở đâu. */
-      #note {
-        display: none;
-        flex: none;
-        gap: 8px;
-        align-items: flex-start;
-        padding: 10px 14px;
-        font: 500 13px/1.45 system-ui, 'Segoe UI', sans-serif;
-        color: #fde68a;
-        background: #422006;
-        border-bottom: 1px solid #78350f;
-      }
-      #note.is-on {
-        display: flex;
-      }
-      #note b {
-        color: #fef3c7;
-      }
-      #note button {
-        margin-left: auto;
-        flex: none;
-        padding: 2px 8px;
-        font: inherit;
-        color: inherit;
-        background: transparent;
-        border: 1px solid currentColor;
-        border-radius: 6px;
-        cursor: pointer;
-        opacity: 0.7;
-      }
-      #note button:hover {
-        opacity: 1;
-      }
       iframe {
         display: block;
         flex: 1;
@@ -59,7 +25,6 @@
     </style>
   </head>
   <body>
-    <div id="note" role="status"></div>
     <iframe id="frame" title="Dịch nhanh" allow="clipboard-write"></iframe>
     <script src="window.js"></script>
   </body>
