@@ -134,6 +134,21 @@ function settleFocusedAnswer(answer: HTMLTextAreaElement): void {
   KEYBOARD_SETTLE_MS.forEach((ms) => window.setTimeout(align, ms))
 }
 
+// Chuyển focus sang một ô nhập khác (Tab / nút điều hướng). Tự cuộn của trình
+// duyệt chỉ kéo vừa đủ để ô lọt vào màn, nên trên desktop câu mới hay dính sát
+// mép dưới — đọc đề bài phải liếc xuống. Tắt cuộn mặc định rồi tự canh:
+//  - màn rộng: đưa cả THẺ CÂU ra giữa khung cuộn theo chiều cao;
+//  - màn hẹp: giữ nguyên cách canh theo bàn phím (xem alignAnswerToVisualViewport).
+function focusAnswer(answer: HTMLTextAreaElement): void {
+  answer.focus({ preventScroll: true })
+  if (window.matchMedia('(max-width:860px)').matches) {
+    settleFocusedAnswer(answer)
+    return
+  }
+  const card = answer.closest<HTMLElement>('.cc-sent') ?? answer
+  card.scrollIntoView({ block: 'center', behavior: 'smooth' })
+}
+
 // Ô nhập đang được gõ, nếu có — dùng khi bàn phím đổi kích thước.
 function focusedAnswer(): HTMLTextAreaElement | null {
   const el = document.activeElement
@@ -1254,7 +1269,7 @@ const SentenceCard = memo(function SentenceCard({
     const inputs = Array.from(document.querySelectorAll<HTMLTextAreaElement>('.cc-answer'))
     const cur = taRef.current ? inputs.indexOf(taRef.current) : -1
     const next = inputs[cur + dir]
-    if (next) next.focus()
+    if (next) focusAnswer(next)
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
