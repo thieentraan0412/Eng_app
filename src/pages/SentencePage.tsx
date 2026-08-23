@@ -855,8 +855,12 @@ function PracticeView({
         score: gr.score,
         revealed: !!revealedRef.current[id],
       })
-      // Gõ Enter mà ĐÚNG -> tự nhảy sang câu kế tiếp (cuộn ra giữa + focus)
-      if (advance && gr.status === 'correct') goToNext(id)
+      // Gõ Enter mà ĐÚNG -> tự nhảy sang câu kế tiếp (cuộn ra giữa + focus).
+      // CHỈ ở màn hẹp (mobile, chế độ tập trung 1 câu/màn): bàn phím che gần hết
+      // màn nên phải tự nhảy mới gõ liên tục được. Trên desktop danh sách hiện
+      // sẵn nhiều câu, tự nhảy làm mất chỗ đang đọc -> ở lại ô vừa gõ, người học
+      // tự bấm (hoặc Tab) sang câu kế tiếp.
+      if (advance && narrowRef.current && gr.status === 'correct') goToNext(id)
     },
     [persist, goToNext],
   )
