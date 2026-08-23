@@ -1487,6 +1487,17 @@
     display: flex;
     flex-direction: column;
   }
+  /* .page (.cc-detail) và .cc-focus đều có sẵn "margin: 0 auto" kèm max-width.
+     Trong khối BLOCK thì vô hại: width:auto chiếm hết dòng nên margin auto ra 0.
+     Nhưng cha vừa thành FLEX ở luật trên, mà margin ngang auto lại TẮT stretch
+     của flex — thẻ tụt về bề ngang vừa đúng nội dung rồi canh giữa. Đó là cái
+     "chạm vào ô nhập là cả trang hẹp lại" (đo được 364px -> 205px trên iPhone
+     12). Trả lại width: 100% thì chúng nở hết chỗ như cũ, max-width vẫn kẹp và
+     margin auto vẫn canh giữa trên máy rộng. */
+  html.cc-typing .content > .cc-detail,
+  html.cc-typing .cc-detail > .cc-focus {
+    width: 100%;
+  }
   html.cc-typing .cc-focus {
     gap: 7px;
   }
@@ -1510,9 +1521,12 @@
     top: 0;
     z-index: 1;
     /* Câu dài quá thì tự co lại và cuộn trong lòng nó, chứ không đẩy ô nhập
-       xuống dưới bàn phím. Luôn còn ít nhất khoảng hai dòng để đọc. */
+       xuống dưới bàn phím. KHÔNG đặt sàn min-height ở đây: sàn thì cũng nở
+       những câu chỉ có một dòng lên bằng chừng đó, thành ra chạm vào ô nhập là
+       thẻ câu phình ra một khoảng trống. Chỗ đọc được của đề bài giữ bằng cách
+       cho ô nhập co trước (xem hệ số co ở .cc-answer bên dưới). */
     flex: 0 1 auto;
-    min-height: 3.2em;
+    min-height: 0;
     overflow-y: auto;
     padding-bottom: 4px;
     background: var(--surface);
@@ -1528,9 +1542,16 @@
     display: flex;
     flex-direction: column;
   }
+  /* KHÔNG hạ min-height ở đây. flex-basis: auto lấy chiều cao tự nhiên của
+     textarea rồi mới kẹp lên bằng min-height gốc, nên để nguyên min-height là ô
+     nhập giữ đúng cỡ lúc chưa gõ. Bản trước đặt thẳng min-height: 46px, thành ra
+     cỡ gốc tụt về chiều cao tự nhiên (~71px thay vì 78px) NGAY khi chạm vào, dù
+     màn hình còn thừa cả trăm px — đúng cái "ô nhập tự dưng bé lại".
+     Hệ số co 3: khi chỗ thật sự thiếu thì ô nhập nhường trước, đề bài co sau
+     cùng. Chỉ co được tới min-height, và min-height chỉ hạ ở màn hình thấp
+     (khối @media cuối file). */
   html.cc-typing .cc-page .cc-answer {
-    flex: 1 1 auto;
-    min-height: 46px;
+    flex: 1 3 auto;
   }
   html.cc-typing .cc-focus .cc-sent-actions {
     flex: none;
@@ -1555,5 +1576,12 @@
   }
   html.cc-typing .cc-focus > .cc-sent {
     padding: 9px 11px;
+  }
+  /* Chỉ ở đây mới hạ sàn ô nhập: chật tới mức này thì thà ô nhập bé còn hơn nút
+     bấm chui xuống dưới bàn phím. .cc-backdrop (lớp phủ tô chỗ sai) đi kèm vì nó
+     phủ inset: 0 lên ô nhập — lệch sàn là nó thò ra ngoài khung. */
+  html.cc-typing .cc-page .cc-answer,
+  html.cc-typing .cc-backdrop {
+    min-height: 46px;
   }
 }
