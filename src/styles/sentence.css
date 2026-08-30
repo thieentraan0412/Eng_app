@@ -790,6 +790,11 @@
   font-family: inherit;
   font-size: 14px;
   line-height: 1.6;
+  /* Khai báo rõ (không dựa vào mặc định của trình duyệt) để cách ngắt dòng ở đây
+     TRÙNG khít lớp phủ .cc-backdrop — lệch một nhịp là vạch nháy đứng một nơi,
+     chữ hiện một nẻo. */
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
   resize: vertical;
   outline: none;
   transition: border-color 0.14s, box-shadow 0.14s;
@@ -820,7 +825,6 @@
   line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: break-word;
-  word-break: break-word;
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
@@ -832,12 +836,26 @@
   color: transparent;
   -webkit-text-fill-color: transparent;
   caret-color: var(--text);
+  /* Chữ nhìn thấy là của .cc-backdrop, còn vạch nháy là của ô nhập này. Thanh
+     cuộn của ô nhập ăn mất ~15px bề ngang (Windows) làm chữ trong ô xuống dòng
+     sớm hơn lớp phủ -> vạch nháy lệch hẳn khỏi chữ đang thấy. Giấu nó đi để hai
+     bên rộng bằng nhau; cuộn bằng con lăn/phím vẫn chạy và lớp phủ cuộn theo. */
+  scrollbar-width: none;
+}
+.cc-page .cc-answer.has-overlay::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 .cc-wrong {
-  background: transparent;
+  /* KHÔNG được đổi bất cứ thứ gì làm chữ rộng/hẹp đi (font-weight, letter-spacing,
+     font-size...): lớp phủ phải rộng đúng từng chữ như trong ô nhập, lệch một
+     chút là vạch nháy — và chỗ gõ/xóa — trượt khỏi chữ đang nhìn thấy. Tô đỏ +
+     gạch lượn + nền nhạt là đủ nổi mà không đụng vào bề rộng chữ. */
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-radius: 3px;
   color: var(--danger);
-  font-weight: 600;
   text-decoration: underline wavy var(--danger);
+  text-decoration-thickness: 2px;
   text-underline-offset: 2px;
 }
 

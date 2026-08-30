@@ -1232,18 +1232,38 @@ const SentenceCard = memo(function SentenceCard({
     return () => clearTimeout(h)
   }, [value, caret, suggestEnabled, focused])
 
-  useEffect(() => {
-    if (pendingCaret.current != null && taRef.current) {
-      const pos = pendingCaret.current
-      taRef.current.focus()
-      taRef.current.setSelectionRange(pos, pos)
-      setCaret(pos)
-      pendingCaret.current = null
-    }
-  }, [value])
+  // Đặt lại con trỏ NGAY sau khi ô nhập bị viết đè (lọc ký tự, nhận gợi ý).
+  // Trình duyệt thả con trỏ về cuối câu mỗi lần giá trị bị thay bằng chuỗi khác,
+  // nên nếu không kéo nó về đúng chỗ thì chữ gõ tiếp — và cả phím Xóa — lại ăn
+  // vào cuối câu chứ không phải chỗ đang có vạch nháy.
+  // Chạy sau MỌI lần vẽ (không chỉ khi value đổi): nếu chuỗi mới trùng chuỗi cũ,
+  // effect theo [value] sẽ không chạy, vị trí đang chờ còn treo lại tới lần gõ
+  // sau mới bung ra làm con trỏ nhảy lung tung.
+  useLayoutEffect(() => {
+    const pos = pendingCaret.current
+    if (pos == null) return
+    pendingCaret.current = null
+    const ta = taRef.current
+    if (!ta) return
+    const at = Math.max(0, Math.min(pos, ta.value.length))
+    if (document.activeElement !== ta) ta.focus({ preventScroll: true })
+    ta.setSelectionRange(at, at)
+    setCaret(at)
+  })
 
   const syncCaret = () => {
     if (taRef.current) setCaret(taRef.current.selectionStart)
+  }
+  // Bộ lọc vừa sửa chữ trong ô -> ghi lại vào ô và đặt con trỏ NGAY trong nhịp
+  // sự kiện này. Không chờ React vẽ lại được vì:
+  //  • trình duyệt đẩy con trỏ về cuối câu ngay lúc giá trị ô bị thay;
+  //  • nếu chuỗi sau khi lọc trùng chuỗi đang giữ (VD gõ emoji rồi bị bỏ), React
+  //    bỏ qua lần vẽ đó, ô nhập giữ nguyên chữ đáng lẽ đã bị lọc.
+  const writeBack = (el: HTMLTextAreaElement, next: string, caretAt: number) => {
+    if (el.value === next) return
+    el.value = next
+    const at = Math.max(0, Math.min(caretAt, next.length))
+    el.setSelectionRange(at, at)
   }
   // Cuộn ô nhập -> cuộn lớp phủ theo để chữ đỏ luôn khớp vị trí
   const syncScroll = (e: UIEvent<HTMLTextAreaElement>) => {
@@ -1393,13 +1413,25 @@ const SentenceCard = memo(function SentenceCard({
           rows={2}
           value={value}
           onChange={(e) => {
-            const raw = e.target.value
+            const el = e.currentTarget
+            const raw = el.value
+            const rawCaret = el.selectionStart
             // Đang soạn dở bằng bộ gõ -> nhận nguyên chuỗi thô, lọc sau khi chốt
             const isComposing =
               composing.current || Boolean((e.nativeEvent as InputEvent).isComposing)
-            const nextValue = isComposing ? raw : sanitizeEnglishInput(raw)
+            if (isComposing) {
+              onChange(item.id, raw)
+              setCaret(rawCaret)
+              return
+            }
+            const nextValue = sanitizeEnglishInput(raw)
+            // Bộ lọc có thể thêm/bớt ký tự ("…" -> "...", dán chữ có dấu, emoji
+            // bị bỏ) nên con trỏ phải bám ĐÚNG phần chữ đứng trước nó: lọc riêng
+            // đoạn trước con trỏ rồi lấy độ dài, thay vì giữ nguyên số đếm cũ.
+            const nextCaret = sanitizeEnglishInput(raw.slice(0, rawCaret)).length
+            writeBack(el, nextValue, nextCaret)
             onChange(item.id, nextValue)
-            setCaret(Math.min(e.target.selectionStart, nextValue.length))
+            setCaret(nextCaret)
           }}
           onCompositionStart={() => {
             composing.current = true
@@ -1407,9 +1439,12 @@ const SentenceCard = memo(function SentenceCard({
           onCompositionEnd={(e) => {
             composing.current = false
             const el = e.currentTarget
-            const nextValue = sanitizeEnglishInput(el.value)
+            const raw = el.value
+            const nextValue = sanitizeEnglishInput(raw)
+            const nextCaret = sanitizeEnglishInput(raw.slice(0, el.selectionStart)).length
+            writeBack(el, nextValue, nextCaret)
             onChange(item.id, nextValue)
-            setCaret(Math.min(el.selectionStart, nextValue.length))
+            setCaret(nextCaret)
           }}
           onKeyUp={syncCaret}
           onClick={syncCaret}
