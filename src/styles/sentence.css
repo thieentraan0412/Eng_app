@@ -774,9 +774,29 @@
 }
 
 /* ---------- Ô nhập bản dịch (mockup .textarea) ---------- */
+/* ============================================================
+   Ô NHẬP + LỚP PHỦ TÔ CHỖ SAI — CHUNG MỘT BỘ SỐ ĐO
+   Chữ người dùng nhìn thấy khi có lớp phủ là chữ của .cc-backdrop, còn vạch
+   nháy / vùng bôi đen là của .cc-answer nằm trong suốt bên trên. Chỉ cần lệch
+   một thông số chữ là hai lớp trượt khỏi nhau: chữ hiện một cỡ, con trỏ và
+   phím Xóa lại ăn theo cỡ khác.
+   Vì vậy cỡ chữ và độ cao dòng khai báo Ở ĐÂY (trên thẻ cha chung) rồi cả hai
+   cùng đọc — không lớp nào tự đặt riêng được nữa.
+   ============================================================ */
 .cc-input-wrap {
   position: relative;
   margin-top: 2px;
+  --cc-answer-fz: 14px;
+  --cc-answer-lh: 1.6;
+}
+/* styles.css ép MỌI textarea về 16px !important ở khổ này để iOS không tự
+   phóng to cả trang khi chạm vào ô nhập. Ô nhập không thoát được luật đó, nên
+   lớp phủ phải đi theo — nếu không, gõ sai một câu là chữ tụt từ 16px xuống
+   14px và mọi vị trí gõ/xóa lệch hẳn. Điều kiện phải TRÙNG luật bên kia. */
+@media (max-width: 860px), (pointer: coarse) {
+  .cc-input-wrap {
+    --cc-answer-fz: 16px;
+  }
 }
 .cc-page .cc-answer {
   display: block; /* bỏ khoảng trắng baseline -> khớp đúng lớp phủ .cc-backdrop */
@@ -788,8 +808,17 @@
   border: 1px solid var(--border-strong);
   border-radius: var(--r-sm);
   font-family: inherit;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--cc-answer-fz);
+  line-height: var(--cc-answer-lh);
+  /* Trình duyệt tự đặt lại letter-spacing/word-spacing/text-rendering về mặc
+     định cho ô nhập (luật của chính trình duyệt cho thẻ form), nên ô nhập KHÔNG
+     kế thừa khoảng cách chữ -0.011em của trang như .cc-backdrop. Chỉ chênh
+     0,176px mỗi chữ nhưng cộng dồn hết một dòng là lệch hẳn hơn một con chữ.
+     Ép về đúng giá trị của trang để hai lớp trùng nhau tuyệt đối. */
+  letter-spacing: inherit;
+  word-spacing: inherit;
+  text-rendering: auto;
+  font-variant-ligatures: none;
   /* Khai báo rõ (không dựa vào mặc định của trình duyệt) để cách ngắt dòng ở đây
      TRÙNG khít lớp phủ .cc-backdrop — lệch một nhịp là vạch nháy đứng một nơi,
      chữ hiện một nẻo. */
@@ -821,8 +850,12 @@
   background: var(--surface);
   color: var(--text);
   font-family: inherit;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--cc-answer-fz);
+  line-height: var(--cc-answer-lh);
+  letter-spacing: inherit;
+  word-spacing: inherit;
+  text-rendering: auto;
+  font-variant-ligatures: none;
   white-space: pre-wrap;
   overflow-wrap: break-word;
   overflow: hidden;
@@ -1412,14 +1445,16 @@
     margin-top: 9px;
     scroll-margin-block: 16px;
   }
+  .cc-input-wrap {
+    --cc-answer-fz: 16px;
+    --cc-answer-lh: 1.48;
+  }
   .cc-page .cc-answer,
   .cc-backdrop {
     min-height: 78px;
     max-height: 118px;
     padding: 11px 12px;
     border-radius: 12px;
-    font-size: 16px;
-    line-height: 1.48;
     resize: none;
   }
   .cc-page .cc-answer:focus {
