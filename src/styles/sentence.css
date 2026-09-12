@@ -1457,7 +1457,12 @@
     border-radius: 12px;
     resize: none;
   }
-  .cc-page .cc-answer:focus {
+  /* :not(.has-overlay) là BẮT BUỘC: luật này cùng độ cụ thể với
+     .cc-answer.has-overlay mà đứng sau, nên nếu không loại ra thì chạm vào ô
+     nhập sau khi chấm sai là nền đục phủ kín lớp .cc-backdrop bên dưới — chữ
+     của ô nhập lại đang trong suốt, thành ra các từ đã gõ biến mất, chỉ còn
+     vạch nháy. */
+  .cc-page .cc-answer:focus:not(.has-overlay) {
     background: var(--surface);
   }
   .cc-sent-actions {
