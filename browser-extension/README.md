@@ -47,6 +47,23 @@ Từ bản 1.4.0, ở những trang trình duyệt khoá hẳn (PDF, `edge://`, 
 cửa sổ tự lấy chữ trong clipboard: bôi đen → `Ctrl+C` → `Alt+X` là dịch được cả
 file PDF. Chỉ dùng clipboard ở đúng những chỗ đó, và luôn nói rõ chữ lấy từ đâu.
 
+Từ bản 1.5.0, **bôi đen là tự dịch**: thả chuột là bóng dịch hiện ngay cạnh chữ
+vừa bôi, ngay trên trang đang xem (bôi một từ thì kèm các nghĩa theo từ loại),
+bám theo khi cuộn trang. Bôi lại chữ đã dịch trong trang thì kết quả có tức thì.
+Tự nhận ngôn ngữ — chữ tiếng Việt thì dịch sang tiếng Anh, còn lại dịch sang
+tiếng Việt. Đóng bằng `Esc`, bấm ra ngoài hoặc gõ phím. Bấm `Alt+Shift+X` để
+bật/tắt (trang báo BẬT/TẮT, icon hiện `OFF` khi đang tắt); công tắc cũng có
+trong trang cài đặt. Mặc định bật. Bỏ qua đoạn dài quá 1000 ký tự và ô mật khẩu.
+
+Từ bản 1.6.0, bóng dịch được làm lại: bôi một từ thì hiện chữ gốc, phiên âm IPA
+(từ tiếng Anh), nút đọc to và các nghĩa gom theo từ loại có nhãn màu (`N`, `V`,
+`ADJ`, `ADV`…); bỏ dòng cuối. Chạy được ở nhiều trang hơn: trang vẽ lại liên tục
+như Facebook không còn làm bóng dịch biến mất; bóng dịch nằm trên cả hộp thoại
+và video toàn màn hình của trang; bôi đen trong ô nhập, vùng soạn thảo, Shadow
+DOM và khung nhúng `about:blank`/`srcdoc` cũng dịch; trang chặn sự kiện chuột
+cũng không làm hụt. Google Dịch chặn tạm thì thử thêm một đường khác của Google
+trước khi tới MyMemory.
+
 Cài, nạp lại hoặc **bật lại** tiện ích xong, các tab đang mở được chèn
 `content.js` ngay, không phải F5 từng tab.
 
@@ -61,8 +78,10 @@ Cài, nạp lại hoặc **bật lại** tiện ích xong, các tab đang mở �
 ## Đổi phím tắt
 
 `edge://extensions/shortcuts` (Chrome: `chrome://extensions/shortcuts`) → mục
-"Mở Dịch nhanh". Nếu `Alt+X` đã bị tiện ích khác chiếm thì trình duyệt để
-trống, tự đặt lại ở đây.
+"Mở Dịch nhanh" và "Bật/tắt tự dịch khi bôi đen". Nếu tổ hợp đã bị tiện ích
+khác chiếm thì trình duyệt để trống, tự đặt lại ở đây. Để trống thì `Alt+X` và
+`Alt+Shift+X` vẫn dùng được trên trang web thường (tiện ích bắt ngay trong
+trang), chỉ không ăn ở `edge://` và trình xem PDF.
 
 ## Bấm Alt+X mà không thấy gì
 
@@ -96,10 +115,12 @@ trống, tự đặt lại ở đây.
 | --- | --- |
 | `activeTab` | Đọc vùng chọn của đúng tab đang xem, chỉ tại thời điểm bấm phím tắt |
 | `scripting` | Chạy đoạn lấy `window.getSelection()` trong tab đó |
-| `storage` | Nhớ địa chỉ trang EngMaster |
-| `<all_urls>` | Cho `content.js` chạy trên mọi trang để bắt `Alt+X` và ghi chữ vừa bôi đen |
+| `storage` | Nhớ địa chỉ trang EngMaster và công tắc tự dịch |
+| `<all_urls>` | Cho `content.js` chạy trên mọi trang để bắt `Alt+X`, ghi chữ vừa bôi đen và hiện bóng dịch; cho service worker gọi dịch vụ dịch |
 | `clipboardRead` | Lấy chữ trong clipboard, CHỈ khi trang bị trình duyệt khoá (PDF, `edge://`, `file://`) và không đọc được vùng chọn |
 
 Chữ bôi đen chỉ được giữ trong bộ nhớ tạm của phiên trình duyệt (tối đa 10 phút,
-mất khi đóng trình duyệt) và chỉ đi tới trang EngMaster của bạn. Không chạy nền,
-không thu thập gì khác.
+mất khi đóng trình duyệt) và chỉ đi tới trang EngMaster của bạn. **Khi bật tự
+dịch**, mỗi đoạn bôi đen còn được gửi tới Google Translate (dự phòng MyMemory)
+để dịch — cùng dịch vụ web app EngMaster đang dùng. Ở trang có nội dung nhạy cảm
+thì bấm `Alt+Shift+X` tắt đi trước khi bôi đen. Không thu thập gì khác.

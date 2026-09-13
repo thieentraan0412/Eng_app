@@ -78,6 +78,65 @@
         font-size: 13px;
         color: #94a3b8;
       }
+      .setting {
+        margin-top: 28px;
+        padding-top: 20px;
+        border-top: 1px solid #1e293b;
+      }
+      .switch {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin: 0;
+        font-weight: 400;
+        cursor: pointer;
+      }
+      .switch input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        opacity: 0;
+      }
+      .track {
+        flex: none;
+        position: relative;
+        width: 38px;
+        height: 22px;
+        margin-top: 1px;
+        border-radius: 999px;
+        background: #334155;
+        transition: background 0.15s;
+      }
+      .track::after {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #e2e8f0;
+        transition: transform 0.15s;
+      }
+      .switch input:checked + .track {
+        background: #4f46e5;
+      }
+      .switch input:checked + .track::after {
+        transform: translateX(16px);
+      }
+      .switch input:focus-visible + .track {
+        outline: 2px solid #4f46e5;
+        outline-offset: 2px;
+      }
+      .switch-text {
+        display: flex;
+        flex-direction: column;
+      }
+      .switch-text small {
+        color: #94a3b8;
+        font-size: 13px;
+      }
       code {
         padding: 2px 6px;
         border-radius: 5px;
@@ -105,10 +164,24 @@
         <span id="status" hidden>Đã lưu</span>
       </div>
 
+      <div class="setting">
+        <label class="switch">
+          <input id="auto-translate" type="checkbox" />
+          <span class="track" aria-hidden="true"></span>
+          <span class="switch-text">
+            <b>Tự dịch khi bôi đen</b>
+            <small>
+              Bôi đen chữ trên trang là hiện bản dịch ngay cạnh. Bật/tắt nhanh bằng
+              <code id="toggle-key">Alt+Shift+X</code>
+            </small>
+          </span>
+        </label>
+      </div>
+
       <div class="hint">
         Đổi phím tắt: mở <code>edge://extensions/shortcuts</code> (Chrome là
         <code>chrome://extensions/shortcuts</code>) rồi đặt lại tổ hợp cho mục
-        “Mở Dịch nhanh”.
+        “Mở Dịch nhanh” hoặc “Bật/tắt tự dịch khi bôi đen”.
       </div>
     </main>
     <script src="options.js"></script>

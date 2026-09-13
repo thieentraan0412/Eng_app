@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "EngMaster — Dịch nhanh",
-  "version": "1.4.0",
-  "description": "Bấm Alt+X ở bất kỳ tab nào để mở cửa sổ Dịch nhanh của EngMaster kèm chữ đang bôi đen.",
+  "version": "1.6.0",
+  "description": "Bôi đen là tự dịch ngay cạnh chữ (Alt+Shift+X để bật/tắt). Bấm Alt+X để mở cửa sổ Dịch nhanh của EngMaster.",
   "permissions": ["activeTab", "scripting", "storage", "clipboardRead"],
   "host_permissions": ["<all_urls>"],
   "content_scripts": [
@@ -10,6 +10,7 @@
       "matches": ["<all_urls>"],
       "all_frames": true,
       "match_about_blank": true,
+      "match_origin_as_fallback": true,
       "run_at": "document_idle",
       "js": ["content.js"]
     }
@@ -37,6 +38,10 @@
     "open-quick-translate": {
       "suggested_key": { "default": "Alt+X" },
       "description": "Mở Dịch nhanh"
+    },
+    "toggle-auto-translate": {
+      "suggested_key": { "default": "Alt+Shift+X" },
+      "description": "Bật/tắt tự dịch khi bôi đen"
     }
   }
 }

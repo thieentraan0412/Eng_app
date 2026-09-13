@@ -350,9 +350,312 @@ function scheduleLateLook(tabId) {
   }, LATE_LOOK)
 }
 
+// ---------- Tự dịch khi bôi đen ----------
+// content.js hiện bóng dịch ngay cạnh chữ vừa bôi đen. Gọi dịch vụ dịch thì làm
+// ở đây: content script chạy trong trang nên dính CORS của trang, còn service
+// worker có host_permissions nên gọi thẳng được. Cùng nguồn dịch với web app
+// (Google gtx, dự phòng MyMemory).
+const AUTO_KEY = 'autoTranslate'
+const TRANSLATE_TIMEOUT = 6000
+// Chỉ dùng để đoán chiều dịch khi Google không trả lời — MyMemory không tự nhận
+// được ngôn ngữ.
+const VI_MARKS = /[ăâđêôơưàáạảãầấậẩẫằắặẳẵèéẹẻẽềếệểễìíịỉĩòóọỏõồốộổỗờớợởỡùúụủũừứựửữỳýỵỷỹ]/i
+// Một từ hoặc cụm tối đa ba từ, toàn chữ Latin không dấu.
+const LATIN_SHORT = /^[A-Za-z]+(?:['-][A-Za-z]+)*(?:\s+[A-Za-z]+(?:['-][A-Za-z]+)*){0,2}$/
+const POS_SHORT = {
+  noun: 'n',
+  verb: 'v',
+  adjective: 'adj',
+  adverb: 'adv',
+  pronoun: 'pron',
+  preposition: 'prep',
+  conjunction: 'conj',
+  interjection: 'interj',
+  abbreviation: 'abbr',
+  article: 'art',
+  'auxiliary verb': 'aux',
+}
+
+// Mặc định BẬT: chưa từng gạt công tắc thì storage chưa có gì.
+async function readAutoTranslate() {
+  const stored = await chrome.storage.sync.get(AUTO_KEY)
+  return stored[AUTO_KEY] !== false
+}
+
+// Icon hiện chữ OFF khi tự dịch đang tắt — nhìn thanh công cụ là biết, khỏi phải
+// bôi thử một chữ.
+function showAutoState(on) {
+  Promise.all([
+    chrome.action.setBadgeBackgroundColor({ color: '#64748b' }),
+    chrome.action.setBadgeText({ text: on ? '' : 'OFF' }),
+    chrome.action.setTitle({
+      title: `Dịch nhanh (Alt+X) · Tự dịch khi bôi đen: ${on ? 'bật' : 'tắt'} (Alt+Shift+X)`,
+    }),
+  ]).catch(() => {})
+}
+
+readAutoTranslate().then(showAutoState, () => {})
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'sync' && changes[AUTO_KEY]) showAutoState(changes[AUTO_KEY].newValue !== false)
+})
+
+// Một lần bấm mà tới bằng cả hai đường (phím tắt trình duyệt + content.js) thì
+// lật hai lần, y như chưa bấm — trong TRIGGER_GAP chỉ tính một lần.
+let lastToggleAt = 0
+async function toggleAutoTranslate() {
+  if (Date.now() - lastToggleAt < TRIGGER_GAP) return
+  lastToggleAt = Date.now()
+  const on = !(await readAutoTranslate())
+  await chrome.storage.sync.set({ [AUTO_KEY]: on })
+  log('tự dịch khi bôi đen:', on ? 'bật' : 'tắt')
+}
+
+async function fetchJson(url, timeout = TRANSLATE_TIMEOUT) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeout)
+  try {
+    const res = await fetch(url, { signal: controller.signal })
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+// Coi như không dịch được nếu rỗng hoặc y hệt chữ gốc (tên riêng, viết tắt…).
+function acceptText(out, src) {
+  if (typeof out !== 'string') return null
+  const text = out.trim()
+  if (!text || text.toLowerCase() === src.trim().toLowerCase()) return null
+  return text
+}
+
+// data[0] = các đoạn [đoạn dịch, đoạn gốc, …] -> nối lại thành câu.
+function joinSegments(data) {
+  const segs = data?.[0]
+  if (!Array.isArray(segs)) return null
+  return segs.map((s) => (Array.isArray(s) && typeof s[0] === 'string' ? s[0] : '')).join('')
+}
+
+// Cách đọc chữ gốc (dt=rm): phần tử cuối của data[0] có dạng
+// [null, null, cách đọc bản dịch, cách đọc chữ gốc] — "ˈrəniNG" cho "running",
+// "Kon'nichiwa" cho "こんにちは". Có ngay trong lượt dịch, khỏi chờ nguồn IPA.
+function sourceReading(data) {
+  for (const seg of Array.isArray(data?.[0]) ? data[0] : []) {
+    if (Array.isArray(seg) && seg[0] == null && typeof seg[3] === 'string' && seg[3].trim()) {
+      return seg[3].trim()
+    }
+  }
+  return ''
+}
+
+// data[1] = khối từ điển (chỉ có khi bôi một từ): [[từ loại, [nghĩa…]], …]
+function parseSenses(data) {
+  if (!Array.isArray(data?.[1])) return []
+  const out = []
+  for (const block of data[1]) {
+    const pos = typeof block?.[0] === 'string' ? block[0] : ''
+    const terms = (Array.isArray(block?.[1]) ? block[1] : [])
+      .filter((t) => typeof t === 'string' && t.trim())
+      .map((t) => t.trim().normalize('NFC'))
+      .slice(0, 5)
+    if (terms.length) out.push({ pos: POS_SHORT[pos] || pos, terms })
+  }
+  return out.slice(0, 5)
+}
+
+// Bóng dịch ghi phím tắt đang thật sự được gán — người dùng có thể đã đổi.
+// Trình duyệt để trống thì content.js vẫn bắt Alt+Shift+X trong trang.
+async function currentKeys() {
+  try {
+    const all = await chrome.commands.getAll()
+    const find = (name) => all.find((c) => c.name === name)?.shortcut || ''
+    return { open: find('open-quick-translate') || 'Alt+X', toggle: find('toggle-auto-translate') || 'Alt+Shift+X' }
+  } catch {
+    return { open: 'Alt+X', toggle: 'Alt+Shift+X' }
+  }
+}
+
+// Bôi đi bôi lại cùng một chữ là chuyện thường, mà Google gtx chặn (429) khá
+// nhanh khi bị gọi dồn — nhớ tạm kết quả trong service worker. Mất khi service
+// worker ngủ, không sao.
+const CACHE_LIMIT = 100
+const translateCache = new Map()
+
+// Trả về { status: 'ok', text, from, to, senses } | { status: 'no-meaning' }
+// | { status: 'unreachable' }, kèm keys.
+async function translateSelection(raw) {
+  const text = String(raw || '').trim().slice(0, MAX_SELECTION)
+  const keys = await currentKeys()
+  if (!text) return { status: 'no-meaning', keys }
+  const cached = translateCache.get(text)
+  if (cached) return { ...cached, keys }
+  const result = await translateFresh(text)
+  // Lỗi mạng / bị chặn thì không nhớ, lần bôi sau còn thử lại.
+  if (result.status !== 'unreachable') {
+    translateCache.delete(text)
+    translateCache.set(text, result)
+    if (translateCache.size > CACHE_LIMIT) translateCache.delete(translateCache.keys().next().value)
+  }
+  return { ...result, keys }
+}
+
+// Đường dịch của tiện ích Google Dịch chính chủ, trả về [[bản dịch, ngôn ngữ gốc]].
+// Không có từ loại, nhưng gtx bị chặn tạm (429) thì đường này thường vẫn chạy.
+async function chromeExTranslate(text, tl, sl = 'auto') {
+  const data = await fetchJson(
+    'https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=' +
+      sl +
+      '&tl=' +
+      tl +
+      '&q=' +
+      encodeURIComponent(text),
+  )
+  const first = Array.isArray(data) ? data[0] : null
+  if (Array.isArray(first) && typeof first[0] === 'string') {
+    return { text: first[0], from: typeof first[1] === 'string' ? first[1] : '' }
+  }
+  if (typeof first === 'string') return { text: first, from: '' }
+  return null
+}
+
+async function translateFresh(text) {
+  // hl=en: tên từ loại trả về bằng tiếng Anh (noun, verb…). Bỏ đi thì Google theo
+  // ngôn ngữ trình duyệt — Edge tiếng Việt nhận "danh từ", không khớp POS_SHORT.
+  const gtx = (sl, tl) =>
+    fetchJson(
+      'https://translate.googleapis.com/translate_a/single?client=gtx&hl=en&dt=t&dt=bd&dt=rm&sl=' +
+        sl +
+        '&tl=' +
+        tl +
+        '&q=' +
+        encodeURIComponent(text),
+    )
+
+  // Để Google tự nhận ngôn ngữ; nhận ra tiếng Việt thì dịch ngược sang tiếng Anh.
+  let data = await gtx('auto', 'vi')
+  let detected = typeof data?.[2] === 'string' ? data[2] : ''
+  // Từ/cụm ngắn toàn chữ Latin không dấu thì Google hay đoán nhầm sang tiếng khác
+  // ("modal" ra tiếng Indonesia, dịch thành "thủ đô"). Tiện ích học tiếng Anh: gặp
+  // thế thì dịch lại như tiếng Anh, ra nghĩa thì lấy.
+  const bare = text.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '')
+  if (data && detected && detected !== 'en' && detected !== 'vi' && LATIN_SHORT.test(bare)) {
+    const english = await gtx('en', 'vi')
+    if (english && acceptText(joinSegments(english), text)) {
+      data = english
+      detected = 'en'
+    }
+  }
+  let from = detected || (VI_MARKS.test(text) ? 'vi' : '')
+  let to = from === 'vi' ? 'en' : 'vi'
+  if (data && to === 'en') data = await gtx('vi', 'en')
+  const viaGoogle = data ? acceptText(joinSegments(data), text) : null
+  if (viaGoogle) {
+    return { status: 'ok', text: viaGoogle, from, to, senses: parseSenses(data), phonetic: sourceReading(data) }
+  }
+
+  // Dự phòng 1: đường của tiện ích Google Dịch.
+  let alt = await chromeExTranslate(text, to)
+  if (alt && alt.from === 'vi' && to === 'vi') {
+    to = 'en'
+    alt = await chromeExTranslate(text, 'en')
+  }
+  // Cùng lỗi đoán nhầm ngôn ngữ như gtx ở trên.
+  if (alt && alt.from && alt.from !== 'en' && alt.from !== 'vi' && LATIN_SHORT.test(bare)) {
+    const english = await chromeExTranslate(text, 'vi', 'en')
+    if (english && acceptText(english.text, text)) alt = { text: english.text, from: 'en' }
+  }
+  if (alt && alt.from) from = alt.from
+  const viaAlt = alt ? acceptText(alt.text, text) : null
+  if (viaAlt) return { status: 'ok', text: viaAlt, from, to, senses: [] }
+
+  // Dự phòng MyMemory. Google không nhận ra được ngôn ngữ thì nhờ MyMemory tự
+  // nhận ("autodetect") — đoán bừa "en" thì tiếng Nhật, tiếng Trung… ra y nguyên.
+  const memory = await fetchJson(
+    'https://api.mymemory.translated.net/get?q=' +
+      encodeURIComponent(text) +
+      '&langpair=' +
+      (from || 'autodetect') +
+      '|' +
+      to,
+  )
+  const viaMemory =
+    memory && Number(memory.responseStatus) === 200
+      ? acceptText(memory.responseData?.translatedText, text)
+      : null
+  if (viaMemory) {
+    const memoryFrom = from || String(memory.responseData?.detectedLanguage || '').split('-')[0]
+    return { status: 'ok', text: viaMemory, from: memoryFrom, to, senses: [] }
+  }
+  // Chỉ kết luận "không có nghĩa" khi Google trả lời tử tế. MyMemory hay đưa lại
+  // y nguyên chữ gốc cả với câu dịch được — Google đang chặn (429) mà tin nó thì
+  // bóng dịch lặng lẽ tắt, người dùng tưởng tiện ích hỏng.
+  return { status: data || alt ? 'no-meaning' : 'unreachable' }
+}
+
+// Phiên âm IPA cho một từ tiếng Anh — cùng nguồn web app dùng (dictionaryapi.dev).
+// Hỏi riêng, sau khi đã có bản dịch: nguồn này hay chậm, có lúc treo hẳn — bắt
+// bản dịch đợi nó thì bóng dịch mất cái "hiện ngay". Trong lúc chờ, bóng dịch hiện
+// tạm cách đọc Google gửi kèm bản dịch.
+const PHONETIC_TIMEOUT = 3500
+const phoneticCache = new Map()
+
+async function lookupPhonetic(raw) {
+  const word = String(raw || '')
+    .trim()
+    .toLowerCase()
+  if (!/^[a-z][a-z'-]{0,40}$/.test(word)) return ''
+  if (phoneticCache.has(word)) return phoneticCache.get(word)
+  const data = await fetchJson(
+    'https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word),
+    PHONETIC_TIMEOUT,
+  )
+  let phonetic = ''
+  for (const entry of Array.isArray(data) ? data : []) {
+    const found = entry?.phonetic || (entry?.phonetics || []).find((p) => p && p.text)?.text
+    if (found) {
+      phonetic = String(found)
+      break
+    }
+  }
+  // Không có mục từ (404) cũng nhớ; chỉ lỗi mạng mới để lần sau hỏi lại.
+  if (data || phonetic) {
+    phoneticCache.set(word, phonetic)
+    if (phoneticCache.size > CACHE_LIMIT) phoneticCache.delete(phoneticCache.keys().next().value)
+  }
+  return phonetic
+}
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!msg || msg.type !== 'engmaster-translate') return
+  translateSelection(msg.text).then(sendResponse, () => sendResponse({ status: 'unreachable' }))
+  // Giữ kênh mở để trả lời bất đồng bộ.
+  return true
+})
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!msg || msg.type !== 'engmaster-phonetic') return
+  lookupPhonetic(msg.word).then(
+    (phonetic) => sendResponse({ phonetic }),
+    () => sendResponse({ phonetic: '' }),
+  )
+  return true
+})
+
+chrome.runtime.onMessage.addListener((msg) => {
+  if (!msg || msg.type !== 'engmaster-toggle-auto') return
+  toggleAutoTranslate().catch((err) => log('lỗi khi bật/tắt tự dịch:', String(err?.message || err)))
+})
+
 // Trình duyệt đưa sẵn tab đang xem lúc bấm phím — dùng luôn, khỏi phải dò lại
 // bằng tabs.query (dò lại dễ trúng nhầm cửa sổ Dịch nhanh vừa được focus).
 chrome.commands.onCommand.addListener((command, tab) => {
+  if (command === 'toggle-auto-translate') {
+    toggleAutoTranslate().catch((err) => log('lỗi khi bật/tắt tự dịch:', String(err?.message || err)))
+    return
+  }
   if (command !== 'open-quick-translate') return
   enqueue(() => openQuickTranslate(tab))
 })
