@@ -955,6 +955,27 @@
   border-top: 1px solid var(--border);
   font-size: 12.5px;
 }
+/* Nút loa nghe lại câu vừa làm đúng — cùng tông xanh với nhãn "Đúng" */
+.cc-page .cc-ibtn.cc-speak {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 35%, transparent);
+  background: color-mix(in srgb, var(--success) 10%, var(--surface));
+}
+.cc-page .cc-ibtn.cc-speak:hover {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 18%, var(--surface));
+}
+@media (max-width: 860px) {
+  /* Đủ to cho đầu ngón tay */
+  .cc-page .cc-ibtn.cc-speak {
+    width: 34px;
+    height: 34px;
+  }
+  .cc-page .cc-ibtn.cc-speak .ico {
+    width: 17px;
+    height: 17px;
+  }
+}
 .cc-note {
   color: var(--text-soft);
 }
@@ -1642,4 +1663,41 @@
   html.cc-typing .cc-backdrop {
     min-height: 46px;
   }
+}
+
+/* ============================================================
+   CỬA SỔ NỔI — Document Picture-in-Picture (bản web, services/pip.ts)
+   Cửa sổ chỉ rộng ~480px nên các luật @media (max-width: …) ở trên vẫn áp
+   dụng bên trong; ở đây chỉ gỡ những chỗ dành riêng cho điện thoại.
+   ============================================================ */
+body.cc-pip-body {
+  min-width: 0;
+}
+.cc-pip {
+  padding: 12px;
+}
+.cc-pip .cc-focus {
+  max-width: none;
+  gap: 10px;
+}
+.cc-pip .cc-progress {
+  position: static;
+  margin: 0;
+}
+/* Điện thoại neo gợi ý trên mép bàn phím ảo (position: fixed). Cửa sổ nổi không
+   có bàn phím ảo -> trả về ngay dưới ô nhập như bản máy tính, không đè nút. */
+.cc-pip .cc-suggest {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: auto;
+  bottom: auto;
+  left: 0;
+  width: auto;
+  min-width: 220px;
+  max-width: 100%;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.cc-pip-placeholder .cc-btn {
+  margin-top: 12px;
 }

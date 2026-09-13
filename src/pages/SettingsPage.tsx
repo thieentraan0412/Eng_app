@@ -6,6 +6,7 @@ import { isDesktop } from '../platform'
 import Icon from '../components/Icon'
 import type { UpdateStatus } from '../vite-env'
 import { accelFromEvent, readQuickTranslateHotkey } from '../services/hotkey'
+import { ttsSupported } from '../services/tts'
 import '../styles/settings.css'
 
 export default function SettingsPage() {
@@ -55,6 +56,15 @@ export default function SettingsPage() {
     const next = !autoSpeak
     setAutoSpeak(next)
     localStorage.setItem('fc_autospeak', next ? '1' : '0')
+  }
+  // Chép câu: làm đúng thì tự đọc to câu hoàn chỉnh (đọc thẳng khóa lúc chấm)
+  const [sentenceSpeak, setSentenceSpeak] = useState(
+    localStorage.getItem('sc_autospeak') !== '0',
+  )
+  const toggleSentenceSpeak = () => {
+    const next = !sentenceSpeak
+    setSentenceSpeak(next)
+    localStorage.setItem('sc_autospeak', next ? '1' : '0')
   }
 
   const toggleDeskTrans = () => {
@@ -680,6 +690,37 @@ export default function SettingsPage() {
           </span>
         </div>
       </section>
+
+      {/* --------------------------------------------------- Chép câu */}
+      {ttsSupported && (
+        <>
+          <h2 className="set-label">Chép câu</h2>
+          <section className="set-card">
+            <div className="set-row">
+              <span className="set-ico">
+                <Icon name="speak" />
+              </span>
+              <span className="set-main">
+                <span className="set-title">Tự phát âm câu khi làm đúng</span>
+                <span className="set-desc">
+                  Đọc to câu tiếng Anh hoàn chỉnh ngay khi kiểm tra đúng. Tắt đi vẫn nghe lại
+                  được bằng nút loa cạnh kết quả.
+                </span>
+              </span>
+              <span className="set-side">
+                <label className="set-switch">
+                  <input
+                    type="checkbox"
+                    checked={sentenceSpeak}
+                    onChange={toggleSentenceSpeak}
+                  />
+                  <span className="track" />
+                </label>
+              </span>
+            </div>
+          </section>
+        </>
+      )}
 
       {/* Auto-update chỉ hỗ trợ bản desktop cài bằng NSIS. */}
       {isDesktop && (

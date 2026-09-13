@@ -45,6 +45,8 @@ import {
 } from '../services/excelImport'
 import { translateToEnglish } from '../services/translation'
 import { speak, ttsSupported } from '../services/tts'
+import { openPipWindow, pipSupported } from '../services/pip'
+import { createPortal } from 'react-dom'
 import '../styles/sentence.css'
 
 const LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
@@ -754,6 +756,16 @@ function PracticeView({
   const narrow = useIsNarrow()
   const narrowRef = useRef(narrow)
   narrowRef.current = narrow
+  const curRef = useRef(cur)
+  curRef.current = cur
+
+  // Cửa sổ nổi "hình trong hình" (bản web): câu đang làm được dựng qua portal
+  // sang cửa sổ đó nên dùng chung state với trang này.
+  const [pipWin, setPipWin] = useState<Window | null>(null)
+  const pipRef = useRef<Window | null>(null)
+  pipRef.current = pipWin
+  // Rời thư mục / sang tab Quản lý câu -> đóng luôn, không để cửa sổ mồ côi
+  useEffect(() => () => pipRef.current?.close(), [])
   // Giữ chỉ số hợp lệ khi danh sách đổi (nạp xong / xóa câu / đổi bộ lọc)
   useEffect(() => {
     setCur((c) => Math.min(Math.max(0, c), Math.max(0, shown.length - 1)))
@@ -785,7 +797,8 @@ function PracticeView({
   // ấy iOS coi là focus "tự động" và ĐÓNG bàn phím.
   useLayoutEffect(() => {
     if (!advanceTo) return
-    const card = document.getElementById(`cc-${advanceTo}`)
+    // Đang mở cửa sổ nổi thì thẻ câu nằm trong document của cửa sổ đó
+    const card = (pipWin?.document ?? document).getElementById(`cc-${advanceTo}`)
     if (!card) {
       setAdvanceTo(null)
       return
@@ -808,7 +821,7 @@ function PracticeView({
       retries.forEach(window.clearTimeout)
       window.clearTimeout(finish)
     }
-  }, [advanceTo])
+  }, [advanceTo, pipWin])
 
   // Rời trang Chép câu (hoặc đóng thư mục) thì bỏ chế độ thu gọn, nếu không lớp
   // .cc-typing còn sót lại trên <html> và làm hỏng bố cục các trang khác.
@@ -870,6 +883,13 @@ function PracticeView({
         score: gr.score,
         revealed: !!revealedRef.current[id],
       })
+      // Làm ĐÚNG -> đọc to câu hoàn chỉnh (tắt được ở Cài đặt › Chép câu).
+      // Gọi ngay trong nhịp bấm/gõ Enter: iOS chỉ cho phát tiếng khi còn trong
+      // thao tác của người dùng. Đọc đáp án tham chiếu khớp nhất thay vì chữ
+      // người dùng gõ để có đúng hoa/thường, dấu câu -> ngữ điệu tự nhiên hơn.
+      if (gr.status === 'correct' && localStorage.getItem('sc_autospeak') !== '0') {
+        speak(gr.bestAnswer)
+      }
       // Gõ Enter mà ĐÚNG -> tự nhảy sang câu kế tiếp (cuộn ra giữa + focus).
       // CHỈ ở màn hẹp (mobile, chế độ tập trung 1 câu/màn): bàn phím che gần hết
       // màn nên phải tự nhảy mới gõ liên tục được. Trên desktop danh sách hiện
@@ -1012,26 +1032,53 @@ function PracticeView({
     </div>
   )
 
-  if (shown.length === 0) {
-    return (
-      <>
-        {filterRow}
-        <div className="cc-empty">
-          <Icon name="search" />
-          <b>Không có câu nào khớp bộ lọc</b>
-          <p>Chọn cấp độ hoặc chủ đề khác nhé.</p>
-        </div>
-      </>
-    )
+  // Đổi sang câu trước/kế tiếp ở khung 1 câu/màn (mobile + cửa sổ nổi)
+  const stepFocus = (from: number, dir: 1 | -1) => {
+    const target = shown[from + dir]
+    if (!target) return
+    setCur(from + dir)
+    setAdvanceTo(target.id)
   }
 
-  // ===== Chế độ TẬP TRUNG (mobile): 1 câu/màn + điều hướng Trước/Tiếp =====
-  if (narrow) {
+  const openPip = async () => {
+    if (pipRef.current) {
+      pipRef.current.focus()
+      return
+    }
+    const idx = Math.min(cur, shown.length - 1)
+    try {
+      const win = await openPipWindow({
+        title: `Chép câu · ${folder.name}`,
+        width: 480,
+        height: 460,
+        bodyClass: 'cc-pip-body',
+      })
+      win.addEventListener(
+        'pagehide',
+        () => {
+          setPipWin(null)
+          // Về lại trang: cuộn tới câu vừa làm dở trong cửa sổ nổi
+          const list = shownRef.current
+          const i = Math.min(curRef.current, list.length - 1)
+          if (i < 0) return
+          setLimit((l) => (i + 1 > l ? Math.ceil((i + 1) / PAGE_SIZE) * PAGE_SIZE : l))
+          setJumpId(list[i].id)
+        },
+        { once: true },
+      )
+      setPipWin(win)
+      if (shown[idx]) setAdvanceTo(shown[idx].id)
+    } catch (e) {
+      alert('Không mở được cửa sổ nổi: ' + errMsg(e))
+    }
+  }
+
+  // Khung 1 câu/màn: tiến độ + thẻ câu + Trước/Tiếp
+  const focusBody = (floating: boolean) => {
     const idx = Math.min(cur, shown.length - 1)
     const item = shown[idx]
     return (
-      <div className="cc-focus">
-        {filterRow}
+      <>
         <div className="cc-progress">
           <span className="cc-pb-num">
             Câu <b>{idx + 1}</b> / {shown.length}
@@ -1055,34 +1102,87 @@ function PracticeView({
           onChange={setInput}
           onCheck={checkOne}
           onReveal={reveal}
+          floating={floating}
+          onStep={floating ? (dir) => stepFocus(idx, dir) : undefined}
         />
 
         <div className="cc-focus-nav">
-          <button
-            className="cc-btn"
-            disabled={idx === 0}
-            onClick={() => {
-              const previous = shown[idx - 1]
-              if (!previous) return
-              setCur(idx - 1)
-              setAdvanceTo(previous.id)
-            }}
-          >
+          <button className="cc-btn" disabled={idx === 0} onClick={() => stepFocus(idx, -1)}>
             <Icon name="left" /> Trước
           </button>
           <button
             className="cc-btn"
             disabled={idx >= shown.length - 1}
-            onClick={() => {
-              const next = shown[idx + 1]
-              if (!next) return
-              setCur(idx + 1)
-              setAdvanceTo(next.id)
-            }}
+            onClick={() => stepFocus(idx, 1)}
           >
             Tiếp <Icon name="right" />
           </button>
         </div>
+      </>
+    )
+  }
+
+  const pipButton = pipSupported && (
+    <button
+      className="cc-btn cc-btn-sm"
+      onClick={openPip}
+      title="Mở câu đang làm trong cửa sổ nhỏ luôn nổi trên các tab và ứng dụng khác"
+    >
+      <Icon name="pip" /> Cửa sổ nổi
+    </button>
+  )
+
+  if (pipWin) {
+    return (
+      <>
+        {filterRow}
+        <div className="cc-empty cc-pip-placeholder">
+          <Icon name="pip" />
+          <b>Đang luyện trong cửa sổ nổi</b>
+          <p>
+            Cửa sổ nhỏ luôn nằm trên các tab và ứng dụng khác — vừa xem video, đọc tài liệu vừa
+            chép câu. Đóng cửa sổ đó là quay lại luyện ở đây.
+          </p>
+          <button className="cc-btn" onClick={() => pipWin.close()}>
+            <Icon name="left" /> Đưa về trang
+          </button>
+        </div>
+        {createPortal(
+          <div className="cc-page cc-pip">
+            {shown.length === 0 ? (
+              <div className="cc-empty">
+                <Icon name="search" />
+                <b>Không có câu nào khớp bộ lọc</b>
+              </div>
+            ) : (
+              <div className="cc-focus">{focusBody(true)}</div>
+            )}
+          </div>,
+          pipWin.document.body,
+        )}
+      </>
+    )
+  }
+
+  if (shown.length === 0) {
+    return (
+      <>
+        {filterRow}
+        <div className="cc-empty">
+          <Icon name="search" />
+          <b>Không có câu nào khớp bộ lọc</b>
+          <p>Chọn cấp độ hoặc chủ đề khác nhé.</p>
+        </div>
+      </>
+    )
+  }
+
+  // ===== Chế độ TẬP TRUNG (mobile): 1 câu/màn + điều hướng Trước/Tiếp =====
+  if (narrow) {
+    return (
+      <div className="cc-focus">
+        {filterRow}
+        {focusBody(false)}
 
         <div className="cc-focus-tools">
           <button className="cc-btn cc-btn-sm" onClick={checkAll}>
@@ -1095,6 +1195,7 @@ function PracticeView({
           >
             <Icon name="refresh" /> Làm lại
           </button>
+          {pipButton}
         </div>
       </div>
     )
@@ -1123,9 +1224,17 @@ function PracticeView({
         >
           <Icon name="refresh" /> Làm lại
         </button>
+        {pipButton}
       </div>
 
-      <section>
+      {/* Nhớ câu đang gõ -> mở cửa sổ nổi là tiếp đúng câu đó */}
+      <section
+        onFocus={(e) => {
+          const id = (e.target as HTMLElement).closest('.cc-sent')?.id.slice(3)
+          const i = id ? shownRef.current.findIndex((s) => s.id === id) : -1
+          if (i >= 0) setCur(i)
+        }}
+      >
         {shown.slice(0, limit).map((item, idx) => (
           <SentenceCard
             key={item.id}
@@ -1182,6 +1291,8 @@ const SentenceCard = memo(function SentenceCard({
   onChange,
   onCheck,
   onReveal,
+  floating = false,
+  onStep,
 }: {
   index: number
   item: SentenceItem
@@ -1189,6 +1300,8 @@ const SentenceCard = memo(function SentenceCard({
   result?: GradeResult
   revealed: boolean
   dictation?: boolean // nghe-chép: nghe TTS đọc câu tiếng Anh rồi gõ lại
+  floating?: boolean // nằm trong cửa sổ nổi — document riêng, không bàn phím ảo
+  onStep?: (dir: 1 | -1) => void // có thì Tab / Shift+Tab đổi câu thay vì nhảy ô
   onChange: (id: string, v: string) => void
   onCheck: (id: string, advance?: boolean) => void
   onReveal: (id: string) => void
@@ -1246,7 +1359,8 @@ const SentenceCard = memo(function SentenceCard({
     const ta = taRef.current
     if (!ta) return
     const at = Math.max(0, Math.min(pos, ta.value.length))
-    if (document.activeElement !== ta) ta.focus({ preventScroll: true })
+    // ownerDocument: trong cửa sổ nổi, document của trang chính không biết ô này
+    if (ta.ownerDocument.activeElement !== ta) ta.focus({ preventScroll: true })
     ta.setSelectionRange(at, at)
     setCaret(at)
   })
@@ -1315,7 +1429,8 @@ const SentenceCard = memo(function SentenceCard({
       }
       e.preventDefault()
       setOpen(false)
-      focusSibling(e.shiftKey ? -1 : 1)
+      if (onStep) onStep(e.shiftKey ? -1 : 1)
+      else focusSibling(e.shiftKey ? -1 : 1)
       return
     }
     if (!open || suggestions.length === 0) return
@@ -1452,12 +1567,15 @@ const SentenceCard = memo(function SentenceCard({
           onScroll={syncScroll}
           onFocus={(e) => {
             setFocused(true)
+            // Chế độ thu gọn khi gõ là cho bàn phím ảo trên trang chính — cửa sổ
+            // nổi mà bật thì trang chính phía sau bị cất mất tiêu đề/điều hướng.
+            if (floating) return
             setTypingMode(true)
             settleFocusedAnswer(e.currentTarget)
           }}
           onBlur={() => {
             setFocused(false)
-            setTypingMode(false)
+            if (!floating) setTypingMode(false)
             setTimeout(() => setOpen(false), 120)
           }}
         />
@@ -1528,6 +1646,18 @@ function ResultRow({
         {result.status === 'correct' && <Icon name="check" />}
         {STATUS_TEXT[result.status]} · {Math.round(result.score * 100)}%
       </span>
+
+      {result.status === 'correct' && ttsSupported && (
+        <button
+          type="button"
+          className="cc-ibtn cc-speak"
+          title="Nghe lại câu"
+          aria-label="Nghe lại câu"
+          onClick={() => speak(result.bestAnswer)}
+        >
+          <Icon name="speak" />
+        </button>
+      )}
 
       {result.status !== 'correct' && (
         <span className="cc-note cc-next-word">
