@@ -38,7 +38,8 @@ function pickVoice(): SpeechSynthesisVoice | null {
 
 // Phát âm đoạn chữ tiếng Anh. Gọi lần nữa khi đang đọc -> ngắt lượt cũ, đọc lượt mới.
 // rate hơi chậm (0.95) để nghe rõ; truyền rate thấp hơn nếu muốn đọc chậm.
-export function speak(text: string, rate = 0.95): void {
+// onEnd chạy khi đọc xong, bị ngắt hoặc lỗi — để nút "Nghe" trở lại trạng thái cũ.
+export function speak(text: string, rate = 0.95, onEnd?: () => void): void {
   if (!ttsSupported) return
   const t = text.trim()
   if (!t) return
@@ -49,6 +50,10 @@ export function speak(text: string, rate = 0.95): void {
   const v = pickVoice()
   if (v) u.voice = v
   u.rate = rate
+  if (onEnd) {
+    u.onend = onEnd
+    u.onerror = onEnd
+  }
   synth.speak(u)
 }
 

@@ -181,6 +181,24 @@
   letter-spacing: 0.055em;
   text-transform: uppercase;
 }
+/* Nhãn ô nhập + nút "Nghe" trên cùng một dòng; chiều cao cố định để ô nhập
+   không nhảy lên xuống khi nút hiện/ẩn */
+.qt-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 24px;
+  margin-bottom: 4px;
+}
+.qt-form .qt-form-head label {
+  margin-bottom: 0;
+}
+.qt-result-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
 .qt-form textarea {
   width: 100%;
   min-height: 68px;
@@ -245,7 +263,8 @@
 .qt-result-head > span {
   margin-bottom: 0;
 }
-.qt-result-head button {
+.qt-result-head button,
+.qt-form-head button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -261,7 +280,16 @@
   background: var(--surface);
   color: var(--text);
 }
-.qt-result-head .ico {
+.qt-form-head button:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.qt-result-head button.is-speaking,
+.qt-form-head button.is-speaking {
+  color: var(--primary);
+}
+.qt-result-head .ico,
+.qt-form-head .ico {
   width: 14px;
   height: 14px;
 }

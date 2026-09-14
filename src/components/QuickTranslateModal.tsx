@@ -13,6 +13,7 @@ import {
   posLabelVi,
   type WordDetails,
 } from '../services/dictionaryDetails'
+import { speak, stopSpeaking, ttsSupported } from '../services/tts'
 import '../styles/quicktranslate.css'
 
 export type QuickTranslateDirection = 'en-vi' | 'vi-en'
@@ -69,9 +70,13 @@ export default function QuickTranslateModal({
   const [details, setDetails] = useState<WordDetails | null>(null)
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [activePos, setActivePos] = useState('all')
+  // Nút nào đang đọc: chữ đã nhập, bản dịch, hay từ trong thẻ từ điển
+  const [speaking, setSpeaking] = useState<'source' | 'result' | 'word' | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const posListRef = useRef<HTMLDivElement>(null)
   const requestRef = useRef(0)
+  // Mỗi lượt đọc một mã: lượt cũ bị ngắt xong mới báo "hết" thì bỏ qua
+  const speakIdRef = useRef(0)
   // Từ điển có ra nghĩa hay không — để khỏi báo "không tìm thấy nghĩa" đè lên
   // bảng nghĩa đang hiện.
   const hasDetailsRef = useRef(false)
@@ -111,6 +116,14 @@ export default function QuickTranslateModal({
     window.addEventListener('keydown', close)
     return () => window.removeEventListener('keydown', close)
   }, [open, onClose])
+
+  // Đóng cửa sổ thì ngừng đọc
+  useEffect(() => {
+    if (open) return
+    speakIdRef.current += 1
+    setSpeaking(null)
+    stopSpeaking()
+  }, [open])
 
   // Dừng gõ một nhịp ngắn là dịch. Mỗi lần gõ/đổi chiều sẽ hủy kết quả của
   // yêu cầu trước để bản dịch cũ không ghi đè nội dung mới. Bật lại cửa sổ
@@ -227,14 +240,39 @@ export default function QuickTranslateModal({
     }
   }
 
-  const speakWord = () => {
-    if (!details || !('speechSynthesis' in window)) return
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(details.word)
-    utterance.lang = 'en-US'
-    utterance.rate = 0.86
-    window.speechSynthesis.speak(utterance)
+  // Bấm lần nữa khi đang đọc thì dừng; bấm nút khác thì chuyển sang đọc nút đó.
+  const toggleSpeak = (target: 'source' | 'result' | 'word', value: string, rate = 0.95) => {
+    const id = ++speakIdRef.current
+    if (speaking === target) {
+      stopSpeaking()
+      setSpeaking(null)
+      return
+    }
+    setSpeaking(target)
+    speak(value, rate, () => {
+      if (speakIdRef.current === id) setSpeaking(null)
+    })
   }
+  const speakWord = () => {
+    if (details) toggleSpeak('word', details.word, 0.86)
+  }
+  // Chỉ phần nào đang là tiếng Anh mới có nút nghe
+  const sourceEnglish = ttsSupported && direction === 'en-vi' ? text.trim() : ''
+  const resultEnglish = ttsSupported && direction === 'vi-en' && result ? result : ''
+
+  const speakButton = (target: 'source' | 'result', value: string, label: string) => (
+    <button
+      type="button"
+      className={speaking === target ? 'is-speaking' : undefined}
+      // Giữ con trỏ trong ô nhập để bấm nghe xong gõ tiếp được ngay
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => toggleSpeak(target, value)}
+      aria-label={speaking === target ? 'Dừng đọc' : label}
+      title={speaking === target ? 'Dừng đọc' : label}
+    >
+      <Icon name="speak" /> {speaking === target ? 'Dừng' : 'Nghe'}
+    </button>
+  )
 
   const visibleGroups = details
     ? activePos === 'all'
@@ -283,9 +321,12 @@ export default function QuickTranslateModal({
         </div>
 
         <div className="qt-form">
-          <label htmlFor="qt-source">
-            {direction === 'en-vi' ? 'Tiếng Anh' : 'Tiếng Việt'}
-          </label>
+          <div className="qt-form-head">
+            <label htmlFor="qt-source">
+              {direction === 'en-vi' ? 'Tiếng Anh' : 'Tiếng Việt'}
+            </label>
+            {sourceEnglish && speakButton('source', sourceEnglish, 'Nghe câu tiếng Anh đã nhập')}
+          </div>
           <textarea
             ref={inputRef}
             id="qt-source"
@@ -338,9 +379,12 @@ export default function QuickTranslateModal({
               <div className="qt-result-head">
                 <span>{direction === 'en-vi' ? 'Tiếng Việt' : 'Tiếng Anh'}</span>
                 {result && (
-                  <button type="button" onClick={copyResult}>
-                    <Icon name={copied ? 'check' : 'stack'} /> {copied ? 'Đã sao chép' : 'Sao chép'}
-                  </button>
+                  <div className="qt-result-actions">
+                    {resultEnglish && speakButton('result', resultEnglish, 'Nghe bản dịch tiếng Anh')}
+                    <button type="button" onClick={copyResult}>
+                      <Icon name={copied ? 'check' : 'stack'} /> {copied ? 'Đã sao chép' : 'Sao chép'}
+                    </button>
+                  </div>
                 )}
               </div>
               <div className="qt-result-text">
