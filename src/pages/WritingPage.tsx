@@ -650,76 +650,6 @@ const LINES: [string, string][] = [
   ['2.1', 'Thoáng'],
 ]
 
-// Toạ độ con trỏ trong ô nhập — dựng một bản sao ẩn của textarea rồi đo vị trí
-// ký tự tại con trỏ (textarea không cho hỏi trực tiếp).
-const MIRROR_PROPS = [
-  'boxSizing',
-  'width',
-  'paddingTop',
-  'paddingRight',
-  'paddingBottom',
-  'paddingLeft',
-  'borderTopWidth',
-  'borderRightWidth',
-  'borderBottomWidth',
-  'borderLeftWidth',
-  'fontFamily',
-  'fontSize',
-  'fontWeight',
-  'fontStyle',
-  'letterSpacing',
-  'lineHeight',
-  'wordSpacing',
-] as const
-
-// Bản sao ẩn của ô soạn thảo, dùng để tìm tọa độ con trỏ.
-// Giữ lại và dùng lại một phần tử duy nhất: hàm này chạy mỗi lần gõ phím, nếu
-// tạo mới rồi xóa đi thì trình duyệt phải tính lại layout cả trang hai lượt.
-let mirrorEl: HTMLDivElement | null = null
-let mirrorMark: HTMLSpanElement | null = null
-let mirrorSig = ''
-
-function getMirror(ta: HTMLTextAreaElement): { box: HTMLDivElement; mark: HTMLSpanElement; lh: number } {
-  if (!mirrorEl) {
-    mirrorEl = document.createElement('div')
-    mirrorEl.setAttribute('aria-hidden', 'true')
-    mirrorEl.style.position = 'absolute'
-    mirrorEl.style.top = '0'
-    mirrorEl.style.left = '-9999px'
-    mirrorEl.style.visibility = 'hidden'
-    mirrorEl.style.whiteSpace = 'pre-wrap'
-    mirrorEl.style.overflowWrap = 'break-word'
-    mirrorEl.style.height = 'auto'
-    mirrorMark = document.createElement('span')
-    mirrorEl.appendChild(mirrorMark)
-    document.body.appendChild(mirrorEl)
-  }
-  const cs = getComputedStyle(ta)
-  // Chỉ chép lại kiểu chữ khi có gì đó thật sự đổi (đổi cỡ chữ, đổi độ rộng…)
-  const sig = `${cs.font}|${cs.width}|${cs.padding}|${cs.letterSpacing}|${cs.lineHeight}`
-  if (sig !== mirrorSig) {
-    mirrorSig = sig
-    for (const prop of MIRROR_PROPS) {
-      const kebab = prop.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
-      mirrorEl.style.setProperty(kebab, cs.getPropertyValue(kebab))
-    }
-  }
-  const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.6
-  return { box: mirrorEl, mark: mirrorMark!, lh }
-}
-
-function caretPoint(ta: HTMLTextAreaElement, pos: number): { left: number; top: number; lh: number } {
-  const { box, mark, lh } = getMirror(ta)
-  // Phần văn bản trước con trỏ nằm thẳng trong box, phần sau nằm trong mark
-  if (box.firstChild !== mark) box.insertBefore(document.createTextNode(''), mark)
-  ;(box.firstChild as Text).data = ta.value.slice(0, pos)
-  mark.textContent = ta.value.slice(pos) || '.'
-  const left = mark.offsetLeft
-  const top = mark.offsetTop
-  const r = ta.getBoundingClientRect()
-  return { left: r.left + left - ta.scrollLeft, top: r.top + top - ta.scrollTop, lh }
-}
-
 // Icon của thanh định dạng — vẽ thẳng theo mockup (bộ Icon chung không có)
 const FMT_ICONS = {
   bullet: (
@@ -796,10 +726,6 @@ function Editor({
   const [view, setView] = useState<ViewPrefs>(loadView)
 
   const [suggestOn, setSuggestOn] = useState(localStorage.getItem('suggest_enabled') !== '0')
-  // Bảng gợi ý nổi ngay dưới con trỏ (như mockup) — chỉ khi ô viết đang focus
-  const [ghost, setGhost] = useState<{ left: number; top: number } | null>(null)
-  const [ghostIdx, setGhostIdx] = useState(0)
-  const [focused, setFocused] = useState(false)
   const spellEnabled = localStorage.getItem('spell_enabled') !== '0'
   const grammarEnabled = localStorage.getItem('grammar_enabled') !== '0'
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -823,27 +749,6 @@ function Editor({
     }
     setSuggestions(suggest(content.slice(0, caret)))
   }, [content, caret, suggestOn])
-
-  // Đặt bảng gợi ý ngay dưới con trỏ, lùi vào trong nếu chạm mép phải màn hình
-  useEffect(() => {
-    const ta = taRef.current
-    if (!suggestOn || !focused || suggestions.length === 0 || !ta) {
-      setGhost(null)
-      return
-    }
-    const pt = caretPoint(ta, caret)
-    const box = ta.getBoundingClientRect()
-    // Con trỏ cuộn ra ngoài vùng nhìn thấy thì không hiện
-    if (pt.top < box.top - 8 || pt.top > box.bottom - 4) {
-      setGhost(null)
-      return
-    }
-    setGhost({
-      left: Math.min(pt.left, window.innerWidth - 190),
-      top: Math.min(pt.top + pt.lh + 4, window.innerHeight - 160),
-    })
-    setGhostIdx(0)
-  }, [suggestions, caret, suggestOn, focused])
 
   // Chính tả (debounce 350ms) — chỉ liệt kê trong trợ lý, KHÔNG gạch chân trong bài.
   //
@@ -1011,27 +916,80 @@ function Editor({
     pendingCaret.current = newBefore.length
     setContent(newBefore + after)
   }
+  // Thay một đoạn văn bản bằng execCommand để Ctrl+Z vẫn hoàn tác được;
+  // trình duyệt không hỗ trợ thì mới tự ghép chuỗi.
+  const replaceRange = (from: number, to: number, text: string, selStart: number, selEnd: number) => {
+    const ta = taRef.current
+    if (!ta) return
+    ta.focus()
+    ta.setSelectionRange(from, to)
+    const ok = document.execCommand(text ? 'insertText' : 'delete', false, text)
+    if (ok) {
+      ta.setSelectionRange(selStart, selEnd)
+      setCaret(selEnd)
+    } else {
+      setContent(ta.value.slice(0, from) + text + ta.value.slice(to))
+      pendingSel.current = { start: selStart, end: selEnd }
+    }
+  }
+  // Tab: thụt lề · Shift+Tab: lùi lề. Chọn nhiều dòng thì áp cho cả khối.
+  const indent = (outdent: boolean) => {
+    const ta = taRef.current
+    if (!ta) return
+    const v = ta.value
+    const s = ta.selectionStart
+    const e = ta.selectionEnd
+    const multi = v.slice(s, e).includes('\n')
+    if (!outdent && !multi) {
+      replaceRange(s, e, '\t', s + 1, s + 1)
+      return
+    }
+    const lineStart = v.lastIndexOf('\n', s - 1) + 1
+    // Vùng chọn dừng ngay đầu dòng kế tiếp thì không tính dòng đó
+    const blockEnd = multi && v[e - 1] === '\n' ? e - 1 : e
+    const lineEnd = v.indexOf('\n', blockEnd)
+    const to = lineEnd === -1 ? v.length : lineEnd
+    const block = v.slice(lineStart, to)
+    const out = block
+      .split('\n')
+      .map((l) => (outdent ? l.replace(/^(\t| {1,4})/, '') : l ? `\t${l}` : l))
+      .join('\n')
+    if (out === block) return
+    if (multi) {
+      replaceRange(lineStart, to, out, lineStart, lineStart + out.length)
+    } else {
+      const d = out.length - block.length
+      replaceRange(lineStart, to, out, Math.max(lineStart, s + d), Math.max(lineStart, e + d))
+    }
+  }
+
+  // Tab chèn gợi ý đầu tiên chỉ khi tab "Gợi ý" của trợ lý đang mở (người dùng
+  // thấy được danh sách) và con trỏ ở giữa dòng. Đầu dòng / ngay sau Tab thì Tab
+  // là thụt lề — gợi ý "từ tiếp theo" cũng hiện sau dấu xuống dòng.
+  const tabPicksHint = (before: string) => {
+    const line = before.slice(before.lastIndexOf('\n') + 1)
+    return (
+      panelOpen &&
+      pane === 'hint' &&
+      suggestions.length > 0 &&
+      line.trim() !== '' &&
+      !line.endsWith('\t')
+    )
+  }
+  const tabHint = tabPicksHint(content.slice(0, caret))
+
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (composing.current || (e.nativeEvent as unknown as { isComposing?: boolean }).isComposing) {
       return
     }
-    const list = suggestions.slice(0, 5)
-    if (e.key === 'Tab' && list.length > 0) {
-      e.preventDefault()
-      accept(list[ghost ? ghostIdx : 0])
-      setGhost(null)
-      return
-    }
-    if (!ghost || list.length === 0) return
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setGhostIdx((i) => (i + 1) % list.length)
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setGhostIdx((i) => (i - 1 + list.length) % list.length)
-    } else if (e.key === 'Escape') {
-      e.preventDefault()
-      setGhost(null)
+    if (e.key !== 'Tab' || e.ctrlKey || e.altKey || e.metaKey) return
+    e.preventDefault()
+    const ta = e.currentTarget
+    const collapsed = ta.selectionStart === ta.selectionEnd
+    if (!e.shiftKey && collapsed && tabPicksHint(ta.value.slice(0, ta.selectionStart))) {
+      accept(suggestions[0])
+    } else {
+      indent(e.shiftKey)
     }
   }
 
@@ -1542,13 +1500,6 @@ function Editor({
                   data-form-type="other"
                   name="write-content"
                   aria-label="Nội dung bài viết"
-                  aria-autocomplete="list"
-                  aria-controls={ghost && suggestions.length > 0 ? 'writing-suggestions' : undefined}
-                  aria-activedescendant={
-                    ghost && suggestions.length > 0
-                      ? `writing-suggestion-${ghostIdx}`
-                      : undefined
-                  }
                   value={content}
                   onChange={(e) => {
                     setContent(e.target.value)
@@ -1563,12 +1514,6 @@ function Editor({
                   onKeyUp={syncCaret}
                   onClick={syncCaret}
                   onKeyDown={onKeyDown}
-                  onScroll={() => setGhost(null)}
-                  onFocus={() => setFocused(true)}
-                  onBlur={() => {
-                    setFocused(false)
-                    setTimeout(() => setGhost(null), 120)
-                  }}
                 />
               </div>
 
@@ -1588,7 +1533,7 @@ function Editor({
                     <span className="write-kbd">Ctrl J</span> Trợ lý
                   </span>
                   <span>
-                    <span className="write-kbd">Tab</span> Gợi ý
+                    <span className="write-kbd">Tab</span> Thụt lề
                   </span>
                 </div>
               </div>
@@ -1829,8 +1774,7 @@ function Editor({
                     <Icon name="sparkle" />
                     <b>Gợi ý từ đang tắt</b>
                     <p>
-                      Bật để nhận gợi ý từ tiếp theo ngay khi bạn gõ. Nhấn{' '}
-                      <span className="write-kbd">Tab</span> để chấp nhận gợi ý đầu tiên.
+                      Bật để nhận gợi ý từ ngay khi bạn gõ — danh sách hiện ở bảng này.
                     </p>
                     <div className="write-off-row">
                       <button
@@ -1849,8 +1793,9 @@ function Editor({
                   <>
                     <div className="write-pn-note">
                       <b>Gợi ý đang bật</b>
-                      Gõ tiếng Anh rồi dừng một nhịp — danh sách bên dưới đổi theo con trỏ.{' '}
-                      <span className="write-kbd">Tab</span> chèn gợi ý đầu tiên.
+                      Gõ tiếng Anh — danh sách bên dưới đổi theo con trỏ. Bấm vào một từ để
+                      chèn, hoặc <span className="write-kbd">Tab</span> chèn gợi ý đầu tiên khi
+                      đang gõ giữa dòng.
                     </div>
                     {suggestions.length === 0 ? (
                       <p className="write-note">Chưa có gợi ý cho vị trí con trỏ hiện tại.</p>
@@ -1864,6 +1809,7 @@ function Editor({
                         >
                           {s.text}
                           <small>{typeLabel[s.type]}</small>
+                          {i === 0 && tabHint && <span className="write-kbd">Tab</span>}
                         </button>
                       ))
                     )}
@@ -1934,37 +1880,6 @@ function Editor({
           </aside>
         )}
       </div>
-
-      {/* Bảng gợi ý từ nổi ngay dưới con trỏ — Tab để nhận */}
-      {ghost && suggestions.length > 0 && (
-        <div
-          className="write-ghost"
-          id="writing-suggestions"
-          style={{ left: ghost.left, top: ghost.top }}
-          role="listbox"
-        >
-          <div className="write-ghost-head">Gợi ý từ tiếp theo</div>
-          {suggestions.slice(0, 5).map((s, i) => (
-            <button
-              type="button"
-              key={s.text + i}
-              id={`writing-suggestion-${i}`}
-              role="option"
-              aria-selected={i === ghostIdx}
-              className={i === ghostIdx ? 'write-ghost-item is-sel' : 'write-ghost-item'}
-              onMouseDown={(e) => {
-                e.preventDefault()
-                accept(s)
-                setGhost(null)
-              }}
-              onMouseEnter={() => setGhostIdx(i)}
-            >
-              {s.text}
-              {i === ghostIdx && <span className="write-kbd">Tab</span>}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Lớp phủ khi trợ lý mở dạng bottom sheet (mobile) */}
       {narrow && panelOpen && (
