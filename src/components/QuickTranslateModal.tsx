@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 import {
+  hasVietnameseMarks,
+  isAllProperNouns,
   isSingleWord,
   translate,
   translateOnlineDetailed,
@@ -53,6 +55,18 @@ function noMeaningMessage(source: string, direction: QuickTranslateDirection): s
   return `Không tìm thấy nghĩa ${target} của “${source}”. Có thể là chữ gõ sai, tên riêng hoặc viết tắt.`
 }
 
+// Bản dịch ra y hệt chữ đã nhập. Đó là kết quả đúng (tên riêng giữ nguyên, hoặc
+// câu vốn đã là tiếng đích), nhưng nhìn vào thì tưởng app chưa dịch — nên nói rõ
+// lý do và chỉ luôn cách sửa nếu là chọn nhầm chiều.
+function unchangedNote(source: string, direction: QuickTranslateDirection): string {
+  if (isAllProperNouns(source)) return 'Đây là tên riêng hoặc viết tắt nên được giữ nguyên.'
+  if (direction === 'vi-en' && !hasVietnameseMarks(source))
+    return 'Chữ bạn nhập gần như đã là tiếng Anh nên được giữ nguyên. Bấm Tab để đổi sang chiều EN → VI.'
+  if (direction === 'en-vi' && hasVietnameseMarks(source))
+    return 'Chữ bạn nhập đã là tiếng Việt nên được giữ nguyên. Bấm Tab để đổi sang chiều VI → EN.'
+  return 'Các phần được giữ nguyên thường là tên riêng, viết tắt hoặc chữ gõ sai.'
+}
+
 export default function QuickTranslateModal({
   open,
   hotkey,
@@ -66,6 +80,8 @@ export default function QuickTranslateModal({
   const [result, setResult] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  // Ghi chú đi kèm bản dịch giữ nguyên văn — xem unchangedNote.
+  const [note, setNote] = useState('')
   const [copied, setCopied] = useState(false)
   const [details, setDetails] = useState<WordDetails | null>(null)
   const [detailsLoading, setDetailsLoading] = useState(false)
@@ -90,6 +106,7 @@ export default function QuickTranslateModal({
     setLoading(false)
     setResult(null)
     setError('')
+    setNote('')
     setDetails(null)
     hasDetailsRef.current = false
     setDetailsLoading(false)
@@ -137,6 +154,7 @@ export default function QuickTranslateModal({
       setLoading(false)
       setResult(null)
       setError('')
+      setNote('')
       setDetails(null)
       setDetailsLoading(false)
       return
@@ -145,6 +163,7 @@ export default function QuickTranslateModal({
     const timer = window.setTimeout(async () => {
       setLoading(true)
       setError('')
+      setNote('')
       setCopied(false)
       const shouldLoadDetails = direction === 'en-vi' && SINGLE_WORD.test(source)
       setDetails(null)
@@ -169,6 +188,7 @@ export default function QuickTranslateModal({
       if (outcome.status === 'ok') {
         setResult(outcome.text)
         setError('')
+        setNote(outcome.unchanged ? unchangedNote(source, direction) : '')
         // Chiều Việt -> Anh: tra tiếp chính từ tiếng Anh vừa dịch được, người
         // học có luôn phiên âm, từ loại và ví dụ thay vì chỉ một dòng chữ.
         const word = outcome.text.trim()
@@ -185,6 +205,7 @@ export default function QuickTranslateModal({
         }
       } else {
         setResult(null)
+        setNote('')
         // Từ điển đã tìm ra nghĩa thì đừng báo lỗi chồng lên, mâu thuẫn nhau.
         if (hasDetailsRef.current) return
         setError(
@@ -222,6 +243,7 @@ export default function QuickTranslateModal({
     window.dispatchEvent(new CustomEvent('quick-translate-direction-changed', { detail: next }))
     setResult(null)
     setError('')
+    setNote('')
     setDetails(null)
     setDetailsLoading(false)
     setActivePos('all')
@@ -344,6 +366,7 @@ export default function QuickTranslateModal({
               setText(e.target.value)
               setResult(null)
               setError('')
+              setNote('')
               setDetails(null)
               setDetailsLoading(false)
               setActivePos('all')
@@ -390,6 +413,7 @@ export default function QuickTranslateModal({
               <div className="qt-result-text">
                 {loading ? 'Đang dịch…' : error || result}
               </div>
+              {!loading && !error && note && <p className="qt-result-note">{note}</p>}
             </div>
           )}
 

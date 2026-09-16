@@ -38,6 +38,56 @@ function normalize(text: string): string {
   return text.trim().toLowerCase().replace(/^[^a-z]+|[^a-z]+$/g, '')
 }
 
+// ---------- Nhận diện tên riêng và tiếng của chữ nhập ----------
+
+// Tách thành từng tiếng, bỏ dấu câu ở hai đầu mỗi tiếng.
+function wordsOf(text: string): string[] {
+  return text
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
+    .filter(Boolean)
+}
+
+// Một tiếng trông như TÊN RIÊNG hoặc VIẾT TẮT:
+//  - hoa chữ đầu: John, Hà, Nội, Google
+//  - hoa toàn bộ: NASA, WHO, TP
+//  - có chữ số: Covid-19, iPhone15
+const PROPER_TOKEN = /^(?:\p{Lu}[\p{L}\p{M}'’-]*|[\p{L}\p{M}'’-]*\p{N}[\p{L}\p{M}\p{N}'’-]*)$/u
+
+export function isProperNoun(word: string): boolean {
+  const w = word.trim().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '')
+  return w.length > 0 && PROPER_TOKEN.test(w)
+}
+
+// Cả chuỗi chỉ gồm tên riêng/viết tắt: "Hà Nội", "New York", "Nguyễn Văn A".
+export function isAllProperNouns(text: string): boolean {
+  const words = wordsOf(text)
+  return words.length > 0 && words.every(isProperNoun)
+}
+
+// Chữ có dấu hay không. Xét trên dạng ĐÃ TÁCH DẤU (NFD): lúc đó mọi dấu mũ, dấu
+// móc và 5 thanh của tiếng Việt đều tách ra thành ký tự tổ hợp \p{Mn}; riêng đ
+// không tách nên phải kể riêng. Dùng \p{Mn} thay vì liệt kê từng dấu để khỏi đặt
+// ký tự tổ hợp trần trong mã nguồn — nhìn vào không thấy, rất dễ hỏng khi sửa.
+const VI_MARKS = /[đĐ]|\p{Mn}/u
+
+export function hasVietnameseMarks(text: string): boolean {
+  return VI_MARKS.test(text.normalize('NFD'))
+}
+
+// Dịch vụ trả lại ĐÚNG CHỮ GỐC thì có hai khả năng rất khác nhau:
+//  - một tiếng lạ (gõ sai, ký hiệu) -> đúng là không dịch được
+//  - cụm/câu, hoặc tên riêng -> giữ nguyên chính là bản dịch đúng
+//    ("Hà Nội" sang tiếng Anh vẫn là "Hà Nội"; một câu vốn đã là tiếng đích
+//     thì không có gì để đổi)
+function keepAsIs(source: string): boolean {
+  const words = wordsOf(source)
+  if (words.length === 0) return false
+  if (words.length > 1) return true
+  return isProperNoun(words[0])
+}
+
 export function translate(text: string): TranslateResult {
   const word = normalize(text)
   const entry = dict[word]
@@ -78,15 +128,21 @@ export function glossPhrase(text: string): WordGloss[] {
 // tên riêng, viết tắt). Gộp lại thì màn hình báo "kiểm tra kết nối mạng" cho cả
 // hai, sai hẳn bản chất ở trường hợp thứ hai.
 export type TranslateOutcome =
-  | { status: 'ok'; text: string }
+  // unchanged = dịch vụ trả lại nguyên văn và đó là kết quả đúng (tên riêng,
+  // hoặc câu vốn đã là tiếng đích) — màn hình cần nói rõ vì sao chữ không đổi.
+  | { status: 'ok'; text: string; unchanged?: boolean }
   | { status: 'no-meaning' } // gọi được dịch vụ, nhưng không có nghĩa nào khác chữ gốc
   | { status: 'unreachable' } // không dịch vụ nào trả lời
 
 // reached = dịch vụ có trả lời tử tế (dù nghĩa có dùng được hay không)
-type RawTranslation = { reached: boolean; text: string | null }
+// echo    = dịch vụ trả lại đúng chữ gốc (giữ lại để outcomeOf quyết định)
+type RawTranslation = { reached: boolean; text: string | null; echo?: string }
 
-function outcomeOf(...tries: RawTranslation[]): TranslateOutcome {
+function outcomeOf(source: string, ...tries: RawTranslation[]): TranslateOutcome {
   for (const t of tries) if (t.text) return { status: 'ok', text: t.text }
+  const echoed = tries.find((t) => t.echo)
+  if (echoed?.echo && keepAsIs(source))
+    return { status: 'ok', text: echoed.echo, unchanged: true }
   return tries.some((t) => t.reached) ? { status: 'no-meaning' } : { status: 'unreachable' }
 }
 
@@ -95,13 +151,15 @@ function outcomeOf(...tries: RawTranslation[]): TranslateOutcome {
 export async function translateOnlineDetailed(text: string): Promise<TranslateOutcome> {
   const google = await googleTranslateRaw(text)
   if (google.text) return { status: 'ok', text: google.text }
-  return outcomeOf(google, await myMemoryTranslateRaw(text))
+  return outcomeOf(text, google, await myMemoryTranslateRaw(text))
 }
 
 // Trả null nếu lỗi/không dịch được (kể cả khi API trả lại đúng từ gốc tiếng Anh).
+// Nơi gọi hàm này cần MỘT NGHĨA để lưu vào từ vựng/câu, nên bản giữ nguyên văn
+// (unchanged) cũng coi như không có nghĩa.
 export async function translateOnline(text: string): Promise<string | null> {
   const outcome = await translateOnlineDetailed(text)
-  return outcome.status === 'ok' ? outcome.text : null
+  return outcome.status === 'ok' && !outcome.unchanged ? outcome.text : null
 }
 
 // Tra ĐA NGHĨA online — dùng chế độ từ điển của Google (dt=bd):
@@ -261,6 +319,17 @@ function accept(vi: string | undefined | null, src: string): string | null {
   return t
 }
 
+// Gói một câu trả lời của dịch vụ thành RawTranslation. Khác accept ở chỗ KHÔNG
+// vứt bỏ bản giữ nguyên văn mà ghi vào echo, để outcomeOf còn phân biệt được
+// "tên riêng / câu đã đúng tiếng" với "gõ sai, không có nghĩa".
+function raw(value: string | undefined | null, src: string): RawTranslation {
+  if (typeof value !== 'string') return { reached: true, text: null }
+  const t = value.trim()
+  if (!t) return { reached: true, text: null }
+  if (t.toLowerCase() === src.trim().toLowerCase()) return { reached: true, text: null, echo: t }
+  return { reached: true, text: t }
+}
+
 // Google Translate (endpoint gtx miễn phí, không cần key, có CORS)
 async function googleTranslateRaw(text: string): Promise<RawTranslation> {
   try {
@@ -274,7 +343,7 @@ async function googleTranslateRaw(text: string): Promise<RawTranslation> {
     const segs = data?.[0]
     if (!Array.isArray(segs)) return { reached: false, text: null }
     const vi = segs.map((s: unknown[]) => (typeof s?.[0] === 'string' ? s[0] : '')).join('')
-    return { reached: true, text: accept(vi, text) }
+    return raw(vi, text)
   } catch {
     return { reached: false, text: null }
   }
@@ -288,7 +357,7 @@ async function myMemoryTranslateRaw(text: string): Promise<RawTranslation> {
     const res = await fetchWithTimeout(url)
     if (!res.ok) return { reached: false, text: null }
     const data = await res.json()
-    return { reached: true, text: accept(data?.responseData?.translatedText, text) }
+    return raw(data?.responseData?.translatedText, text)
   } catch {
     return { reached: false, text: null }
   }
@@ -298,13 +367,14 @@ async function myMemoryTranslateRaw(text: string): Promise<RawTranslation> {
 // Cần internet. Bản có lý do khi không ra chữ — xem TranslateOutcome.
 export async function translateToEnglishDetailed(text: string): Promise<TranslateOutcome> {
   const [google, memory] = await Promise.all([googleTranslateVERaw(text), myMemoryTranslateVERaw(text)])
-  return outcomeOf(google, memory)
+  return outcomeOf(text, google, memory)
 }
 
-// Trả null nếu lỗi/không dịch được.
+// Trả null nếu lỗi/không dịch được. Bản giữ nguyên văn (unchanged) cũng coi như
+// không có nghĩa — xem ghi chú ở translateOnline.
 export async function translateToEnglish(text: string): Promise<string | null> {
   const outcome = await translateToEnglishDetailed(text)
-  return outcome.status === 'ok' ? outcome.text : null
+  return outcome.status === 'ok' && !outcome.unchanged ? outcome.text : null
 }
 
 async function googleTranslateVERaw(text: string): Promise<RawTranslation> {
@@ -318,7 +388,7 @@ async function googleTranslateVERaw(text: string): Promise<RawTranslation> {
     const segs = data?.[0]
     if (!Array.isArray(segs)) return { reached: false, text: null }
     const en = segs.map((s: unknown[]) => (typeof s?.[0] === 'string' ? s[0] : '')).join('')
-    return { reached: true, text: accept(en, text) }
+    return raw(en, text)
   } catch {
     return { reached: false, text: null }
   }
@@ -331,7 +401,7 @@ async function myMemoryTranslateVERaw(text: string): Promise<RawTranslation> {
     const res = await fetchWithTimeout(url)
     if (!res.ok) return { reached: false, text: null }
     const data = await res.json()
-    return { reached: true, text: accept(data?.responseData?.translatedText, text) }
+    return raw(data?.responseData?.translatedText, text)
   } catch {
     return { reached: false, text: null }
   }

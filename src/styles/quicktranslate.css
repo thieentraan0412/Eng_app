@@ -254,6 +254,14 @@
   border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
   background: color-mix(in srgb, var(--danger) 8%, var(--surface));
 }
+/* Lời giải thích khi bản dịch giữ nguyên văn (tên riêng, hoặc nhầm chiều dịch).
+   Là ghi chú chứ không phải lỗi, nên để chữ nhạt thay vì nền đỏ. */
+.qt-result-note {
+  margin: 7px 0 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .qt-result-head {
   display: flex;
   align-items: center;

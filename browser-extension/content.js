@@ -7,7 +7,7 @@
 //
 // Từ 1.5.0 còn lo luôn phần tự dịch khi bôi đen: hiện bóng dịch ngay cạnh chữ.
 ;(() => {
-  const VERSION = '1.6.0'
+  const VERSION = '1.6.1'
   const MAX_SELECTION = 1000
   const DEBOUNCE = 120
   // Thả chuột là dịch luôn — chỉ nhường một nhịp để trình duyệt chốt xong vùng
