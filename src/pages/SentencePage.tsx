@@ -45,6 +45,20 @@ import {
 } from '../services/excelImport'
 import { translateToEnglish } from '../services/translation'
 import { speak, ttsSupported } from '../services/tts'
+import {
+  DICT_RATES,
+  loadRate,
+  saveRate,
+  loadRepeat,
+  saveRepeat,
+  playDictation,
+  stopDictation,
+  stopDictationExcept,
+  stopDictationOf,
+  type DictRate,
+  type DictRepeat,
+  type DictState,
+} from '../services/dictation'
 import { openPipWindow, pipSupported } from '../services/pip'
 import { createPortal } from 'react-dom'
 import '../styles/sentence.css'
@@ -53,6 +67,19 @@ const LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 
 // Số câu hiện lúc đầu ở tab Luyện tập — phần còn lại mở bằng nút "Hiện thêm"
 const PAGE_SIZE = 20
+
+// Nhãn tốc độ đọc theo kiểu Việt (0,75×) cho thanh Nghe–chép
+const rateLabel = (r: number) => String(r).replace('.', ',') + '×'
+
+const REPEATS: { value: DictRepeat; label: string; hint: string }[] = [
+  { value: 1, label: '1 lần', hint: 'Mỗi lần bấm Nghe, máy đọc câu 1 lần' },
+  { value: 2, label: '2 lần', hint: 'Máy đọc câu 2 lần liên tiếp rồi dừng' },
+  {
+    value: 'loop',
+    label: 'Lặp lại',
+    hint: 'Máy đọc đi đọc lại tới khi bạn gõ đúng — chuyển sang câu khác cũng dừng',
+  },
+]
 
 const errMsg = errText
 
@@ -632,6 +659,20 @@ function PracticeView({
   const toggleDictation = (on: boolean) => {
     setDictation(on)
     localStorage.setItem('sc_dictation', on ? '1' : '0')
+    if (!on) stopDictation()
+  }
+  // Tốc độ đọc + số lần nghe lại — nhớ theo máy, áp dụng cho mọi câu
+  const [dictRate, setDictRate] = useState<DictRate>(loadRate)
+  const [dictRepeat, setDictRepeat] = useState<DictRepeat>(loadRepeat)
+  const changeRate = (r: DictRate) => {
+    setDictRate(r)
+    saveRate(r)
+    stopDictation() // tốc độ mới chỉ nghe được ở lượt đọc sau
+  }
+  const changeRepeat = (r: DictRepeat) => {
+    setDictRepeat(r)
+    saveRepeat(r)
+    stopDictation()
   }
   // Lọc câu theo cấp độ (A1–C2) / chủ đề
   const [levelF, setLevelF] = useState('')
@@ -651,6 +692,8 @@ function PracticeView({
   resultsRef.current = results
   const revealedRef = useRef(revealed)
   revealedRef.current = revealed
+  const dictRateRef = useRef(dictRate)
+  dictRateRef.current = dictRate
 
   // Đổi thư mục -> nạp câu + bài đã làm từ cloud, dựng lại trạng thái
   useEffect(() => {
@@ -827,6 +870,9 @@ function PracticeView({
   // .cc-typing còn sót lại trên <html> và làm hỏng bố cục các trang khác.
   useEffect(() => clearTypingMode, [])
 
+  // Rời trang Chép câu -> tắt tiếng đang đọc, nhất là khi đang để "Lặp lại"
+  useEffect(() => stopDictation, [])
+
   // Bàn phím bật/tắt/đổi cỡ (đổi bộ gõ, mở emoji, xoay máy) làm vùng nhìn thấy
   // co giãn — chỉnh lại ô đang gõ, nếu không nó trôi xuống dưới bàn phím.
   useEffect(() => {
@@ -887,8 +933,10 @@ function PracticeView({
       // Gọi ngay trong nhịp bấm/gõ Enter: iOS chỉ cho phát tiếng khi còn trong
       // thao tác của người dùng. Đọc đáp án tham chiếu khớp nhất thay vì chữ
       // người dùng gõ để có đúng hoa/thường, dấu câu -> ngữ điệu tự nhiên hơn.
-      if (gr.status === 'correct' && localStorage.getItem('sc_autospeak') !== '0') {
-        speak(gr.bestAnswer)
+      if (gr.status === 'correct') {
+        // Gõ đúng rồi thì thôi lặp (chế độ "Lặp lại" đọc mãi tới lúc này)
+        stopDictationOf(id)
+        if (localStorage.getItem('sc_autospeak') !== '0') speak(gr.bestAnswer, dictRateRef.current)
       }
       // Gõ Enter mà ĐÚNG -> tự nhảy sang câu kế tiếp (cuộn ra giữa + focus).
       // CHỈ ở màn hẹp (mobile, chế độ tập trung 1 câu/màn): bàn phím che gần hết
@@ -908,6 +956,7 @@ function PracticeView({
       if (!val) continue
       const gr = gradeSentence(item, val)
       next[item.id] = gr
+      if (gr.status === 'correct') stopDictationOf(item.id)
       toSave.push({
         id: item.id,
         rec: {
@@ -926,6 +975,8 @@ function PracticeView({
 
   const reveal = useCallback(
     (id: string) => {
+      // Đã xem đáp án thì không cần máy đọc lại nữa (nhất là khi đang "Lặp lại")
+      stopDictationOf(id)
       setRevealed((m) => ({ ...m, [id]: true }))
       persist(id, {
         answer: inputsRef.current[id] ?? '',
@@ -939,6 +990,7 @@ function PracticeView({
 
   const resetProgress = async () => {
     if (!confirm('Làm lại từ đầu? Toàn bộ câu đã gõ và kết quả của thư mục này sẽ bị xóa.')) return
+    stopDictation()
     try {
       await clearProgress(items.map((s) => s.id))
       Object.values(saveTimers.current).forEach(clearTimeout)
@@ -1032,10 +1084,48 @@ function PracticeView({
     </div>
   )
 
+  // Hàng chỉnh cách máy đọc: tốc độ 0,5×–1,5× và số lần nghe lại mỗi câu.
+  // Chỉ hiện ở chế độ Nghe–chép để không làm rối tab Dịch.
+  const dictBar = dictation && ttsSupported && (
+    <div className="cc-dictbar">
+      <span className="cc-dictbar-label">
+        <Icon name="speak" /> Tốc độ
+      </span>
+      <div className="cc-chipset">
+        {DICT_RATES.map((r) => (
+          <button
+            key={r}
+            className={dictRate === r ? 'cc-chip is-active' : 'cc-chip'}
+            onClick={() => changeRate(r)}
+            title={`Máy đọc ở tốc độ ${rateLabel(r)}`}
+          >
+            {rateLabel(r)}
+          </button>
+        ))}
+      </div>
+      <span className="cc-dictbar-label">
+        <Icon name="repeat" /> Nghe lại
+      </span>
+      <div className="cc-chipset">
+        {REPEATS.map((r) => (
+          <button
+            key={String(r.value)}
+            className={dictRepeat === r.value ? 'cc-chip is-active' : 'cc-chip'}
+            onClick={() => changeRepeat(r.value)}
+            title={r.hint}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+
   // Đổi sang câu trước/kế tiếp ở khung 1 câu/màn (mobile + cửa sổ nổi)
   const stepFocus = (from: number, dir: 1 | -1) => {
     const target = shown[from + dir]
     if (!target) return
+    stopDictation() // sang câu khác là câu cũ thôi đọc
     setCur(from + dir)
     setAdvanceTo(target.id)
   }
@@ -1099,6 +1189,8 @@ function PracticeView({
           result={results[item.id]}
           revealed={!!revealed[item.id]}
           dictation={dictation}
+          rate={dictRate}
+          repeat={dictRepeat}
           onChange={setInput}
           onCheck={checkOne}
           onReveal={reveal}
@@ -1136,6 +1228,7 @@ function PracticeView({
     return (
       <>
         {filterRow}
+        {dictBar}
         <div className="cc-empty cc-pip-placeholder">
           <Icon name="pip" />
           <b>Đang luyện trong cửa sổ nổi</b>
@@ -1155,7 +1248,10 @@ function PracticeView({
                 <b>Không có câu nào khớp bộ lọc</b>
               </div>
             ) : (
-              <div className="cc-focus">{focusBody(true)}</div>
+              <div className="cc-focus">
+                {dictBar}
+                {focusBody(true)}
+              </div>
             )}
           </div>,
           pipWin.document.body,
@@ -1168,6 +1264,7 @@ function PracticeView({
     return (
       <>
         {filterRow}
+        {dictBar}
         <div className="cc-empty">
           <Icon name="search" />
           <b>Không có câu nào khớp bộ lọc</b>
@@ -1182,6 +1279,7 @@ function PracticeView({
     return (
       <div className="cc-focus">
         {filterRow}
+        {dictBar}
         {focusBody(false)}
 
         <div className="cc-focus-tools">
@@ -1206,6 +1304,7 @@ function PracticeView({
   return (
     <>
       {filterRow}
+      {dictBar}
 
       <div className="cc-progress">
         <span className="cc-pb-num">
@@ -1244,6 +1343,8 @@ function PracticeView({
             result={results[item.id]}
             revealed={!!revealed[item.id]}
             dictation={dictation}
+            rate={dictRate}
+            repeat={dictRepeat}
             onChange={setInput}
             onCheck={checkOne}
             onReveal={reveal}
@@ -1288,6 +1389,8 @@ const SentenceCard = memo(function SentenceCard({
   result,
   revealed,
   dictation = false,
+  rate = 1,
+  repeat = 1,
   onChange,
   onCheck,
   onReveal,
@@ -1300,6 +1403,8 @@ const SentenceCard = memo(function SentenceCard({
   result?: GradeResult
   revealed: boolean
   dictation?: boolean // nghe-chép: nghe TTS đọc câu tiếng Anh rồi gõ lại
+  rate?: number // tốc độ máy đọc (0,5×–1,5×)
+  repeat?: DictRepeat // số lần đọc mỗi khi bấm Nghe (1 / 2 / lặp tới khi đúng)
   floating?: boolean // nằm trong cửa sổ nổi — document riêng, không bàn phím ảo
   onStep?: (dir: 1 | -1) => void // có thì Tab / Shift+Tab đổi câu thay vì nhảy ô
   onChange: (id: string, v: string) => void
@@ -1316,6 +1421,14 @@ const SentenceCard = memo(function SentenceCard({
 
   const [caret, setCaret] = useState(0)
   const [focused, setFocused] = useState(false)
+  // Lượt đọc của CHÍNH câu này: đổi nút Nghe ↔ Dừng, hiện đang ở lần thứ mấy
+  const [dictState, setDictState] = useState<DictState>({
+    playing: false,
+    round: 0,
+    total: null,
+  })
+  // Thẻ biến mất (đổi thư mục, đổi bộ lọc, đóng cửa sổ nổi) -> câu này thôi đọc
+  useEffect(() => () => stopDictationOf(item.id), [item.id])
 
   // Sau khi chấm (sai/gần đúng): tô ĐỎ các từ gõ sai vị trí ngay trong ô nhập.
   // Tính lại theo văn bản hiện tại nên tự cập nhật khi người dùng sửa từ.
@@ -1451,6 +1564,10 @@ const SentenceCard = memo(function SentenceCard({
   const dict = dictation && !!item.en
   // Đề tiếng Việt bị GIẤU khi nghe-chép, chỉ lộ sau khi chấm / xem đáp án
   const hidePrompt = dict && !result && !revealed
+  // Đang đọc lượt thứ mấy: "2/3" khi biết trước số lần, "lần 4" khi đang lặp
+  const roundLabel = dictState.total
+    ? `${dictState.round}/${dictState.total}`
+    : `lần ${dictState.round}`
 
   return (
     <article id={`cc-${item.id}`} className={`cc-sent${statusClass}`}>
@@ -1461,14 +1578,44 @@ const SentenceCard = memo(function SentenceCard({
         </span>
         {dict && (
           <span className="cc-listen">
-            <button type="button" className="cc-btn cc-btn-sm" onClick={() => speak(item.en)}>
-              <Icon name="speak" /> Nghe
+            <button
+              type="button"
+              className={dictState.playing ? 'cc-btn cc-btn-sm is-playing' : 'cc-btn cc-btn-sm'}
+              title={
+                dictState.playing
+                  ? 'Dừng đọc'
+                  : repeat === 'loop'
+                    ? 'Đọc lặp lại tới khi bạn gõ đúng'
+                    : `Đọc ${repeat} lần ở tốc độ ${rateLabel(rate)}`
+              }
+              onClick={() =>
+                dictState.playing
+                  ? stopDictation()
+                  : playDictation(item.id, item.en, {
+                      rate,
+                      repeat,
+                      onState: setDictState,
+                    })
+              }
+            >
+              {dictState.playing ? (
+                <>
+                  <Icon name="stop" /> Dừng
+                  <span className="cc-listen-round">{roundLabel}</span>
+                </>
+              ) : (
+                <>
+                  <Icon name="speak" /> Nghe
+                </>
+              )}
             </button>
             <button
               type="button"
               className="cc-btn cc-btn-sm"
-              title="Đọc chậm"
-              onClick={() => speak(item.en, 0.65)}
+              title="Nghe lại thật chậm 1 lần (không đổi tốc độ đã chọn)"
+              onClick={() =>
+                playDictation(item.id, item.en, { rate: 0.5, repeat: 1, onState: setDictState })
+              }
             >
               <Icon name="clock" /> Chậm
             </button>
@@ -1567,6 +1714,8 @@ const SentenceCard = memo(function SentenceCard({
           onScroll={syncScroll}
           onFocus={(e) => {
             setFocused(true)
+            // Chuyển sang gõ câu khác -> câu đang được đọc (kể cả đang lặp) dừng
+            stopDictationExcept(item.id)
             // Chế độ thu gọn khi gõ là cho bàn phím ảo trên trang chính — cửa sổ
             // nổi mà bật thì trang chính phía sau bị cất mất tiêu đề/điều hướng.
             if (floating) return
@@ -1622,7 +1771,7 @@ const SentenceCard = memo(function SentenceCard({
         </div>
       )}
 
-      {result && <ResultRow item={item} result={result} revealed={revealed} />}
+      {result && <ResultRow item={item} result={result} revealed={revealed} rate={rate} />}
     </article>
   )
 })
@@ -1634,10 +1783,12 @@ function ResultRow({
   item,
   result,
   revealed,
+  rate = 1,
 }: {
   item: SentenceItem
   result: GradeResult
   revealed: boolean
+  rate?: number
 }) {
   const hint = result.nextWord
   return (
@@ -1653,7 +1804,7 @@ function ResultRow({
           className="cc-ibtn cc-speak"
           title="Nghe lại câu"
           aria-label="Nghe lại câu"
-          onClick={() => speak(result.bestAnswer)}
+          onClick={() => speak(result.bestAnswer, rate)}
         >
           <Icon name="speak" />
         </button>

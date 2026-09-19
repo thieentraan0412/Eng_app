@@ -294,6 +294,7 @@ const ICONS = {
       <rect x="12.4" y="12" width="6.4" height="5.2" rx="1.2" />
     </>
   ),
+  stop: <rect x="6" y="6" width="12" height="12" rx="2.2" />,
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof ICONS
