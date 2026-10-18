@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Áp dụng 6 câu hỏi</title>
+<style>
+:root {
+  --bg: #f7f6f2; --surface: #ffffff; --text: #22211f; --muted: #6b6860;
+  --border: #e3e0d8; --accent: #2f6f5e; --accent-soft: #e6f0ec; --quote-bg: #f1efe8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161716; --surface: #1f2120; --text: #e8e6e1; --muted: #a09d95;
+    --border: #343734; --accent: #7cc4ad; --accent-soft: #23312c; --quote-bg: #252826;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161716; --surface: #1f2120; --text: #e8e6e1; --muted: #a09d95;
+  --border: #343734; --accent: #7cc4ad; --accent-soft: #23312c; --quote-bg: #252826;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+header.top {
+  position: sticky; top: 0; z-index: 2; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+header.top .inner { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 16px; max-width: 1180px; margin: 0 auto; }
+header.top a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 999px; font-size: 14px; }
+header.top a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+header.top button {
+  margin-left: auto; background: none; border: 1px solid var(--border); color: var(--text);
+  border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 14px; cursor: pointer;
+}
+.layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 40px; max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+nav.toc { position: sticky; top: 72px; align-self: start; max-height: calc(100vh - 96px); overflow: auto; font-size: 14px; }
+nav.toc p { margin: 0 0 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+nav.toc a { display: block; color: var(--muted); text-decoration: none; padding: 3px 0; }
+nav.toc a:hover { color: var(--accent); }
+nav.toc a.l3 { padding-left: 12px; }
+main { max-width: 780px; min-width: 0; }
+h1 { font-size: 30px; line-height: 1.25; margin: 0 0 16px; }
+h2 { font-size: 23px; margin: 44px 0 12px; padding-top: 8px; color: var(--accent); }
+h3 { font-size: 19px; margin: 32px 0 8px; }
+h1, h2, h3 { scroll-margin-top: 72px; }
+p, ul { margin: 0 0 14px; }
+ul { padding-left: 22px; }
+li { margin: 4px 0; }
+a { color: var(--accent); }
+hr { border: 0; border-top: 1px solid var(--border); margin: 36px 0; }
+blockquote {
+  margin: 0 0 16px; padding: 12px 16px; background: var(--quote-bg);
+  border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;
+}
+.table-wrap { overflow-x: auto; margin: 0 0 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+th { background: var(--accent-soft); font-weight: 600; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; gap: 0; }
+  nav.toc { display: none; }
+  h1 { font-size: 25px; }
+  td:first-child { white-space: normal; }
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="inner">
+<a href="huong-dan.html">12 hướng phát triển ý</a>
+<a href="example.html" aria-current="page">Áp dụng WHO–WHICH</a>
+<button type="button" id="theme">Sáng / Tối</button>
+</div></header>
+<div class="layout">
+<nav class="toc"><p>Mục lục</p>
+<a class="l1" href="#ap-dung-cong-thuc-who-why-what-how-when-which-cho-12-huong-phat-trien-y">Áp dụng công thức WHO – WHY – WHAT – HOW – WHEN – WHICH cho 12 hướng phát triển ý</a>
+<a class="l2" href="#1-government-chinh-phu">1. Government – Chính phủ</a>
+<a class="l2" href="#2-individuals-ca-nhan">2. Individuals – Cá nhân</a>
+<a class="l2" href="#3-schools-and-universities-truong-hoc">3. Schools and Universities – Trường học</a>
+<a class="l2" href="#4-parents-and-families-cha-me-va-gia-dinh">4. Parents and Families – Cha mẹ và gia đình</a>
+<a class="l2" href="#5-businesses-and-employers-doanh-nghiep">5. Businesses and Employers – Doanh nghiệp</a>
+<a class="l2" href="#6-health-suc-khoe">6. Health – Sức khỏe</a>
+<a class="l2" href="#7-economy-kinh-te-va-tai-chinh">7. Economy – Kinh tế và tài chính</a>
+<a class="l2" href="#8-society-and-community-xa-hoi-va-cong-dong">8. Society and Community – Xã hội và cộng đồng</a>
+<a class="l2" href="#9-environment-moi-truong">9. Environment – Môi trường</a>
+<a class="l2" href="#10-technology-cong-nghe">10. Technology – Công nghệ</a>
+<a class="l2" href="#11-time-and-convenience-thoi-gian-va-su-tien-loi">11. Time and Convenience – Thời gian và sự tiện lợi</a>
+<a class="l2" href="#12-long-term-and-short-term-effects-tac-dong-ngan-han-va-dai-han">12. Long-term and Short-term Effects – Tác động ngắn hạn và dài hạn</a>
+<a class="l2" href="#bang-tra-nhanh-cau-hoi-nao-goi-huong-nao">Bảng tra nhanh: câu hỏi nào gọi hướng nào?</a>
+</nav>
+<main>
+
+<h1 id="ap-dung-cong-thuc-who-why-what-how-when-which-cho-12-huong-phat-trien-y">Áp dụng công thức WHO – WHY – WHAT – HOW – WHEN – WHICH cho 12 hướng phát triển ý</h1>
+<blockquote>Đi kèm <a href="huong-dan.html">huong-dan.html</a>. Mỗi hướng gồm: bảng 6 câu hỏi, cụm từ tiếng Anh, một chuỗi lập luận và một đoạn mẫu (khoảng band 6.0–6.5).</blockquote>
+<p>Khi đọc bất kỳ đề Task 2 nào, hãy tự hỏi:</p>
+<ul><li><strong>WHO?</strong> Ai liên quan? Chính phủ, cá nhân, trường học, cha mẹ, doanh nghiệp hay cộng đồng?</li><li><strong>WHY?</strong> Tại sao vấn đề xảy ra?</li><li><strong>WHAT?</strong> Lợi ích, tác hại hoặc hậu quả là gì?</li><li><strong>HOW?</strong> Giải pháp nào có thể thực hiện?</li><li><strong>WHEN?</strong> Tác động ngắn hạn hay dài hạn?</li><li><strong>WHICH?</strong> Phương án nào tốt hơn và tại sao?</li></ul>
+<p><strong>Cách dùng:</strong> WHO giúp chọn hướng (mục 1–5 là các <em>đối tượng</em>). WHY, WHAT, HOW, WHEN, WHICH giúp đào sâu hướng đó. Các mục 6–12 là các <em>khía cạnh</em>, dùng để trả lời câu WHAT và WHEN cho mọi đối tượng.</p>
+<hr>
+<h2 id="1-government-chinh-phu">1. Government – Chính phủ</h2>
+<div class="table-wrap"><table><thead><tr><th>Câu hỏi</th><th>Gợi ý ý</th><th>Cụm từ tiếng Anh</th></tr></thead><tbody><tr><td>WHO</td><td>Chính phủ, chính quyền địa phương, cơ quan quản lý</td><td>the government, local authorities, policymakers</td></tr><tr><td>WHY</td><td>Vấn đề quá lớn, cá nhân không tự giải quyết được; cần nguồn lực và quyền lực pháp lý</td><td>beyond the capacity of individuals, require large-scale funding</td></tr><tr><td>WHAT</td><td>Tác động trên diện rộng, thay đổi nhanh hành vi của cả xã hội</td><td>have a nationwide impact, change behaviour on a large scale</td></tr><tr><td>HOW</td><td>Ban hành luật, tăng ngân sách, trợ cấp, đánh thuế, xây hạ tầng, tuyên truyền</td><td>introduce legislation, allocate funding, impose taxes, launch public campaigns</td></tr><tr><td>WHEN</td><td>Ngắn hạn: tốn ngân sách, có thể gặp phản đối. Dài hạn: thay đổi bền vững, có hệ thống</td><td>in the short term it is costly; in the long run it brings lasting change</td></tr><tr><td>WHICH</td><td>Luật + chế tài hiệu quả hơn lời kêu gọi tự nguyện vì có tính bắt buộc</td><td>legally binding measures are more effective than voluntary ones</td></tr></tbody></table></div>
+<p><strong>Chuỗi lập luận:</strong> Chính phủ đánh thuế đồ uống có đường → giá tăng → người dân mua ít hơn → giảm béo phì và chi phí y tế.</p>
+<p><strong>Đoạn mẫu:</strong></p>
+<blockquote>Governments are in the best position to tackle this problem because they have both the authority and the resources. For example, a tax on sugary drinks would raise their price, which would discourage people from buying them. As a result, obesity rates could fall, and the healthcare system would save a considerable amount of money in the long term.</blockquote>
+<hr>
+<h2 id="2-individuals-ca-nhan">2. Individuals – Cá nhân</h2>
+<div class="table-wrap"><table><thead><tr><th>Câu hỏi</th><th>Gợi ý ý</th><th>Cụm từ tiếng Anh</th></tr></thead><tbody><tr><td>WHO</td><td>Mỗi người, người tiêu dùng, công dân</td><td>individuals, consumers, citizens</td></tr><tr><td>WHY</td><td>Vấn đề bắt nguồn từ thói quen và lựa chọn hằng ngày của từng người</td><td>stem from daily habits and personal choices</td></tr><tr><td>WHAT</td><td>Thay đổi nhỏ nhưng cộng dồn thành tác động lớn; tạo ảnh hưởng tới người xung quanh</td><td>small changes add up, set an example for others</td></tr><tr><td>HOW</td><td>Đổi thói quen, tự học, tiết kiệm tài nguyên, tuân thủ luật, chọn sản phẩm có trách nhiệm</td><td>change their lifestyle, take responsibility, make informed choices</td></tr><tr><td>WHEN</td><td>Ngắn hạn: khó duy trì, cần ý chí. Dài hạn: trở thành lối sống, lan tỏa cho thế hệ sau</td><td>hard to maintain at first, become second nature over time</td></tr><tr><td>WHICH</td><td>Hiệu quả khi có nhiều người cùng làm; một mình cá nhân thì tác động hạn chế</td><td>effective only when many people take part</td></tr></tbody></table></div>
+<p><strong>Chuỗi lập luận:</strong> Mỗi người mang túi vải khi đi chợ → giảm túi nilon → giảm rác thải nhựa → khi hàng triệu người cùng làm, lượng rác giảm đáng kể.</p>
+<p><strong>Đoạn mẫu:</strong></p>
+<blockquote>On the other hand, individuals also play an important role. Many environmental problems are caused by everyday habits, such as using plastic bags or driving short distances. If each person brought their own bag and walked or cycled more often, the amount of waste and emissions would fall. Although one person's actions seem small, the combined effect of millions of people can be significant.</blockquote>
+<hr>
+<h2 id="3-schools-and-universities-truong-hoc">3. Schools and Universities – Trường học</h2>
+<div class="table-wrap"><table><thead><tr><th>Câu hỏi</th><th>Gợi ý ý</th><th>Cụm từ tiếng Anh</th></tr></thead><tbody><tr><td>WHO</td><td>Nhà trường, giáo viên, trường đại học</td><td>schools, teachers, educational institutions</td></tr><tr><td>WHY</td><td>Trẻ dành phần lớn thời gian ở trường; đây là nơi hình thành kiến thức và thái độ</td><td>children spend most of their time at school, shape their attitudes</td></tr><tr><td>WHAT</td><td>Trang bị kiến thức, kỹ năng và ý thức từ sớm; ảnh hưởng tới cả thế hệ</td><td>equip students with skills, influence a whole generation</td></tr><tr><td>HOW</td><td>Đưa môn học mới vào chương trình, dạy kỹ năng thực tế, hoạt động ngoại khóa, hướng nghiệp</td><td>include it in the curriculum, offer practical courses, career guidance</td></tr><tr><td>WHEN</td><td>Ngắn hạn: cần đào tạo giáo viên, sửa chương trình. Dài hạn: thế hệ trẻ có ý thức và kỹ năng tốt hơn</td><td>require teacher training, produce a better-prepared generation</td></tr><tr><td>WHICH</td><td>Giáo dục là giải pháp gốc rễ, bền vững hơn biện pháp trừng phạt</td><td>education tackles the root cause rather than the symptoms</td></tr></tbody></table></div>
+<p><strong>Chuỗi lập luận:</strong> Trường dạy kỹ năng quản lý tài chính → học sinh biết lập ngân sách → khi đi làm ít nợ nần → xã hội ổn định hơn.</p>
+<p><strong>Đoạn mẫu:</strong></p>
+<blockquote>Schools can also make a difference by teaching practical life skills. If financial management were part of the curriculum, students would learn how to budget and save before they start earning money. Consequently, they would be less likely to fall into debt as adults, which benefits not only themselves but also society as a whole.</blockquote>
+<hr>
+<h2 id="4-parents-and-families-cha-me-va-gia-dinh">4. Parents and Families – Cha mẹ và gia đình</h2>
+<div class="table-wrap"><table><thead><tr><th>Câu hỏi</th><th>Gợi ý ý</th><th>Cụm từ tiếng Anh</th></tr></thead><tbody><tr><td>WHO</td><td>Cha mẹ, ông bà, người giám hộ</td><td>parents, families, caregivers</td></tr><tr><td>WHY</td><td>Gia đình là môi trường đầu tiên và gần gũi nhất; trẻ học bằng cách bắt chước</td><td>children imitate their parents, the first teachers</td></tr><tr><td>WHAT</td><td>Hình thành tính cách, giá trị đạo đức, thói quen từ nhỏ</td><td>shape children's character and values</td></tr><tr><td>HOW</td><td>Làm gương, giới hạn thời gian dùng thiết bị, dành thời gian cho con, khuyến khích tự lập</td><td>set a good example, limit screen time, spend quality time</td></tr><tr><td>WHEN</td><td>Ngắn hạn: tốn thời gian, cha mẹ bận rộn khó làm. Dài hạn: trẻ trưởng thành tự lập, có trách nhiệm</td><td>time-consuming for busy parents, raise independent adults</td></tr><tr><td>WHICH</td><td>Cha mẹ ảnh hưởng sớm và sâu hơn trường học, nhưng cần trường học hỗ trợ</td><td>parents have an earlier and deeper influence than schools</td></tr></tbody></table></div>
+<p><strong>Chuỗi lập luận:</strong> Cha mẹ giới hạn thời gian dùng điện thoại của con → trẻ vận động và đọc sách nhiều hơn → sức khỏe và khả năng tập trung tốt hơn.</p>
+<p><strong>Đoạn mẫu:</strong></p>
+<blockquote>Parents are arguably the most influential people in a child's life, since children tend to copy what they see at home. If parents limit their own screen time and set clear rules for their children, young people are more likely to spend time reading or playing outside. This would improve both their physical health and their ability to concentrate at school.</blockquote>
+<hr>
+<h2 id="5-businesses-and-employers-doanh-nghiep">5. Businesses and Employers – Doanh nghiệp</h2>
+<div class="table-wrap"><table><thead><tr><th>Câu hỏi</th><th>Gợi ý ý</th><th>Cụm từ tiếng Anh</th></tr></thead><tbody><tr><td>WHO</td><td>Doanh nghiệp, nhà tuyển dụng, tập đoàn</td><td>companies, employers, corporations</td></tr><tr><td>WHY</td><td>Doanh nghiệp tạo ra phần lớn sản phẩm, việc làm và cũng gây nhiều ô nhiễm</td><td>major source of jobs and pollution</td></tr><tr><td>WHAT</td><td>Ảnh hưởng tới người lao động, khách hàng và môi trường</td><td>affect employees, customers and the environment</td></tr><tr><td>HOW</td><td>Đào tạo nhân viên, cải thiện môi trường làm việc, công nghệ sạch, trách nhiệm xã hội</td><td>provide training, adopt green technology, corporate social responsibility</td></tr><tr><td>WHEN</td><td>Ngắn hạn: tăng chi phí, giảm lợi nhuận. Dài hạn: nhân viên gắn bó, uy tín thương hiệu tăng</td><td>raise costs initially, improve reputation and loyalty</td></tr><tr><td>WHICH</td><td>Doanh nghiệp thường chỉ thay đổi khi có lợi ích hoặc bị luật bắt buộc → nên kết hợp với chính phủ</td><td>companies act mainly when it is profitable or required by law</td></tr></tbody></table></div>
+<p><strong>Chuỗi lập luận:</strong> Công ty cho nhân viên làm việc linh hoạt → nhân viên ít căng thẳng → năng suất tăng, ít nghỉ việc → công ty tiết kiệm chi phí tuyển dụng.</p>
+<p><strong>Đoạn mẫu:</strong></p>
+<blockquote>Employers also benefit from looking after their staff. For instance, companies that offer flexible working hours often find that their employees are less stressed and more productive. As fewer people leave their jobs, the company saves money on recruiting and training new staff, so this policy is good for both sides.</blockquote>
+<hr>
+<h2 id="6-health-suc-khoe">6. Health – Sức khỏe</h2>
+<div class="table-wrap"><table><thead><tr><th>Câu hỏi</th><th>Gợi ý ý</th><th>Cụm từ tiếng Anh</th></tr></thead><tbody><tr><td>WHO</td><td>Người dân, bệnh nhân, bác sĩ, hệ thống y tế</td><td>the public, patients, the healthcare system</td></tr><tr><td>WHY</td><td>Lối sống ít vận động, ăn uống thiếu lành mạnh, áp lực công việc, ô nhiễm</td><td>sedentary lifestyle, unhealthy diet, stress, pollution</td></tr><tr><td>WHAT</td><td>Lợi: khỏe mạnh, sống lâu. Hại: bệnh tật, trầm cảm, mất khả năng lao động</td><td>improve wellbeing / lead to obesity, depression, lost productivity</td></tr><tr><td>HOW</td><td>Tập thể dục, ăn uống lành mạnh, khám định kỳ, hỗ trợ sức khỏe tinh thần</td><td>regular exercise, a balanced diet, regular check-ups, mental health support</td></tr><tr><td>WHEN</td><td>Ngắn hạn: cảm thấy khỏe, ít stress. Dài hạn: giảm bệnh mãn tính, giảm chi phí y tế</td><td>feel better immediately, reduce chronic diseases in the long run</td></tr><tr><td>WHICH</td><td>Phòng bệnh rẻ và hiệu quả hơn chữa bệnh</td><td>prevention is cheaper and more effective than cure</td></tr></tbody></table></div>
+<p><strong>Chuỗi lập luận:</strong> Người dân vận động nhiều hơn → giảm bệnh tim mạch, tiểu đường → ít phải nhập viện → giảm áp lực cho bệnh viện và ngân sách y tế.</p>
+<p><strong>Đoạn mẫu:</strong></p>
+<blockquote>From a health perspective, this change would be highly beneficial. Regular physical activity reduces the risk of serious illnesses such as heart disease and diabetes. If fewer people developed these conditions, hospitals would be less overcrowded and the government could spend less on treatment, since preventing a disease is far cheaper than curing it.</blockquote>
+<hr>
+<h2 id="7-economy-kinh-te-va-tai-chinh">7. Economy – Kinh tế và tài chính</h2>
+<div class="table-wrap"><table><thead><tr><th>Câu hỏi</th><th>Gợi ý ý</th><th>Cụm từ tiếng Anh</th></tr></thead><tbody><tr><td>WHO</td><td>Người lao động, doanh nghiệp, nhà đầu tư, nhà nước</td><td>workers, businesses, investors, the state</td></tr><tr><td>WHY</td><td>Chi phí sinh hoạt tăng, thất nghiệp, cạnh tranh toàn cầu</td><td>rising living costs, unemployment, global competition</td></tr><tr><td>WHAT</td><td>Lợi: việc làm, thu nhập, đầu tư. Hại: tốn ngân sách, chênh lệch giàu nghèo</td><td>create jobs, boost income / costly, widen the wealth gap</td></tr><tr><td>HOW</td><td>Đầu tư vào ngành mới, ưu đãi thuế, đào tạo lao động, thu hút vốn nước ngoài</td><td>invest in new industries, offer tax incentives, attract foreign investment</td></tr><tr><td>WHEN</td><td>Ngắn hạn: chi phí đầu tư lớn. Dài hạn: kinh tế tăng trưởng, mức sống cao hơn</td><td>require heavy investment, stimulate long-term growth</td></tr><tr><td>WHICH</td><td>Khoản chi ban đầu đáng giá nếu mang lại lợi ích kinh tế lâu dài</td><td>the initial cost is justified by long-term economic gains</td></tr></tbody></table></div>
+<p><strong>Chuỗi lập luận:</strong> Phát triển du lịch → mở thêm khách sạn, nhà hàng → tạo việc làm cho người dân địa phương → thu nhập tăng, kinh tế vùng phát triển.</p>
+<p><strong>Đoạn mẫu:</strong></p>
+<blockquote>Economically, tourism brings considerable advantages to local communities. The growth of hotels, restaurants and transport services creates thousands of jobs, particularly for young people who might otherwise move to big cities. This increases household income and allows the local government to collect more taxes, which can then be spent on schools and roads.</blockquote>
+<hr>
+<h2 id="8-society-and-community-xa-hoi-va-cong-dong">8. Society and Community – Xã hội và cộng đồng</h2>
+<div class="table-wrap"><table><thead><tr><th>Câu hỏi</th><th>Gợi ý ý</th><th>Cụm từ tiếng Anh</th></tr></thead><tbody><tr><td>WHO</td><td>Cộng đồng, người già, người nghèo, người khuyết tật, người nhập cư</td><td>local communities, vulnerable groups, the elderly, minorities</td></tr><tr><td>WHY</td><td>Bất bình đẳng, đô thị hóa làm con người xa cách, thiếu dịch vụ công</td><td>inequality, urbanisation, lack of public services</td></tr><tr><td>WHAT</td><td>Lợi: gắn kết, an toàn, công bằng. Hại: cô lập, tội phạm, mâu thuẫn xã hội</td><td>strengthen social bonds / lead to isolation, crime, social tension</td></tr><tr><td>HOW</td><td>Xây không gian công cộng, hỗ trợ nhóm yếu thế, tình nguyện, hoạt động cộng đồng</td><td>build community centres, support disadvantaged groups, volunteer</td></tr><tr><td>WHEN</td><td>Ngắn hạn: cần thời gian để mọi người tham gia. Dài hạn: xã hội hòa nhập, ít tội phạm</td><td>slow to take effect, create a more inclusive society</td></tr><tr><td>WHICH</td><td>Xã hội gắn kết giúp giảm nhiều vấn đề cùng lúc (cô đơn, tội phạm, bất bình đẳng)</td><td>addresses several problems at the same time</td></tr></tbody></table></div>
+<p><strong>Chuỗi lập luận:</strong> Xây trung tâm cộng đồng → người dân gặp gỡ, tham gia hoạt động chung → giảm cô đơn ở người già, thanh thiếu niên ít sa vào tệ nạn → khu dân cư an toàn hơn.</p>
+<p><strong>Đoạn mẫu:</strong></p>
+<blockquote>Another advantage relates to community life. Public facilities such as libraries and community centres give people of different ages a place to meet and take part in shared activities. This reduces loneliness among the elderly and keeps teenagers away from antisocial behaviour, making neighbourhoods safer and more united.</blockquote>
+<hr>
+<h2 id="9-environment-moi-truong">9. Environment – Môi trường</h2>
+<div class="table-wrap"><table><thead><tr><th>Câu hỏi</th><th>Gợi ý ý</th><th>Cụm từ tiếng Anh</th></tr></thead><tbody><tr><td>WHO</td><td>Chính phủ, nhà máy, người tiêu dùng, thế hệ tương lai</td><td>governments, factories, consumers, future generations</td></tr><tr><td>WHY</td><td>Công nghiệp hóa, phương tiện cá nhân, tiêu dùng quá mức, rác thải nhựa</td><td>industrialisation, private vehicles, overconsumption, plastic waste</td></tr><tr><td>WHAT</td><td>Hại: ô nhiễm không khí và nước, biến đổi khí hậu, mất đa dạng sinh học</td><td>air and water pollution, climate change, loss of biodiversity</td></tr><tr><td>HOW</td><td>Năng lượng tái tạo, tái chế, giao thông công cộng, trồng rừng, hạn chế đồ nhựa</td><td>renewable energy, recycling, public transport, reforestation</td></tr><tr><td>WHEN</td><td>Ngắn hạn: tốn chi phí chuyển đổi. Dài hạn: phát triển bền vững, bảo vệ thế hệ sau</td><td>costly transition, sustainable development, protect future generations</td></tr><tr><td>WHICH</td><td>Năng lượng sạch tốt hơn nhiên liệu hóa thạch vì không cạn kiệt và ít khí thải</td><td>renewable sources are inexhaustible and cleaner</td></tr></tbody></table></div>
+<p><strong>Chuỗi lập luận:</strong> Đầu tư xe buýt và tàu điện → ít người đi xe máy, ô tô → giảm khí thải và kẹt xe → không khí trong lành hơn.</p>
+<p><strong>Đoạn mẫu:</strong></p>
+<blockquote>The environmental benefits of public transport are clear. When a city provides fast and affordable buses and trains, many residents leave their cars at home. This leads to lower carbon emissions and less traffic congestion, so air quality improves noticeably. In the long term, such investment is essential for sustainable urban development.</blockquote>
+<hr>
+<h2 id="10-technology-cong-nghe">10. Technology – Công nghệ</h2>
+<div class="table-wrap"><table><thead><tr><th>Câu hỏi</th><th>Gợi ý ý</th><th>Cụm từ tiếng Anh</th></tr></thead><tbody><tr><td>WHO</td><td>Người dùng, học sinh, người lao động, công ty công nghệ</td><td>users, students, workers, tech companies</td></tr><tr><td>WHY</td><td>Internet và AI phát triển nhanh, thiết bị rẻ và phổ biến</td><td>rapid development of the Internet and AI, affordable devices</td></tr><tr><td>WHAT</td><td>Lợi: nhanh, chính xác, kết nối, tiếp cận thông tin. Hại: mất việc, lộ dữ liệu, phụ thuộc</td><td>efficient, accurate, connected / job losses, privacy risks, overdependence</td></tr><tr><td>HOW</td><td>Dùng công nghệ có kiểm soát, đào tạo lại lao động, luật bảo vệ dữ liệu</td><td>use it responsibly, retrain workers, data protection laws</td></tr><tr><td>WHEN</td><td>Ngắn hạn: nhiều người mất việc, khó thích nghi. Dài hạn: năng suất tăng, xuất hiện nghề mới</td><td>short-term job losses, new types of jobs in the long run</td></tr><tr><td>WHICH</td><td>Lợi ích lớn hơn tác hại nếu có quy định và đào tạo phù hợp</td><td>benefits outweigh drawbacks if properly regulated</td></tr></tbody></table></div>
+<p><strong>Chuỗi lập luận:</strong> Học trực tuyến → học sinh vùng xa tiếp cận được giáo viên giỏi → giảm chênh lệch giáo dục; nhưng nếu thiếu tương tác trực tiếp → kỹ năng xã hội yếu đi.</p>
+<p><strong>Đoạn mẫu:</strong></p>
+<blockquote>Technology has transformed education in many positive ways. Online courses allow students in remote areas to learn from experienced teachers without travelling to a city, which narrows the gap between rural and urban education. However, if learning takes place only through a screen, students may have fewer chances to develop social skills, so online learning should complement rather than replace classroom teaching.</blockquote>
+<hr>
+<h2 id="11-time-and-convenience-thoi-gian-va-su-tien-loi">11. Time and Convenience – Thời gian và sự tiện lợi</h2>
+<div class="table-wrap"><table><thead><tr><th>Câu hỏi</th><th>Gợi ý ý</th><th>Cụm từ tiếng Anh</th></tr></thead><tbody><tr><td>WHO</td><td>Người đi làm, gia đình bận rộn, người sống ở thành phố</td><td>busy professionals, working parents, city dwellers</td></tr><tr><td>WHY</td><td>Nhịp sống nhanh, quỹ thời gian ít, đi lại mất nhiều thời gian</td><td>fast-paced lifestyle, long commutes, time pressure</td></tr><tr><td>WHAT</td><td>Lợi: tiết kiệm thời gian, giảm công sức. Hại: lười vận động, ít giao tiếp trực tiếp</td><td>save time and effort / encourage inactivity, less face-to-face contact</td></tr><tr><td>HOW</td><td>Làm việc từ xa, mua sắm online, dịch vụ giao hàng, tự động hóa việc nhà</td><td>work remotely, shop online, use delivery services</td></tr><tr><td>WHEN</td><td>Ngắn hạn: tiện ngay lập tức. Dài hạn: cân bằng công việc – cuộc sống tốt hơn, nhưng dễ phụ thuộc</td><td>instant convenience, better work–life balance, risk of dependence</td></tr><tr><td>WHICH</td><td>Thời gian tiết kiệm được chỉ có giá trị nếu dùng cho việc có ích (gia đình, sức khỏe)</td><td>saved time is valuable only if used wisely</td></tr></tbody></table></div>
+<p><strong>Chuỗi lập luận:</strong> Làm việc tại nhà → không mất 1–2 giờ đi lại mỗi ngày → có thêm thời gian cho gia đình và tập thể dục → cân bằng công việc – cuộc sống tốt hơn.</p>
+<p><strong>Đoạn mẫu:</strong></p>
+<blockquote>One major advantage of working from home is the time it saves. Employees no longer need to spend one or two hours commuting every day, and they can use this time to exercise, cook healthy meals or be with their families. As a result, many remote workers report a better work–life balance and higher job satisfaction.</blockquote>
+<hr>
+<h2 id="12-long-term-and-short-term-effects-tac-dong-ngan-han-va-dai-han">12. Long-term and Short-term Effects – Tác động ngắn hạn và dài hạn</h2>
+<div class="table-wrap"><table><thead><tr><th>Câu hỏi</th><th>Gợi ý ý</th><th>Cụm từ tiếng Anh</th></tr></thead><tbody><tr><td>WHO</td><td>Thế hệ hiện tại và thế hệ tương lai</td><td>the current generation, future generations</td></tr><tr><td>WHY</td><td>Nhiều giải pháp tốn kém lúc đầu nhưng có lợi về sau, hoặc ngược lại</td><td>initial costs vs. long-term benefits</td></tr><tr><td>WHAT</td><td>Ngắn hạn: chi phí, khó thích nghi, mất thời gian đào tạo. Dài hạn: năng suất, tiết kiệm, chất lượng sống</td><td>initial costs, adjustment period / higher productivity, savings</td></tr><tr><td>HOW</td><td>Thực hiện từng bước, hỗ trợ người bị ảnh hưởng trong giai đoạn chuyển đổi</td><td>introduce changes gradually, support those affected</td></tr><tr><td>WHEN</td><td>Đây chính là câu WHEN: luôn so sánh "trước mắt" với "lâu dài"</td><td>in the short term… / in the long run…</td></tr><tr><td>WHICH</td><td>Nên chọn giải pháp bền vững dù tốn kém ban đầu</td><td>long-term benefits outweigh short-term costs</td></tr></tbody></table></div>
+<p><strong>Chuỗi lập luận:</strong> Lắp pin mặt trời → ngắn hạn: chi phí lắp đặt cao → dài hạn: hóa đơn điện giảm, hoàn vốn sau vài năm, giảm khí thải cho thế hệ sau.</p>
+<p><strong>Đoạn mẫu:</strong></p>
+<blockquote>Although installing solar panels is expensive at first, it is a wise investment in the long run. Households can cut their electricity bills significantly and usually recover the initial cost within a few years. More importantly, reducing our dependence on fossil fuels helps protect the planet for future generations, so the short-term cost is clearly worth paying.</blockquote>
+<hr>
+<h2 id="bang-tra-nhanh-cau-hoi-nao-goi-huong-nao">Bảng tra nhanh: câu hỏi nào gọi hướng nào?</h2>
+<div class="table-wrap"><table><thead><tr><th>Câu hỏi</th><th>Hướng nên nghĩ tới đầu tiên</th><th>Dạng đề thường gặp</th></tr></thead><tbody><tr><td>WHO</td><td>1–5 (Chính phủ, Cá nhân, Trường học, Gia đình, Doanh nghiệp)</td><td>Discuss both views, Agree/Disagree về trách nhiệm</td></tr><tr><td>WHY</td><td>6–11 (tìm nguyên nhân thuộc khía cạnh nào)</td><td>Causes and Solutions, Problem and Solution</td></tr><tr><td>WHAT</td><td>6–11 (lợi ích, tác hại theo từng khía cạnh)</td><td>Advantages and Disadvantages, Positive or Negative</td></tr><tr><td>HOW</td><td>1–5 (ai làm gì)</td><td>Solutions, What can be done</td></tr><tr><td>WHEN</td><td>12</td><td>Mọi dạng đề, dùng để làm sâu lập luận</td></tr><tr><td>WHICH</td><td>12 kết hợp 1–5</td><td>Discuss both views, Outweigh, To what extent</td></tr></tbody></table></div>
+<p><strong>Mẹo:</strong> Mỗi đoạn thân bài chỉ cần <strong>1 đối tượng (WHO) + 1–2 khía cạnh (WHAT/WHEN)</strong>, triển khai theo chuỗi <em>Ý chính → Giải thích (WHY/HOW) → Ví dụ → Kết quả</em>. Ví dụ: <em>Chính phủ (1)</em> đánh thuế đồ ngọt → <em>Sức khỏe (6)</em> giảm béo phì → <em>Kinh tế (7)</em> giảm chi phí y tế → <em>Dài hạn (12)</em> xã hội khỏe mạnh hơn.</p>
+</main>
+</div>
+<script>
+(function () {
+  var root = document.documentElement, key = 'ielts-notes-theme';
+  try { var saved = localStorage.getItem(key); if (saved) root.dataset.theme = saved; } catch (e) {}
+  document.getElementById('theme').addEventListener('click', function () {
+    var dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem(key, root.dataset.theme); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

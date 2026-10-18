@@ -3,7 +3,7 @@
 //  • Điểm tương đồng = kết hợp trùng token (Jaccard) + tỉ lệ Levenshtein ký tự
 //  • Diff theo từ (LCS) -> suy ra từ đúng kế tiếp cần gõ (không lộ cả câu)
 //  • Nối chính tả (spellcheck) + ngữ pháp cục bộ (localgrammar)
-// (thiết kế: chepcau.md — Mục 6)
+// (thiết kế: Implement/chepcau.md — Mục 6)
 
 import { isMisspelled, suggestFix, tokenizeWords } from './spellcheck'
 import { checkLocalGrammar } from './localgrammar'

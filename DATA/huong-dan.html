@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hướng phát triển ý</title>
+<style>
+:root {
+  --bg: #f7f6f2; --surface: #ffffff; --text: #22211f; --muted: #6b6860;
+  --border: #e3e0d8; --accent: #2f6f5e; --accent-soft: #e6f0ec; --quote-bg: #f1efe8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161716; --surface: #1f2120; --text: #e8e6e1; --muted: #a09d95;
+    --border: #343734; --accent: #7cc4ad; --accent-soft: #23312c; --quote-bg: #252826;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161716; --surface: #1f2120; --text: #e8e6e1; --muted: #a09d95;
+  --border: #343734; --accent: #7cc4ad; --accent-soft: #23312c; --quote-bg: #252826;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+header.top {
+  position: sticky; top: 0; z-index: 2; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+header.top .inner { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 16px; max-width: 1180px; margin: 0 auto; }
+header.top a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 999px; font-size: 14px; }
+header.top a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+header.top button {
+  margin-left: auto; background: none; border: 1px solid var(--border); color: var(--text);
+  border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 14px; cursor: pointer;
+}
+.layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 40px; max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+nav.toc { position: sticky; top: 72px; align-self: start; max-height: calc(100vh - 96px); overflow: auto; font-size: 14px; }
+nav.toc p { margin: 0 0 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+nav.toc a { display: block; color: var(--muted); text-decoration: none; padding: 3px 0; }
+nav.toc a:hover { color: var(--accent); }
+nav.toc a.l3 { padding-left: 12px; }
+main { max-width: 780px; min-width: 0; }
+h1 { font-size: 30px; line-height: 1.25; margin: 0 0 16px; }
+h2 { font-size: 23px; margin: 44px 0 12px; padding-top: 8px; color: var(--accent); }
+h3 { font-size: 19px; margin: 32px 0 8px; }
+h1, h2, h3 { scroll-margin-top: 72px; }
+p, ul { margin: 0 0 14px; }
+ul { padding-left: 22px; }
+li { margin: 4px 0; }
+a { color: var(--accent); }
+hr { border: 0; border-top: 1px solid var(--border); margin: 36px 0; }
+blockquote {
+  margin: 0 0 16px; padding: 12px 16px; background: var(--quote-bg);
+  border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;
+}
+.table-wrap { overflow-x: auto; margin: 0 0 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+th { background: var(--accent-soft); font-weight: 600; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; gap: 0; }
+  nav.toc { display: none; }
+  h1 { font-size: 25px; }
+  td:first-child { white-space: normal; }
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="inner">
+<a href="huong-dan.html" aria-current="page">12 hướng phát triển ý</a>
+<a href="example.html">Áp dụng WHO–WHICH</a>
+<button type="button" id="theme">Sáng / Tối</button>
+</div></header>
+<div class="layout">
+<nav class="toc"><p>Mục lục</p>
+<a class="l2" href="#1-12-huong-phat-trien-y-pho-bien-nhat">1. 12 hướng phát triển ý phổ biến nhất</a>
+<a class="l3" href="#1-government-chinh-phu">1. Government – Chính phủ</a>
+<a class="l3" href="#2-individuals-ca-nhan">2. Individuals – Cá nhân</a>
+<a class="l3" href="#3-schools-and-universities-truong-hoc">3. Schools and Universities – Trường học</a>
+<a class="l3" href="#4-parents-and-families-cha-me-va-gia-dinh">4. Parents and Families – Cha mẹ và gia đình</a>
+<a class="l3" href="#5-businesses-and-employers-doanh-nghiep">5. Businesses and Employers – Doanh nghiệp</a>
+<a class="l3" href="#6-health-suc-khoe">6. Health – Sức khỏe</a>
+<a class="l3" href="#7-economy-kinh-te-va-tai-chinh">7. Economy – Kinh tế và tài chính</a>
+<a class="l3" href="#8-society-and-community-xa-hoi-va-cong-dong">8. Society and Community – Xã hội và cộng đồng</a>
+<a class="l3" href="#9-environment-moi-truong">9. Environment – Môi trường</a>
+<a class="l3" href="#10-technology-cong-nghe">10. Technology – Công nghệ</a>
+<a class="l3" href="#11-time-and-convenience-thoi-gian-va-su-tien-loi">11. Time and Convenience – Thời gian và sự tiện lợi</a>
+<a class="l3" href="#12-long-term-and-short-term-effects-tac-dong-ngan-han-va-dai-han">12. Long-term and Short-term Effects – Tác động ngắn hạn và dài hạn</a>
+<a class="l2" href="#2-ngoai-doi-tuong-hay-phat-trien-y-theo-8-khia-canh">2. Ngoài đối tượng, hãy phát triển ý theo 8 khía cạnh</a>
+<a class="l2" href="#3-vi-du-ap-dung-thuc-te">3. Ví dụ áp dụng thực tế</a>
+<a class="l2" href="#4-cong-thuc-ghi-nho-nhanh">4. Công thức ghi nhớ nhanh</a>
+</nav>
+<main>
+<h1>Các hướng phát triển ý cho IELTS Writing Task 2</h1>
+<p>Trong IELTS Writing Task 2, khi gặp một chủ đề bất kỳ, bạn có thể phát triển ý theo nhiều hướng phân tích cố định. Ví dụ: chính phủ, cá nhân, gia đình, nhà trường, doanh nghiệp, xã hội, kinh tế, sức khỏe...</p>
+<p>Dưới đây là danh sách các hướng bạn nên học để có thể áp dụng cho hầu hết các chủ đề IELTS.</p>
+<h2 id="1-12-huong-phat-trien-y-pho-bien-nhat">1. 12 hướng phát triển ý phổ biến nhất</h2>
+<h3 id="1-government-chinh-phu">1. Government – Chính phủ</h3>
+<p>Câu hỏi: Chính phủ nên làm gì?</p>
+<ul><li>Ban hành luật và quy định (introduce laws and regulations).</li><li>Tăng ngân sách, đầu tư dịch vụ công (increase public funding).</li><li>Nâng cao nhận thức cộng đồng (raise public awareness).</li><li>Xây dựng cơ sở hạ tầng (develop infrastructure).</li><li>Trợ cấp hoặc áp thuế (provide subsidies / impose taxes).</li><li>Giám sát và xử phạt hành vi vi phạm (enforce regulations).</li></ul>
+<h3 id="2-individuals-ca-nhan">2. Individuals – Cá nhân</h3>
+<p>Câu hỏi: Mỗi người có thể làm gì?</p>
+<ul><li>Thay đổi thói quen và hành vi (change personal habits).</li><li>Chịu trách nhiệm cho lựa chọn của mình (take responsibility).</li><li>Nâng cao kiến thức và kỹ năng (improve knowledge and skills).</li><li>Tuân thủ pháp luật (obey the law).</li><li>Sử dụng tài nguyên hợp lý (use resources responsibly).</li><li>Chủ động giải quyết vấn đề thay vì phụ thuộc vào người khác.</li></ul>
+<h3 id="3-schools-and-universities-truong-hoc">3. Schools and Universities – Trường học</h3>
+<ul><li>Cải thiện chất lượng giáo dục.</li><li>Dạy kỹ năng thực tế bên cạnh lý thuyết.</li><li>Tổ chức hoạt động ngoại khóa.</li><li>Giáo dục ý thức và trách nhiệm.</li><li>Hướng nghiệp cho học sinh, sinh viên.</li><li>Trang bị kỹ năng công nghệ và tư duy phản biện.</li></ul>
+<h3 id="4-parents-and-families-cha-me-va-gia-dinh">4. Parents and Families – Cha mẹ và gia đình</h3>
+<ul><li>Làm gương cho con cái.</li><li>Giám sát việc sử dụng Internet.</li><li>Dạy kỹ năng sống và đạo đức.</li><li>Dành thời gian cho con.</li><li>Khuyến khích tính tự lập.</li><li>Hỗ trợ tinh thần và việc học của trẻ.</li></ul>
+<h3 id="5-businesses-and-employers-doanh-nghiep">5. Businesses and Employers – Doanh nghiệp</h3>
+<ul><li>Đào tạo và nâng cao kỹ năng cho nhân viên.</li><li>Cải thiện môi trường làm việc.</li><li>Áp dụng công nghệ để tăng năng suất.</li><li>Bảo vệ quyền lợi người lao động.</li><li>Thực hiện trách nhiệm xã hội.</li><li>Giảm chất thải và ô nhiễm trong sản xuất.</li></ul>
+<h3 id="6-health-suc-khoe">6. Health – Sức khỏe</h3>
+<ul><li>Cải thiện sức khỏe thể chất.</li><li>Bảo vệ sức khỏe tinh thần.</li><li>Giảm nguy cơ mắc bệnh.</li><li>Giảm chi phí điều trị lâu dài.</li><li>Nâng cao chất lượng cuộc sống.</li><li>Giảm áp lực cho hệ thống y tế.</li></ul>
+<h3 id="7-economy-kinh-te-va-tai-chinh">7. Economy – Kinh tế và tài chính</h3>
+<ul><li>Tạo việc làm (create jobs).</li><li>Tăng thu nhập và mức sống.</li><li>Giảm chi phí sản xuất.</li><li>Tăng năng suất lao động.</li><li>Thu hút đầu tư.</li><li>Giảm gánh nặng tài chính cho người dân hoặc chính phủ.</li></ul>
+<h3 id="8-society-and-community-xa-hoi-va-cong-dong">8. Society and Community – Xã hội và cộng đồng</h3>
+<ul><li>Tăng cường sự gắn kết cộng đồng.</li><li>Giảm bất bình đẳng.</li><li>Hỗ trợ nhóm yếu thế.</li><li>Nâng cao ý thức cộng đồng.</li><li>Xây dựng môi trường sống an toàn.</li><li>Thúc đẩy sự công bằng và hòa nhập xã hội.</li></ul>
+<h3 id="9-environment-moi-truong">9. Environment – Môi trường</h3>
+<ul><li>Giảm ô nhiễm không khí và nguồn nước.</li><li>Bảo tồn tài nguyên thiên nhiên.</li><li>Giảm khí thải carbon.</li><li>Tăng tái chế và sử dụng năng lượng sạch.</li><li>Bảo vệ đa dạng sinh học.</li><li>Hướng đến phát triển bền vững.</li></ul>
+<h3 id="10-technology-cong-nghe">10. Technology – Công nghệ</h3>
+<ul><li>Tự động hóa công việc.</li><li>Tiếp cận thông tin nhanh chóng.</li><li>Cải thiện giao tiếp và kết nối.</li><li>Tăng hiệu quả và độ chính xác.</li><li>Gây rủi ro về quyền riêng tư.</li><li>Làm gia tăng sự phụ thuộc vào công nghệ hoặc nguy cơ mất việc.</li></ul>
+<h3 id="11-time-and-convenience-thoi-gian-va-su-tien-loi">11. Time and Convenience – Thời gian và sự tiện lợi</h3>
+<ul><li>Tiết kiệm thời gian.</li><li>Giảm công sức cho công việc thường ngày.</li><li>Tăng thời gian dành cho gia đình.</li><li>Cải thiện cân bằng công việc và cuộc sống.</li><li>Giảm thời gian đi lại và chờ đợi.</li></ul>
+<h3 id="12-long-term-and-short-term-effects-tac-dong-ngan-han-va-dai-han">12. Long-term and Short-term Effects – Tác động ngắn hạn và dài hạn</h3>
+<ul><li>Ngắn hạn: chi phí ban đầu, khó thích nghi, mất thời gian đào tạo.</li><li>Dài hạn: tăng năng suất, tiết kiệm tiền, nâng cao chất lượng cuộc sống.</li><li>Tác động đến thế hệ tương lai.</li><li>Tính bền vững của giải pháp.</li></ul>
+<h2 id="2-ngoai-doi-tuong-hay-phat-trien-y-theo-8-khia-canh">2. Ngoài đối tượng, hãy phát triển ý theo 8 khía cạnh</h2>
+<p>Đây là những góc nhìn giúp bạn tìm ý cho phần thân bài, ngay cả khi không biết nhiều về chủ đề.</p>
+<div class="table-wrap"><table><thead><tr><th>Hướng phân tích</th><th>Câu hỏi tự đặt ra</th></tr></thead><tbody><tr><td>Causes – Nguyên nhân</td><td>Tại sao vấn đề này xảy ra?</td></tr><tr><td>Effects – Tác động</td><td>Nó gây ra những hậu quả gì?</td></tr><tr><td>Benefits – Lợi ích</td><td>Nó mang lại điều gì tích cực?</td></tr><tr><td>Drawbacks – Bất lợi</td><td>Nó gây ra vấn đề gì?</td></tr><tr><td>Solutions – Giải pháp</td><td>Làm thế nào để giải quyết?</td></tr><tr><td>Responsibility – Trách nhiệm</td><td>Ai nên chịu trách nhiệm?</td></tr><tr><td>Comparison – So sánh</td><td>Phương án A tốt hơn B ở điểm nào?</td></tr><tr><td>Future – Tương lai</td><td>Điều gì có thể xảy ra trong dài hạn?</td></tr></tbody></table></div>
+<h2 id="3-vi-du-ap-dung-thuc-te">3. Ví dụ áp dụng thực tế</h2>
+<p>Đề bài:</p>
+<p>Some people believe that governments should take responsibility for protecting the environment, while others think individuals should be responsible. Discuss both views and give your opinion.</p>
+<p>Một số ý tưởng có thể triển khai</p>
+<p>Hướng 1: Government – Chính phủ</p>
+<ul><li>Ban hành luật kiểm soát khí thải của nhà máy.</li><li>Đầu tư vào phương tiện giao thông công cộng.</li><li>Phạt doanh nghiệp vi phạm quy định môi trường.</li></ul>
+<p>Chuỗi lập luận: Luật nghiêm ngặt → giảm hành vi gây ô nhiễm → bảo vệ môi trường trên quy mô lớn.</p>
+<p>Hướng 2: Individuals – Cá nhân</p>
+<ul><li>Phân loại và tái chế rác.</li><li>Hạn chế sử dụng đồ nhựa dùng một lần.</li><li>Đi phương tiện công cộng thay vì sử dụng xe cá nhân khi phù hợp.</li></ul>
+<p>Chuỗi lập luận: Thay đổi thói quen → giảm lượng rác và khí thải → tạo tác động tích cực khi nhiều người cùng thực hiện.</p>
+<p>Bạn có thể thấy rằng một chủ đề không chỉ có một hướng phát triển. Tuy nhiên, trong bài thi, hãy chọn hai ý chính đủ mạnh và giải thích sâu, thay vì cố nhồi nhét tất cả các hướng vào bài.</p>
+<h2 id="4-cong-thuc-ghi-nho-nhanh">4. Công thức ghi nhớ nhanh</h2>
+<p>Khi đọc bất kỳ đề Task 2 nào, hãy tự hỏi:</p>
+<ul><li>WHO? Ai liên quan? Chính phủ, cá nhân, trường học, cha mẹ, doanh nghiệp hay cộng đồng?</li><li>WHY? Tại sao vấn đề xảy ra?</li><li>WHAT? Lợi ích, tác hại hoặc hậu quả là gì?</li><li>HOW? Giải pháp nào có thể thực hiện?</li><li>WHEN? Tác động ngắn hạn hay dài hạn?</li><li>WHICH? Phương án nào tốt hơn và tại sao?</li></ul>
+<p>Chỉ cần luyện thành thói quen với các câu hỏi này, bạn sẽ dễ tìm ý hơn cho phần lớn đề IELTS Writing Task 2.</p>
+</main>
+</div>
+<script>
+(function () {
+  var root = document.documentElement, key = 'ielts-notes-theme';
+  try { var saved = localStorage.getItem(key); if (saved) root.dataset.theme = saved; } catch (e) {}
+  document.getElementById('theme').addEventListener('click', function () {
+    var dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem(key, root.dataset.theme); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>
