@@ -295,6 +295,23 @@ const ICONS = {
     </>
   ),
   stop: <rect x="6" y="6" width="12" height="12" rx="2.2" />,
+  // Sơ đồ tư duy: một gốc tỏa ra ba nhánh
+  mindmap: (
+    <>
+      <circle cx="5" cy="12" r="2.4" />
+      <circle cx="19" cy="5" r="2.2" />
+      <circle cx="19" cy="12" r="2.2" />
+      <circle cx="19" cy="19" r="2.2" />
+      <path d="M7.4 12h9.4M6.8 10.4C9.6 7.6 12.4 5 16.8 5M6.8 13.6c2.8 2.8 5.6 5.4 10 5.4" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect x="8.6" y="8.6" width="12.4" height="12.4" rx="2.2" />
+      <path d="M15.4 8.6V5.2a2.2 2.2 0 0 0-2.2-2.2H5.2A2.2 2.2 0 0 0 3 5.2v8a2.2 2.2 0 0 0 2.2 2.2h3.4" />
+    </>
+  ),
+  star: <path d="m12 3.2 2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-2.9-5.4 2.9 1.1-6-4.5-4.2 6.1-.8Z" />,
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof ICONS

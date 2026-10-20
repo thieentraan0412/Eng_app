@@ -17,6 +17,7 @@ import ExercisePage from '../pages/ExercisePage'
 import GrammarPage from '../pages/GrammarPage'
 import WritingPage from '../pages/WritingPage'
 import SentencePage from '../pages/SentencePage'
+import MindMapPage from '../pages/MindMapPage'
 import UsagePage from '../pages/UsagePage'
 import SettingsPage from '../pages/SettingsPage'
 import QuickTranslateModal from './QuickTranslateModal'
@@ -34,6 +35,7 @@ const STUDY_PAGES = new Set<PageKey>([
   'reading',
   'writing',
   'sentence',
+  'mindmap',
   'vocabulary',
 ])
 
@@ -295,6 +297,8 @@ export default function AppLayout() {
         return <WritingPage />
       case 'sentence':
         return <SentencePage />
+      case 'mindmap':
+        return <MindMapPage onNavigate={setPage} />
       case 'usage':
         return <UsagePage />
     }

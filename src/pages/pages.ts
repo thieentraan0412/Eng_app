@@ -10,6 +10,7 @@ export type PageKey =
   | 'reading'
   | 'writing'
   | 'sentence'
+  | 'mindmap'
   | 'usage'
   | 'settings'
 
@@ -42,6 +43,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { key: 'reading', label: 'Đọc', icon: 'book' },
       { key: 'writing', label: 'Viết', icon: 'pen' },
       { key: 'sentence', label: 'Chép câu', icon: 'keyboard' },
+      { key: 'mindmap', label: 'Tư duy', icon: 'mindmap' },
     ],
   },
   {
