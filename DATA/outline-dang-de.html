@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outline theo dạng đề</title>
+<style>
+:root {
+  --bg: #f7f6f2; --surface: #ffffff; --text: #22211f; --muted: #6b6860;
+  --border: #e3e0d8; --accent: #2f6f5e; --accent-soft: #e6f0ec; --quote-bg: #f1efe8;
+  --g: #2a6b2e; --g-bg: #e6f2e6; --r: #b03a2e; --r-bg: #fbe9e6;
+  --p: #5b4a9e; --p-bg: #eeebf8; --o: #9a4f12; --o-bg: #fbeee0; --ink: #2f4fa8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161716; --surface: #1f2120; --text: #e8e6e1; --muted: #a09d95;
+    --border: #343734; --accent: #7cc4ad; --accent-soft: #23312c; --quote-bg: #252826;
+    --g: #8fd694; --g-bg: #1f2b20; --r: #f29b8f; --r-bg: #34211e;
+    --p: #b9aef2; --p-bg: #29253a; --o: #f0b073; --o-bg: #35281b; --ink: #9db4f0;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161716; --surface: #1f2120; --text: #e8e6e1; --muted: #a09d95;
+  --border: #343734; --accent: #7cc4ad; --accent-soft: #23312c; --quote-bg: #252826;
+  --g: #8fd694; --g-bg: #1f2b20; --r: #f29b8f; --r-bg: #34211e;
+  --p: #b9aef2; --p-bg: #29253a; --o: #f0b073; --o-bg: #35281b; --ink: #9db4f0;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+header.top {
+  position: sticky; top: 0; z-index: 2; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+header.top .inner { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 16px; max-width: 1180px; margin: 0 auto; }
+header.top a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 999px; font-size: 14px; }
+header.top a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+header.top button {
+  margin-left: auto; background: none; border: 1px solid var(--border); color: var(--text);
+  border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 14px; cursor: pointer;
+}
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 40px; max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+nav.toc { position: sticky; top: 72px; align-self: start; max-height: calc(100vh - 96px); overflow: auto; font-size: 14px; }
+nav.toc p { margin: 0 0 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+nav.toc a { display: block; color: var(--muted); text-decoration: none; padding: 3px 0; }
+nav.toc a:hover { color: var(--accent); }
+nav.toc a.l3 { padding-left: 12px; }
+main { max-width: 820px; min-width: 0; }
+h1 { font-size: 30px; line-height: 1.25; margin: 0 0 16px; }
+h2 { font-size: 23px; margin: 44px 0 12px; padding-top: 8px; color: var(--accent); }
+h3 { font-size: 19px; margin: 32px 0 8px; }
+h1, h2, h3 { scroll-margin-top: 72px; }
+p, ul, ol { margin: 0 0 14px; }
+ul, ol { padding-left: 22px; }
+li { margin: 4px 0; }
+a { color: var(--accent); }
+blockquote {
+  margin: 0 0 16px; padding: 12px 16px; background: var(--quote-bg);
+  border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;
+}
+.table-wrap { overflow-x: auto; margin: 0 0 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+th { background: var(--accent-soft); font-weight: 600; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+td a { text-decoration: none; }
+td .sub { display: block; font-size: 13px; font-weight: 400; color: var(--muted); white-space: normal; }
+tr.group td { background: var(--quote-bg); color: var(--muted); font-size: 13px; padding: 6px 12px; }
+
+/* màu như trong sách */
+.g, .r, .p, .o { padding: 1px 4px; border-radius: 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.g { color: var(--g); background: var(--g-bg); }
+.r { color: var(--r); background: var(--r-bg); }
+.p { color: var(--p); background: var(--p-bg); }
+.o { color: var(--o); background: var(--o-bg); }
+
+/* outline 13 câu */
+table.ol { font-size: 15.5px; }
+table.ol td:first-child { width: 52px; text-align: center; }
+.n {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--quote-bg); color: var(--muted); font-size: 13px; font-weight: 600;
+}
+.lb {
+  display: inline-block; margin-right: 6px; padding: 0 7px; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--muted); font-size: 13px; line-height: 22px; vertical-align: 1px;
+}
+tr.ee td:last-child { color: var(--muted); font-style: italic; }
+.blank { display: inline-block; min-width: 80px; border-bottom: 2px dotted currentColor; vertical-align: -3px; margin: 0 2px; }
+.hint { display: block; margin-top: 3px; font-size: 13px; font-style: normal; color: var(--muted); }
+.pat { display: block; font-style: normal; color: var(--text); }
+.pat span { display: inline-block; margin: 5px 6px 0 0; padding: 1px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); font-size: 14px; }
+.ink { color: var(--ink); font-style: italic; }
+div.ink { margin-top: 3px; }
+u.ink-u { text-decoration-color: var(--ink); text-decoration-thickness: 2px; }
+.src { margin: -4px 0 12px; font-size: 13px; color: var(--muted); }
+.flow { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px 12px; margin: 0 0 12px; }
+.flow .k { padding: 6px 10px; border-radius: 8px; background: var(--accent); color: var(--surface); font-weight: 600; text-align: center; }
+.flow .v { padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+
+/* bài mẫu */
+.essay {
+  margin: 0 0 12px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  font-family: Georgia, "Times New Roman", serif; font-size: 16.5px; line-height: 1.75;
+}
+.essay p { margin: 0 0 12px; }
+.essay p:last-child { margin: 0; }
+.sn {
+  display: inline-grid; place-items: center; min-width: 19px; height: 19px; margin-right: 3px; padding: 0 4px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent); font: 600 11px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; vertical-align: 2px;
+}
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; gap: 0; }
+  nav.toc { display: none; }
+  h1 { font-size: 25px; }
+  td:first-child { white-space: normal; }
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="inner">
+<a href="cac-buoc-lam-bai.html">Phân tích đề và tìm ý</a>
+<a href="outline-dang-de.html" aria-current="page">Outline theo dạng đề</a>
+<a href="huong-dan-song-ngu.html">Song ngữ VI–EN</a>
+<button type="button" id="theme">Sáng / Tối</button>
+</div></header>
+<div class="layout">
+<nav class="toc"><p>Mục lục</p>
+<a class="l2" href="#chon-outline">Chọn outline theo dạng đề</a>
+<a class="l2" href="#agree-disagree">Agree – Disagree</a>
+<a class="l3" href="#bai-mau-agree">Bài mẫu</a>
+<a class="l2" href="#advantages-disadvantages">Advantages – Disadvantages</a>
+<a class="l3" href="#listing">Listing</a>
+<a class="l3" href="#outweigh-adv">Outweigh: Advantages &gt; Disadvantages</a>
+<a class="l3" href="#outweigh-dis">Outweigh: Disadvantages &gt; Advantages</a>
+<a class="l2" href="#causes-solutions">Causes &amp; Solutions</a>
+<a class="l2" href="#problems-solutions">Problems &amp; Solutions</a>
+<a class="l2" href="#cau-mo-y">Câu mở ý dùng lại được</a>
+</nav>
+<main>
+<h1>Outline 13 câu theo dạng đề Task 2</h1>
+<blockquote>Tổng hợp từ 6 ảnh chụp giáo trình trong thư mục DATA (Lesson 6 — Linearthinking®). Các dạng đề dùng chung một khung 13 câu, chỉ khác nhau ở các câu được tô màu.</blockquote>
+<p>Cách đọc trang này:</p>
+<ul>
+<li><span class="g">Xanh lá</span>, <span class="r">đỏ</span>, <span class="p">tím</span>, <span class="o">cam</span>: màu như trong sách, đánh dấu các vế cần nhắc lại ở thân bài và kết bài.</li>
+<li><span class="ink">✍ Chữ xanh nghiêng</span>: ghi chú viết tay trong ảnh.</li>
+<li><span class="blank"></span> là chỗ trống trong sách.</li>
+<li>Phần bổ sung, không có trong sách: chữ xám nhỏ (giải thích, <em>Gợi ý điền</em>), các ô mẫu câu như <span class="pat" style="display:inline"><span>For example, S + V.</span></span> và bài mẫu.</li>
+</ul>
+
+<h2 id="chon-outline">Chọn outline theo dạng đề</h2>
+<div class="table-wrap"><table><thead><tr><th>Dạng đề</th><th>Dấu hiệu trong đề</th><th>Outline</th><th>Thân bài 1</th><th>Thân bài 2</th></tr></thead><tbody>
+<tr><td>Agree or Disagree<span class="sub">Đồng ý / Không đồng ý</span></td><td><em>To what extent do you agree or disagree?</em></td><td><a href="#agree-disagree">Agree – Disagree</a></td><td>Lý do 1</td><td>Lý do 2</td></tr>
+<tr><td>Advantages and Disadvantages<span class="sub">Ưu điểm / Nhược điểm</span></td><td><em>Discuss the advantages and disadvantages.</em></td><td><a href="#listing">Listing</a></td><td>Lợi ích</td><td>Bất lợi</td></tr>
+<tr><td>Outweigh<span class="sub">Bạn chọn: lợi nhiều hơn</span></td><td><em>Do the advantages outweigh the disadvantages?</em></td><td><a href="#outweigh-adv">Advantages &gt; Disadvantages</a></td><td>Bất lợi (nhỏ)</td><td>Lợi ích (lớn)</td></tr>
+<tr><td>Outweigh<span class="sub">Bạn chọn: hại nhiều hơn</span></td><td><em>Do the advantages outweigh the disadvantages?</em></td><td><a href="#outweigh-dis">Disadvantages &gt; Advantages</a></td><td>Lợi ích (nhỏ)</td><td>Bất lợi (lớn)</td></tr>
+<tr><td>Causes and Solutions<span class="sub">Nguyên nhân / Giải pháp</span></td><td><em>What are the causes…? What can be done?</em></td><td><a href="#causes-solutions">Causes &amp; Solutions</a></td><td>Nguyên nhân</td><td>Giải pháp</td></tr>
+<tr><td>Problem and Solution<span class="sub">Vấn đề / Giải pháp</span></td><td><em>What problems does this cause? What solutions can you suggest?</em></td><td><a href="#problems-solutions">Problems &amp; Solutions</a></td><td>Vấn đề</td><td>Giải pháp</td></tr>
+</tbody></table></div>
+<p>Ở dạng Outweigh, mặt yếu hơn luôn viết trước (câu 3: <em>some minor …</em>), mặt mạnh hơn viết sau (câu 8: <em>major … which overshadow …</em>).</p>
+<p>6 ảnh chưa có outline cho các dạng Discuss both views, Positive or Negative và Two-part question.</p>
+
+<h2 id="agree-disagree">Agree – Disagree</h2>
+<p class="src">Ảnh: <a href="1a486877-d231-45d9-9d1c-16001a86d9b4.jpg">1a486877….jpg</a> · Lesson 6 — Linearthinking® to develop ideas: Agree – Disagree</p>
+<p>Dùng cho đề <em>To what extent do you agree or disagree?</em>: chọn hẳn một phía (đồng ý hoặc không đồng ý) và đưa ra 2 lý do.</p>
+<h3>Sơ đồ</h3>
+<div class="flow" lang="en">
+<div class="k">Body 1</div><div class="v ink">✍ give your 1st reason</div>
+<div class="k">Body 2</div><div class="v ink">✍ give your 2nd reason</div>
+<div class="k">Conclusion</div><div class="v">Restate your opinion (Strongly agree or Disagree)</div>
+</div>
+<p class="src">Phần Introduction của sơ đồ bị cắt khỏi ảnh. Hai ô Body 1 và Body 2 được điền bằng tay.</p>
+<h3>Outline</h3>
+<p>Ghi chú tay cạnh tiêu đề: <span class="ink" lang="en">✍ a ban on (…) can be imposed on …</span></p>
+<div class="table-wrap"><table class="ol" lang="en"><tbody>
+<tr class="group"><td colspan="2" lang="vi">Mở bài</td></tr>
+<tr><td><span class="n">1</span></td><td>It is sometimes believed that S + V.</td></tr>
+<tr><td><span class="n">2</span></td><td><span class="lb">Thesis:</span><span class="o">This essay <span class="blank"></span> with this suggestion for several reasons.</span><span class="hint" lang="vi">Gợi ý điền: totally agrees / disagrees</span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Thân bài 1</td></tr>
+<tr><td><span class="n">3</span></td><td>The first argument given to support my opinion is that S1 + V1 [idea 1].</td></tr>
+<tr class="ee"><td><span class="n">4</span></td><td>Expand<span class="hint" lang="vi">Giải thích ý ở câu 3: vì sao nó đúng, hoặc nó diễn ra như thế nào.</span><span class="pat"><span>This is because S + V.</span><span>In other words, S + V.</span><span>To be more specific, S + V.</span></span></td></tr>
+<tr class="ee"><td><span class="n">5</span></td><td>Expand<span class="hint" lang="vi">Nói tiếp hệ quả của điều vừa giải thích ở câu 4.</span><span class="pat"><span>As a result, S + V.</span><span>Consequently, S + V.</span><span>This means that S + V.</span></span></td></tr>
+<tr class="ee"><td><span class="n">6</span></td><td>Example<span class="hint" lang="vi">Một ví dụ cụ thể (một người, một nơi, một tình huống) chứng minh ý 1.</span><span class="pat"><span>For example, S + V.</span><span>For instance, in [place], S + V.</span><span>A case in point is [N].</span></span></td></tr>
+<tr class="ee"><td><span class="n">7</span></td><td>Link to the topic<div class="ink">✍ This is why I believe that …</div><span class="hint" lang="vi">Nối ý của đoạn về đề và nhắc lại quan điểm.</span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Thân bài 2</td></tr>
+<tr><td><span class="n">8</span></td><td>Another point behind my belief is that S2 + V2 [idea 2].</td></tr>
+<tr class="ee"><td><span class="n">9</span></td><td>Expand<span class="hint" lang="vi">Giải thích ý ở câu 8: vì sao nó đúng, hoặc nó diễn ra như thế nào.</span><span class="pat"><span>This is mainly because S + V.</span><span>Put simply, S + V.</span><span>What this means is that S + V.</span></span></td></tr>
+<tr class="ee"><td><span class="n">10</span></td><td>Expand<span class="hint" lang="vi">Nói tiếp hệ quả của điều vừa giải thích ở câu 9.</span><span class="pat"><span>Therefore, S + V.</span><span>As a consequence, S + V.</span><span>This, in turn, leads to [N / V-ing].</span></span></td></tr>
+<tr class="ee"><td><span class="n">11</span></td><td>Example<span class="hint" lang="vi">Một ví dụ cụ thể chứng minh ý 2.</span><span class="pat"><span>To illustrate, S + V.</span><span>This can be seen in [N], where S + V.</span><span>A good example is [N], where S + V.</span></span></td></tr>
+<tr class="ee"><td><span class="n">12</span></td><td>Link to the topic<div class="ink">✍ For these reasons, I think that …</div><span class="hint" lang="vi">Nối ý của đoạn về đề và nhắc lại quan điểm.</span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Kết bài</td></tr>
+<tr><td><span class="n">13</span></td><td>In conclusion, <span class="o">I totally | entirely agree | disagree that S + V given the aforementioned arguments.</span></td></tr>
+</tbody></table></div>
+
+<h3 id="bai-mau-agree">Bài mẫu</h3>
+<p>Đề luyện tập, viết đúng theo 13 câu của outline trên (số trên mỗi câu là số câu trong outline):</p>
+<blockquote lang="en">Some people think that advertisements for unhealthy food and drinks should be banned. To what extent do you agree or disagree?</blockquote>
+<div class="essay" lang="en">
+<p><span class="sn">1</span>It is sometimes believed that a ban should be imposed on advertisements for unhealthy food and drinks. <span class="sn">2</span><span class="o">This essay totally agrees with this suggestion for several reasons.</span></p>
+<p><span class="sn">3</span>The first argument given to support my opinion is that such advertisements encourage poor eating habits, especially among children. <span class="sn">4</span>This is because these adverts are designed to make sugary snacks and fast food look fun and desirable, so young viewers often cannot resist them. <span class="sn">5</span>As a result, children tend to pester their parents for these products, and unhealthy food gradually becomes part of their daily diet. <span class="sn">6</span>For example, many fast-food chains offer free toys with children's meals and promote them heavily on television, which makes these meals extremely popular with young children. <span class="sn">7</span>This is why I believe that banning such advertisements would go a long way towards protecting children's health.</p>
+<p><span class="sn">8</span>Another point behind my belief is that a ban would reduce the burden on public healthcare systems. <span class="sn">9</span>This is mainly because diets high in sugar and fat are closely linked to obesity, diabetes and heart disease. <span class="sn">10</span>Therefore, if fewer people consumed these products, governments would spend less money treating such illnesses and could invest more in education or infrastructure. <span class="sn">11</span>To illustrate, a patient with type 2 diabetes may need medication and regular check-ups for the rest of their life, all of which is expensive for the state. <span class="sn">12</span>For these reasons, I think that restricting these advertisements would benefit not only individuals but also society as a whole.</p>
+<p><span class="sn">13</span>In conclusion, <span class="o">I totally agree that unhealthy food and drinks should no longer be advertised given the aforementioned arguments.</span></p>
+</div>
+<ul>
+<li>Câu 1 dùng cụm ghi chú tay <em>a ban … imposed on</em> để paraphrase <em>should be banned</em>.</li>
+<li>Câu 4, 9 giải thích; câu 5, 10 nói hệ quả; câu 6, 11 là ví dụ; câu 7, 12 dùng hai câu Link viết tay.</li>
+<li>Bài dài 263 từ, đạt yêu cầu tối thiểu 250 từ.</li>
+</ul>
+
+<h2 id="advantages-disadvantages">Advantages – Disadvantages</h2>
+<p>Sách có 3 outline cho dạng ưu – nhược điểm: Listing khi đề chỉ yêu cầu bàn về cả hai mặt, Outweigh khi đề hỏi mặt nào lớn hơn.</p>
+
+<h3 id="listing">Listing</h3>
+<p class="src">Ảnh: <a href="813d8e47-47af-438c-94f3-34f3c9e2470f.jpg">813d8e47….jpg</a> · 1.2. Outline dạng Listing</p>
+<p>Dùng cho đề <em>Discuss the advantages and disadvantages</em>: hai mặt ngang nhau, không cần nói mặt nào hơn.</p>
+<div class="table-wrap"><table class="ol" lang="en"><tbody>
+<tr class="group"><td colspan="2" lang="vi">Mở bài</td></tr>
+<tr><td><span class="n">1</span></td><td><span class="lb">Paraphrase the topic:</span><strong>It is true that S + V</strong></td></tr>
+<tr><td><span class="n">2</span></td><td><span class="lb">Thesis:</span><span class="g">Although this can bring about some <span class="blank"></span>,</span> <span class="r">it can also be <span class="blank"></span> to a certain extent.</span><span class="hint" lang="vi">Gợi ý điền: benefits / advantages … detrimental / harmful</span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Thân bài 1</td></tr>
+<tr><td><span class="n">3</span></td><td><span class="g">On the one hand, there are several benefits of [N / N + V-ing].</span></td></tr>
+<tr><td><span class="n">4</span></td><td>One possible advantage is that S + V</td></tr>
+<tr class="ee"><td><span class="n">5</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho ý ở câu 4.</span><span class="pat"><span>This means that S + V.</span><span>As a result, S + V.</span><span>For example, S + V.</span></span></td></tr>
+<tr><td><span class="n">6</span></td><td>Another beneficial effect could be that S + V</td></tr>
+<tr class="ee"><td><span class="n">7</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho ý ở câu 6.</span><span class="pat"><span>This allows [N] to V.</span><span>Consequently, S + V.</span><span>For instance, in [place], S + V.</span></span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Thân bài 2</td></tr>
+<tr><td><span class="n">8</span></td><td><span class="r">Nevertheless, [N / the fact that S' + V'] can have <span class="blank"></span>.</span><span class="hint" lang="vi">Gợi ý điền: some drawbacks / several negative impacts</span></td></tr>
+<tr><td><span class="n">9</span></td><td>One issue could be that S + V</td></tr>
+<tr class="ee"><td><span class="n">10</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho ý ở câu 9.</span><span class="pat"><span>This could lead to [N / V-ing].</span><span>As a consequence, S + V.</span><span>For example, S + V.</span></span></td></tr>
+<tr><td><span class="n">11</span></td><td>Another drawback worth mentioning is that S + V</td></tr>
+<tr class="ee"><td><span class="n">12</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho ý ở câu 11.</span><span class="pat"><span>This may cause [N] to V.</span><span>This, in turn, leads to [N / V-ing].</span><span>A case in point is [N].</span></span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Kết bài</td></tr>
+<tr><td><span class="n">13</span></td><td>In conclusion, <span class="g">while [N / the fact that S' + V'] can be <span class="blank"></span>,</span> <span class="r">it also has several <span class="blank"></span>.</span><span class="hint" lang="vi">Gợi ý điền: beneficial … drawbacks</span></td></tr>
+</tbody></table></div>
+
+<h3 id="outweigh-adv">Outweigh: Advantages &gt; Disadvantages</h3>
+<p class="src">Ảnh: <a href="3e75e0f2-5d91-4391-9b39-a726640de676.jpg">3e75e0f2….jpg</a> · Advantages &gt; Disadvantages</p>
+<p>Dùng khi bạn cho rằng lợi ích lớn hơn: bất lợi viết trước như một sự nhượng bộ, lợi ích viết sau và mạnh hơn.</p>
+<div class="table-wrap"><table class="ol" lang="en"><tbody>
+<tr class="group"><td colspan="2" lang="vi">Mở bài</td></tr>
+<tr><td><span class="n">1</span></td><td><span class="lb">Paraphrase the topic:</span><strong>It is true that S + V</strong></td></tr>
+<tr><td><span class="n">2</span></td><td><span class="lb">Thesis:</span><span class="g">Although this (doing this) has several disadvantages,</span> <span class="r">the benefits may be far more significant.</span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Thân bài 1</td></tr>
+<tr><td><span class="n">3</span></td><td><span class="g">On the one hand, there can be some minor disadvantages of [N / N + V-ing].</span></td></tr>
+<tr><td><span class="n">4</span></td><td>One possible issue is that S + V</td></tr>
+<tr class="ee"><td><span class="n">5</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho ý ở câu 4.</span><span class="pat"><span>This could lead to [N / V-ing].</span><span>As a result, S + V.</span><span>For instance, S + V.</span></span></td></tr>
+<tr><td><span class="n">6</span></td><td>Another detrimental effect could be that S + V</td></tr>
+<tr class="ee"><td><span class="n">7</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho ý ở câu 6.</span><span class="pat"><span>This may cause [N] to V.</span><span>Consequently, S + V.</span><span>To illustrate, S + V.</span></span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Thân bài 2</td></tr>
+<tr><td><span class="n">8</span></td><td><span class="r">Nevertheless, [N / the fact that S' + V'] can have major advantages which overshadow these negative impacts.</span></td></tr>
+<tr><td><span class="n">9</span></td><td>The most obvious benefit could be that S + V</td></tr>
+<tr class="ee"><td><span class="n">10</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho ý ở câu 9.</span><span class="pat"><span>This means that S + V.</span><span>As a consequence, S + V.</span><span>For example, in [place], S + V.</span></span></td></tr>
+<tr><td><span class="n">11</span></td><td>Another merit worth mentioning is that S + V</td></tr>
+<tr class="ee"><td><span class="n">12</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho ý ở câu 11.</span><span class="pat"><span>This allows [N] to V.</span><span>This, in turn, leads to [N / V-ing].</span><span>A case in point is [N].</span></span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Kết bài</td></tr>
+<tr><td><span class="n">13</span></td><td>In conclusion, <span class="g">despite the potential downsides of [N / N + V-ing],</span> <span class="r">the beneficial effects brought about are of greater importance.</span></td></tr>
+</tbody></table></div>
+
+<h3 id="outweigh-dis">Outweigh: Disadvantages &gt; Advantages</h3>
+<p class="src">Ảnh: <a href="681f1267-649a-44b0-9015-a88aa4038b41.jpg">681f1267….jpg</a> · 1.3. Outline dạng Outweigh — Disadvantages &gt; Advantages</p>
+<p>Dùng khi bạn cho rằng bất lợi lớn hơn: lợi ích viết trước, bất lợi viết sau.</p>
+<div class="table-wrap"><table class="ol" lang="en"><tbody>
+<tr class="group"><td colspan="2" lang="vi">Mở bài</td></tr>
+<tr><td><span class="n">1</span></td><td><span class="lb">Paraphrase the topic:</span><strong>It is true that S + V</strong></td></tr>
+<tr><td><span class="n">2</span></td><td><span class="lb">Thesis:</span><span class="g">Although this (doing this) has several advantages,</span> <span class="r">the drawbacks may be far more significant.</span> <span class="ink">✍ adj.</span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Thân bài 1</td></tr>
+<tr><td><span class="n">3</span></td><td><span class="g">On the one hand, there can be some minor benefits of [N / N + V-ing].</span></td></tr>
+<tr><td><span class="n">4</span></td><td>One possible advantage is that S + V</td></tr>
+<tr class="ee"><td><span class="n">5</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho ý ở câu 4.</span><span class="pat"><span>This means that S + V.</span><span>As a result, S + V.</span><span>For instance, S + V.</span></span></td></tr>
+<tr><td><span class="n">6</span></td><td>Another beneficial effect could be that S + V</td></tr>
+<tr class="ee"><td><span class="n">7</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho ý ở câu 6.</span><span class="pat"><span>This allows [N] to V.</span><span>Consequently, S + V.</span><span>To illustrate, S + V.</span></span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Thân bài 2</td></tr>
+<tr><td><span class="n">8</span></td><td><span class="r">Nevertheless, [N / the fact that S' + V'] can have major downsides which overshadow these positive impacts.</span></td></tr>
+<tr><td><span class="n">9</span></td><td>The most obvious issue could be that S + V</td></tr>
+<tr class="ee"><td><span class="n">10</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho ý ở câu 9.</span><span class="pat"><span>This could lead to [N / V-ing].</span><span>As a consequence, S + V.</span><span>For example, in [place], S + V.</span></span></td></tr>
+<tr><td><span class="n">11</span></td><td>Another drawback worth mentioning is that S + V</td></tr>
+<tr class="ee"><td><span class="n">12</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho ý ở câu 11.</span><span class="pat"><span>This may cause [N] to V.</span><span>This, in turn, leads to [N / V-ing].</span><span>A case in point is [N].</span></span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Kết bài</td></tr>
+<tr><td><span class="n">13</span></td><td>In conclusion, <span class="g">despite the potential benefits of [N / N + V-ing],</span> <span class="r">the drawbacks involved are of greater <u class="ink-u">significance</u>.</span> <span class="ink">✍ (n)</span></td></tr>
+</tbody></table></div>
+<p>Ghi chú tay trên trang này: <span class="ink" lang="en">✍ minor = mini</span> (nhỏ); <em>significant</em> (adj) ở câu 2 đổi thành <em>of greater significance</em> (n) ở câu 13.</p>
+
+<h2 id="causes-solutions">Causes &amp; Solutions</h2>
+<p class="src">Ảnh: <a href="1cc74ea7-856a-465d-a554-bfa6e3c33e94.jpg">1cc74ea7….jpg</a> · 2. Causes &amp; Solutions – Linear Framework</p>
+<p>Dùng cho đề hỏi nguyên nhân và giải pháp (<em>What are the causes…? What can be done?</em>).</p>
+<div class="table-wrap"><table class="ol" lang="en"><tbody>
+<tr class="group"><td colspan="2" lang="vi">Mở bài</td></tr>
+<tr><td><span class="n">1</span></td><td><span class="lb">Paraphrase the topic:</span><strong>It is true that S + V</strong></td></tr>
+<tr><td><span class="n">2</span></td><td><span class="lb">Thesis:</span><span class="g">This can be attributed to several factors,</span> <span class="p">which can require possible solutions to be adopted.</span><div class="ink">✍ answers the question</div></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Thân bài 1</td></tr>
+<tr><td><span class="n">3</span></td><td><span class="g">There are several explanations as to why S' + V'.</span></td></tr>
+<tr><td><span class="n">4</span></td><td>One possibility is that S + V</td></tr>
+<tr class="ee"><td><span class="n">5</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho nguyên nhân ở câu 4.</span><span class="pat"><span>This is because S + V.</span><span>As a result, S + V.</span><span>For example, S + V.</span></span></td></tr>
+<tr><td><span class="n">6</span></td><td>Another reason worth mentioning is that S + V</td></tr>
+<tr class="ee"><td><span class="n">7</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho nguyên nhân ở câu 6.</span><span class="pat"><span>This is mainly due to [N / V-ing].</span><span>Consequently, S + V.</span><span>For instance, S + V.</span></span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Thân bài 2</td></tr>
+<tr><td><span class="n">8</span></td><td><span class="p">Various measures, nevertheless, can be implemented to address these issues.</span></td></tr>
+<tr><td><span class="n">9</span></td><td>The first possible solution is that S + V</td></tr>
+<tr class="ee"><td><span class="n">10</span></td><td>Expand | Example<span class="hint" lang="vi">Giải pháp ở câu 9 giải quyết vấn đề thế nào, hoặc một nơi đã làm như vậy.</span><span class="pat"><span>By doing so, S + V.</span><span>This would help [N] (to) V.</span><span>For example, in [place], S + V.</span></span></td></tr>
+<tr><td><span class="n">11</span></td><td>The second approach is that S + V</td></tr>
+<tr class="ee"><td><span class="n">12</span></td><td>Expand | Example<span class="hint" lang="vi">Giải pháp ở câu 11 giải quyết vấn đề thế nào, hoặc một nơi đã làm như vậy.</span><span class="pat"><span>This would mean that S + V.</span><span>As a result, S + V.</span><span>A good example is [N], where S + V.</span></span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Kết bài</td></tr>
+<tr><td><span class="n">13</span></td><td>In conclusion, <span class="g">while many reasons can be given to explain why S' + V',</span> <span class="p">steps can be taken to alleviate the situation.</span></td></tr>
+</tbody></table></div>
+<p>Sơ đồ cuối trang: câu 2 tách thành hai nhánh, <span class="g">Causes</span> → câu 3 và <span class="p">Solutions</span> → câu 8.</p>
+
+<h2 id="problems-solutions">Problems &amp; Solutions</h2>
+<p class="src">Ảnh: <a href="5e309026-b8f0-4b95-8ad7-7cb34567882d.jpg">5e309026….jpg</a> · III. Problems &amp; Solutions – Outline</p>
+<p>Dùng cho đề hỏi vấn đề (hậu quả) và giải pháp (<em>What problems does this cause? What solutions can you suggest?</em>). Thân bài 2 giống hệt Causes &amp; Solutions.</p>
+<div class="table-wrap"><table class="ol" lang="en"><tbody>
+<tr class="group"><td colspan="2" lang="vi">Mở bài</td></tr>
+<tr><td><span class="n">1</span></td><td><span class="lb">Paraphrase the topic:</span><strong>It is true that S + V</strong></td></tr>
+<tr><td><span class="n">2</span></td><td><span class="lb">Thesis:</span><span class="g">This can lead to some negative consequences,</span> <span class="p">which calls for possible solutions to be adopted.</span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Thân bài 1</td></tr>
+<tr><td><span class="n">3</span></td><td><span class="g">There are many problems resulting from [N / N + V-ing / the fact that S' + V'].</span></td></tr>
+<tr><td><span class="n">4</span></td><td>One obvious issue is that S + V</td></tr>
+<tr class="ee"><td><span class="n">5</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho vấn đề ở câu 4.</span><span class="pat"><span>This could lead to [N / V-ing].</span><span>As a result, S + V.</span><span>For example, S + V.</span></span></td></tr>
+<tr><td><span class="n">6</span></td><td>Another potential risk is that S + V</td></tr>
+<tr class="ee"><td><span class="n">7</span></td><td>Expand | Example<span class="hint" lang="vi">Giải thích thêm hoặc cho ví dụ cho vấn đề ở câu 6.</span><span class="pat"><span>This may cause [N] to V.</span><span>Consequently, S + V.</span><span>For instance, S + V.</span></span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Thân bài 2</td></tr>
+<tr><td><span class="n">8</span></td><td><span class="p">Various measures, nevertheless, can be implemented to address these issues.</span></td></tr>
+<tr><td><span class="n">9</span></td><td>The first possible solution is that S + V</td></tr>
+<tr class="ee"><td><span class="n">10</span></td><td>Expand | Example<span class="hint" lang="vi">Giải pháp ở câu 9 giải quyết vấn đề thế nào, hoặc một nơi đã làm như vậy.</span><span class="pat"><span>By doing so, S + V.</span><span>This would help [N] (to) V.</span><span>For example, in [place], S + V.</span></span></td></tr>
+<tr><td><span class="n">11</span></td><td>The second approach is that S + V</td></tr>
+<tr class="ee"><td><span class="n">12</span></td><td>Expand | Example<span class="hint" lang="vi">Giải pháp ở câu 11 giải quyết vấn đề thế nào, hoặc một nơi đã làm như vậy.</span><span class="pat"><span>This would mean that S + V.</span><span>As a result, S + V.</span><span>A good example is [N], where S + V.</span></span></td></tr>
+<tr class="group"><td colspan="2" lang="vi">Kết bài</td></tr>
+<tr><td><span class="n">13</span></td><td>In conclusion, <span class="g">although [topic] can give rise to many issues,</span> <span class="p">steps can be taken to improve the situation.</span></td></tr>
+</tbody></table></div>
+
+<h2 id="cau-mo-y">Câu mở ý dùng lại được</h2>
+<p>Các câu mở ý trong 6 outline, gom theo loại ý:</p>
+<div class="table-wrap"><table><thead><tr><th>Loại ý</th><th>Mở ý thứ nhất</th><th>Mở ý thứ hai</th></tr></thead><tbody>
+<tr><td>Lý do<span class="sub">Agree – Disagree</span></td><td lang="en">The first argument given to support my opinion is that…</td><td lang="en">Another point behind my belief is that…</td></tr>
+<tr><td>Nguyên nhân</td><td lang="en">One possibility is that…</td><td lang="en">Another reason worth mentioning is that…</td></tr>
+<tr><td>Vấn đề, bất lợi</td><td lang="en">One possible issue is that…<br>One obvious issue is that…<br>One issue could be that…<br>The most obvious issue could be that…</td><td lang="en">Another detrimental effect could be that…<br>Another potential risk is that…<br>Another drawback worth mentioning is that…</td></tr>
+<tr><td>Lợi ích</td><td lang="en">One possible advantage is that…<br>The most obvious benefit could be that…</td><td lang="en">Another beneficial effect could be that…<br>Another merit worth mentioning is that…</td></tr>
+<tr><td>Giải pháp</td><td lang="en">The first possible solution is that…</td><td lang="en">The second approach is that…</td></tr>
+<tr><td>Link to the topic<span class="sub">ghi chú tay</span></td><td lang="en" class="ink">This is why I believe that…</td><td lang="en" class="ink">For these reasons, I think that…</td></tr>
+</tbody></table></div>
+</main>
+</div>
+<script>
+(function () {
+  var root = document.documentElement, key = 'ielts-notes-theme';
+  try { var saved = localStorage.getItem(key); if (saved) root.dataset.theme = saved; } catch (e) {}
+  document.getElementById('theme').addEventListener('click', function () {
+    var dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem(key, root.dataset.theme); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

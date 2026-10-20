@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phân tích đề và tìm ý</title>
+<style>
+:root {
+  --bg: #f7f6f2; --surface: #ffffff; --text: #22211f; --muted: #6b6860;
+  --border: #e3e0d8; --accent: #2f6f5e; --accent-soft: #e6f0ec; --quote-bg: #f1efe8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161716; --surface: #1f2120; --text: #e8e6e1; --muted: #a09d95;
+    --border: #343734; --accent: #7cc4ad; --accent-soft: #23312c; --quote-bg: #252826;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161716; --surface: #1f2120; --text: #e8e6e1; --muted: #a09d95;
+  --border: #343734; --accent: #7cc4ad; --accent-soft: #23312c; --quote-bg: #252826;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+header.top {
+  position: sticky; top: 0; z-index: 2; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+header.top .inner { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 16px; max-width: 1180px; margin: 0 auto; }
+header.top a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 999px; font-size: 14px; }
+header.top a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+header.top button {
+  margin-left: auto; background: none; border: 1px solid var(--border); color: var(--text);
+  border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 14px; cursor: pointer;
+}
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 40px; max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+nav.toc { position: sticky; top: 72px; align-self: start; max-height: calc(100vh - 96px); overflow: auto; font-size: 14px; }
+nav.toc p { margin: 0 0 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+nav.toc a { display: block; color: var(--muted); text-decoration: none; padding: 3px 0; }
+nav.toc a:hover { color: var(--accent); }
+nav.toc a.l3 { padding-left: 12px; }
+main { max-width: 820px; min-width: 0; }
+h1 { font-size: 30px; line-height: 1.25; margin: 0 0 16px; }
+h2 { font-size: 23px; margin: 44px 0 12px; padding-top: 8px; color: var(--accent); }
+h3 { font-size: 19px; margin: 32px 0 8px; }
+h1, h2, h3 { scroll-margin-top: 72px; }
+p, ul { margin: 0 0 14px; }
+ul { padding-left: 22px; }
+li { margin: 4px 0; }
+a { color: var(--accent); }
+blockquote {
+  margin: 0 0 16px; padding: 12px 16px; background: var(--quote-bg);
+  border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;
+}
+.table-wrap { overflow-x: auto; margin: 0 0 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+th { background: var(--accent-soft); font-weight: 600; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+td .sub { display: block; font-size: 13px; font-weight: 400; color: var(--muted); white-space: normal; }
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; gap: 0; }
+  nav.toc { display: none; }
+  h1 { font-size: 25px; }
+  td:first-child { white-space: normal; }
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="inner">
+<a href="cac-buoc-lam-bai.html" aria-current="page">Phân tích đề và tìm ý</a>
+<a href="outline-dang-de.html">Outline theo dạng đề</a>
+<a href="huong-dan-song-ngu.html">Song ngữ VI–EN</a>
+<button type="button" id="theme">Sáng / Tối</button>
+</div></header>
+<div class="layout">
+<nav class="toc"><p>Mục lục</p>
+<a class="l2" href="#buoc-1-phan-tich-de">Bước 1: Phân tích đề</a>
+<a class="l3" href="#nhan-dang-dang-de">Nhận dạng dạng đề</a>
+<a class="l2" href="#buoc-2-chon-quan-diem-va-tim-y">Bước 2: Chọn quan điểm và tìm ý</a>
+</nav>
+<main>
+<h1>Bước 1–2: Phân tích đề và tìm ý</h1>
+<blockquote>Hai bước đầu tiên khi gặp một đề Task 2, làm trong khoảng 6 phút trước khi viết: bước 1 mất 2 phút, bước 2 mất 4 phút. Có quan điểm và ý rồi thì chuyển sang <a href="outline-dang-de.html">Outline theo dạng đề</a> để viết bài.</blockquote>
+
+<h2 id="buoc-1-phan-tich-de">Bước 1: Phân tích đề</h2>
+<p>Gạch chân từ khóa và tách đề thành 4 lớp:</p>
+<ul>
+<li><strong>Chủ đề chung:</strong> môi trường, giáo dục, công nghệ…</li>
+<li><strong>Vấn đề cụ thể:</strong> khía cạnh hẹp mà đề thật sự hỏi. Nếu chỉ viết về chủ đề chung thì bài bị lạc đề.</li>
+<li><strong>Yêu cầu:</strong> câu lệnh ở cuối đề. Nó cho biết dạng đề và bài phải trả lời mấy phần.</li>
+<li><strong>Từ giới hạn:</strong> <em>all, only, children, in developing countries…</em> Bỏ qua những từ này thì bài trả lời lệch đề.</li>
+</ul>
+<h3 id="nhan-dang-dang-de">Nhận dạng dạng đề</h3>
+<p>Mỗi dạng đề có cách chia hai đoạn thân bài riêng:</p>
+<div class="table-wrap"><table><thead><tr><th>Dạng đề</th><th>Dấu hiệu trong đề</th><th>Cần ý kiến riêng?</th><th>Thân bài 1</th><th>Thân bài 2</th></tr></thead><tbody>
+<tr><td>Agree or Disagree<span class="sub">Đồng ý / Không đồng ý</span></td><td><em>To what extent do you agree or disagree?</em> / <em>Do you agree or disagree?</em></td><td>Có</td><td>Lý do 1 (nếu đồng ý một phần: phía bạn nhượng bộ)</td><td>Lý do 2 (hoặc phía bạn nghiêng về)</td></tr>
+<tr><td>Discuss both views<span class="sub">Thảo luận hai quan điểm</span></td><td><em>Discuss both views and give your opinion.</em></td><td>Có</td><td>Quan điểm A</td><td>Quan điểm B, thường là phía bạn ủng hộ</td></tr>
+<tr><td>Advantages and Disadvantages<span class="sub">Ưu điểm / Nhược điểm</span></td><td><em>Discuss the advantages and disadvantages.</em> / <em>Do the advantages outweigh the disadvantages?</em></td><td>Chỉ khi đề hỏi <em>outweigh</em> hoặc <em>your opinion</em></td><td>Lợi ích (đề <em>outweigh</em>: mặt yếu hơn)</td><td>Bất lợi (đề <em>outweigh</em>: mặt mạnh hơn, kèm lý do nó vượt trội)</td></tr>
+<tr><td>Causes and Solutions<span class="sub">Nguyên nhân / Giải pháp</span></td><td><em>What are the causes…? What can be done…?</em></td><td>Không</td><td>Nguyên nhân</td><td>Giải pháp, mỗi giải pháp ứng với một nguyên nhân</td></tr>
+<tr><td>Problem and Solution<span class="sub">Vấn đề / Giải pháp</span></td><td><em>What problems does this cause? What solutions can you suggest?</em></td><td>Không</td><td>Vấn đề (hậu quả của hiện tượng)</td><td>Giải pháp cho từng vấn đề</td></tr>
+<tr><td>Positive or Negative<span class="sub">Tích cực hay tiêu cực</span></td><td><em>Is this a positive or negative development?</em></td><td>Có</td><td>Lý do 1 (hoặc mặt bạn nhượng bộ)</td><td>Lý do 2 (hoặc mặt bạn nghiêng về)</td></tr>
+<tr><td>Two-part question<span class="sub">Câu hỏi hai phần</span></td><td>Hai câu hỏi trực tiếp, vd. <em>Why are more people living alone? Is this a good thing for society?</em></td><td>Tùy câu hỏi (<em>Is this a good thing?</em> là hỏi ý kiến)</td><td>Trả lời câu 1</td><td>Trả lời câu 2</td></tr>
+</tbody></table></div>
+<p>Nếu bỏ sót một phần của đề (ví dụ đề <em>Discuss both views</em> mà quên nêu ý kiến), điểm TR (Task Response: trả lời đúng và đủ đề) thường chỉ được khoảng band 5, dù tiếng Anh tốt.</p>
+
+<h2 id="buoc-2-chon-quan-diem-va-tim-y">Bước 2: Chọn quan điểm và tìm ý</h2>
+<ul>
+<li>Chốt quan điểm <strong>trước khi viết</strong> và giữ nguyên đến hết bài. Đồng ý một phần cũng được, miễn là nói rõ bạn đồng ý phần nào.</li>
+<li>Chọn phía mà bạn có nhiều ý và nhiều từ vựng nhất, không nhất thiết là điều bạn tin nhất. Giám khảo chấm cách lập luận, không chấm quan điểm.</li>
+<li>Tìm ý bằng bộ <a href="huong-dan-song-ngu.html#1-cong-thuc-6-cau-hoi">6 câu hỏi</a> WHO – WHY – WHAT – HOW – WHEN – WHICH và <a href="huong-dan-song-ngu.html#3-12-huong-phat-trien-y">12 hướng phát triển ý</a>.</li>
+<li>Chỉ giữ lại <strong>2 ý mạnh nhất</strong>. Cách thử: mỗi ý phải viết được 3–4 câu và có một ví dụ cụ thể, không được thì bỏ. Hai ý giải thích sâu được điểm cao hơn bốn ý chỉ liệt kê.</li>
+</ul>
+</main>
+</div>
+<script>
+(function () {
+  var root = document.documentElement, key = 'ielts-notes-theme';
+  try { var saved = localStorage.getItem(key); if (saved) root.dataset.theme = saved; } catch (e) {}
+  document.getElementById('theme').addEventListener('click', function () {
+    var dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem(key, root.dataset.theme); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>
