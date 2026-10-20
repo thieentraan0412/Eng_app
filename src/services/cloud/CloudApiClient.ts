@@ -333,6 +333,27 @@ export interface CloudGrammarError extends NewCloudGrammarError {
   last_seen: string
 }
 
+// Supabase (PostgREST) chỉ trả tối đa 1000 dòng mỗi truy vấn. Các hàm ĐẾM
+// lấy toàn bộ dòng của user rồi gộp ở client, nên khi kho vượt 1000 câu sẽ
+// đếm thiếu (thẻ thư mục hiện "0 câu"). Helper này lật trang bằng .range()
+// cho đến khi hết dữ liệu.
+const PAGE_SIZE = 1000
+async function fetchAllRows<T>(
+  makeQuery: () => {
+    range: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>
+  },
+): Promise<T[]> {
+  const out: T[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await makeQuery().range(from, from + PAGE_SIZE - 1)
+    if (error) throw error
+    const rows = (data ?? []) as T[]
+    out.push(...rows)
+    if (rows.length < PAGE_SIZE) break
+  }
+  return out
+}
+
 export const CloudApi = {
   // ---------- Auth ----------
   async signUp(email: string, password: string) {
@@ -807,13 +828,11 @@ export const CloudApi = {
 
   // Đếm số câu theo từng thư mục (cho lưới thẻ ngoài trang chính)
   async countSentencesByFolder(): Promise<Record<string, number>> {
-    const { data, error } = await supabase
-      .from('sentences')
-      .select('folder_id')
-      .is('deleted_at', null)
-    if (error) throw error
+    const rows = await fetchAllRows<{ folder_id: string }>(() =>
+      supabase.from('sentences').select('folder_id').is('deleted_at', null),
+    )
     const counts: Record<string, number> = {}
-    for (const row of data as { folder_id: string }[]) {
+    for (const row of rows) {
       counts[row.folder_id] = (counts[row.folder_id] ?? 0) + 1
     }
     return counts
@@ -821,14 +840,15 @@ export const CloudApi = {
 
   // Đếm số câu ĐÃ LÀM (đã chấm điểm) theo từng thư mục — cho lưới thẻ trang chính
   async countProgressByFolder(): Promise<Record<string, number>> {
-    const { data, error } = await supabase
-      .from('sentence_progress')
-      .select('sentence_id, sentences!inner(folder_id)')
-      .not('status', 'is', null)
-      .is('sentences.deleted_at', null)
-    if (error) throw error
+    const rows = await fetchAllRows<{ sentences: { folder_id: string } }>(() =>
+      supabase
+        .from('sentence_progress')
+        .select('sentence_id, sentences!inner(folder_id)')
+        .not('status', 'is', null)
+        .is('sentences.deleted_at', null),
+    )
     const counts: Record<string, number> = {}
-    for (const row of data as unknown as { sentences: { folder_id: string } }[]) {
+    for (const row of rows) {
       const fid = row.sentences?.folder_id
       if (fid) counts[fid] = (counts[fid] ?? 0) + 1
     }
@@ -837,14 +857,15 @@ export const CloudApi = {
 
   // Đếm số câu chấm ĐÚNG theo từng thư mục — nhãn "n đúng" trên thẻ thư mục
   async countCorrectByFolder(): Promise<Record<string, number>> {
-    const { data, error } = await supabase
-      .from('sentence_progress')
-      .select('sentence_id, sentences!inner(folder_id)')
-      .eq('status', 'correct')
-      .is('sentences.deleted_at', null)
-    if (error) throw error
+    const rows = await fetchAllRows<{ sentences: { folder_id: string } }>(() =>
+      supabase
+        .from('sentence_progress')
+        .select('sentence_id, sentences!inner(folder_id)')
+        .eq('status', 'correct')
+        .is('sentences.deleted_at', null),
+    )
     const counts: Record<string, number> = {}
-    for (const row of data as unknown as { sentences: { folder_id: string } }[]) {
+    for (const row of rows) {
       const fid = row.sentences?.folder_id
       if (fid) counts[fid] = (counts[fid] ?? 0) + 1
     }
