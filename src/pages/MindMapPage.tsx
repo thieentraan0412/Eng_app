@@ -1,8 +1,10 @@
-// Trang "Tư duy" — sơ đồ tư duy xử lý một đề IELTS Writing Task 2, vẽ theo kiểu bản đồ tuyến (metro).
-// Nội dung: DATA/cac-buoc-lam-bai.html (bước 1–2), DATA/outline-dang-de.html (outline 13 câu),
-// DATA/huong-dan-song-ngu.md (6 câu hỏi, 12 hướng).
+// Trang "Tư duy" — sơ đồ từng bước xử lý một đề IELTS Writing Task 2.
+// Sáu bước xếp dọc: Phân tích đề → Dạng đề → Quan điểm → Tìm ý → Outline 13 câu → Viết bài.
+// Mỗi bước là một thẻ chứa dữ liệu của riêng bước đó; lựa chọn của bước trên được mang sang
+// bước dưới (hiện trên mũi tên nối hai thẻ). Bấm một nút → bảng bên phải hiện chi tiết,
+// bấm dạng đề / quan điểm → hiện format bài viết 13 câu (DATA/outline-dang-de.html).
 // Dữ liệu: src/data/task2MindMap.ts · src/data/task2Outlines.ts
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import '@fontsource/overpass/600.css'
 import '@fontsource/overpass/700.css'
 import '@fontsource/overpass/800.css'
@@ -10,18 +12,11 @@ import '@fontsource/overpass-mono/500.css'
 import '@fontsource/overpass-mono/600.css'
 import Icon from '../components/Icon'
 import type { PageKey } from './pages'
-import {
-  DIRECTIONS,
-  ESSAY_TYPES,
-  SIX_W,
-  findDirection,
-  findEssayType,
-  type Direction,
-  type EssayType,
-} from '../data/task2MindMap'
+import { DIRECTIONS, ESSAY_TYPES, SIX_W, findDirection, findEssayType, type Direction, type EssayType } from '../data/task2MindMap'
 import {
   OUTLINE_CHOICES,
   defaultChoice,
+  findOutline,
   outlineFor,
   segText,
   segsToText,
@@ -37,26 +32,22 @@ import { errText } from '../services/cloud/cloudError'
 import '../styles/mindmap.css'
 
 // ------------------------------------------------------------------ Trạng thái
-type StepId = 'step.analyze' | 'step.ideas' | 'step.outline'
-
 interface MindState {
   prompt: string
   manualType: string | null // người dùng tự chọn dạng đề (đè lên kết quả dò)
   choices: Record<string, string> // quan điểm / kiểu outline theo từng dạng đề
   picks: string[] // hướng được chọn làm ý cho bài, tối đa MAX_PICKS
-  openStep: StepId | null // tuyến nhánh đang mở trên bản đồ
-  active: string // ga đang xem chi tiết
+  active: string // nút đang xem chi tiết
 }
 
-const STORE_KEY = 'mindmap_task2_v2'
+const STORE_KEY = 'mindmap_task2_v3'
 const MAX_PICKS = 2
 const INITIAL: MindState = {
   prompt: '',
   manualType: null,
   choices: {},
   picks: [],
-  openStep: 'step.analyze',
-  active: 'step.analyze',
+  active: 'root',
 }
 
 function loadState(): MindState {
@@ -69,13 +60,12 @@ function loadState(): MindState {
   return INITIAL
 }
 
-const STEPS: { id: StepId; no: string; label: string; minutes: string }[] = [
-  { id: 'step.analyze', no: '1', label: 'Phân tích đề', minutes: '2 phút' },
-  { id: 'step.ideas', no: '2', label: 'Quan điểm & ý', minutes: '4 phút' },
-  { id: 'step.outline', no: '3', label: 'Outline 13 câu', minutes: 'khi viết' },
-]
-
-const TONE_NAME: Record<Tone, string> = { g: 'xanh lá', r: 'đỏ', p: 'tím', o: 'cam' }
+const TONE_NAME: Record<Tone, string> = {
+  g: 'xanh lá',
+  r: 'đỏ',
+  p: 'tím',
+  o: 'cam',
+}
 const PARTS: { from: number; to: number; title: (o: Outline) => string }[] = [
   { from: 1, to: 2, title: () => 'Mở bài' },
   { from: 3, to: 7, title: (o) => `Thân bài 1 · ${o.bodyNames[0]}` },
@@ -83,74 +73,66 @@ const PARTS: { from: number; to: number; title: (o: Outline) => string }[] = [
   { from: 13, to: 13, title: () => 'Kết bài' },
 ]
 
-/** Bước chứa một ga, để mở đúng tuyến nhánh khi nhảy tới ga đó. */
-function stepOf(id: string): StepId | null {
-  if (id.startsWith('step.')) return id as StepId
-  if (id.startsWith('type.')) return 'step.analyze'
-  if (id === 'ideas.sixw' || id.startsWith('dir.')) return 'step.ideas'
-  if (id.startsWith('line.')) return 'step.outline'
-  return null
-}
-
 const countWords = (s: string) => (s.trim() ? s.trim().split(/\s+/).length : 0)
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
+const choiceNodeId = (typeId: string, choiceId: string) => `choice.${typeId}.${choiceId}`
 
-// ------------------------------------------------------------------ Bản đồ
-type LineTone = Tone | 'm' // 'm' = tuyến chính
-type Kind = 'step' | 'stop' | 'hub' | 'minor' | 'end'
+/** Tách id nút "choice.<type>.<choice>" → { typeId, choiceId }. */
+function parseChoiceNode(id: string): { typeId: string; choiceId: string } | null {
+  const m = /^choice\.(type\.[a-z]+)\.([a-z]+)$/.exec(id)
+  return m ? { typeId: m[1], choiceId: m[2] } : null
+}
 
-interface StationM {
+// ------------------------------------------------------------------ Sơ đồ từng bước
+// Trình tự theo DATA/cac-buoc-lam-bai.html và outline-dang-de.html. Trong thẻ một bước,
+// các nút cấp đầu xếp lưới; nút con treo thụt vào dưới nút cha theo kiểu cây.
+
+/** Một nút trong cây của một bước. */
+interface TNode {
   id: string
-  x: number
-  y: number
-  kind: Kind
-  side: 'up' | 'right' | 'left'
-  tone: LineTone
   label: string
   sub?: string
   no?: string
-  chosen?: boolean
+  kind: 'group' | 'leaf'
+  tone?: Tone | 'm'
+  chosen?: boolean // dạng đề / quan điểm đang dùng
+  picked?: boolean // hướng đã chọn làm ý
+  minor?: boolean // câu Expand / Example trong outline
   flags?: ReactNode
+  kids?: TNode[]
 }
 
-interface PathM {
-  d: string
-  tone: LineTone
+type StepStatus = 'done' | 'now' | 'todo'
+
+const STATUS_TEXT: Record<StepStatus, string> = {
+  done: 'Xong',
+  now: 'Đang làm',
+  todo: 'Chưa làm',
 }
 
-interface LineNameM {
-  x: number
-  y: number
-  side: 'left' | 'right'
-  tone: LineTone
+interface FlowStep {
+  id: string
+  no: number
   label: string
-  sub: string
+  time?: string
+  done: boolean
+  /** Bước trước chưa cho dữ liệu nên bước này chưa làm được. */
+  lock?: string
+  intro?: ReactNode
+  kids: TNode[]
+  extra?: ReactNode
+  /** Kết quả của bước, mang sang bước sau. */
+  carry?: { label: string; value: string; empty: boolean }
 }
 
-interface BranchM {
-  key: string
-  height: number
-  paths: PathM[]
-  stations: StationM[]
-  names: LineNameM[]
-}
-
-// Toạ độ cố định: trục chính nằm ngang, nhánh rơi xuống dưới bước đang mở.
-const W = 660
-const TY = 82 // y của tuyến chính
-const ROOT_X = 40
-const STEP_X: Record<StepId, number> = { 'step.analyze': 190, 'step.ideas': 345, 'step.outline': 500 }
-const BX = 330 // trục giữa của nhánh outline
-const D = 52 // nửa khoảng cách hai tuyến song song
-const ROW = 46
-const C = 14 // vát góc 45°
-const MARK: Record<Kind, number> = { step: 15, end: 14, hub: 11, stop: 8, minor: 3 }
-
-/** Đường từ ga bước xuống trục nhánh, rẽ 45° như bản đồ tàu điện. */
-function drop(sx: number, bx: number, yTurn: number, yEnd: number): string {
-  if (sx === bx) return `M ${sx} ${TY} V ${yEnd}`
-  const dir = bx > sx ? 1 : -1
-  return `M ${sx} ${TY} V ${yTurn - C} L ${sx + dir * C} ${yTurn} H ${bx - dir * C} L ${bx} ${yTurn + C} V ${yEnd}`
+/** Đường dẫn id từ đầu bước tới nút `target` (để tô sáng cả nhánh đang xem). */
+function pathTo(kids: TNode[], target: string): string[] | null {
+  for (const k of kids) {
+    if (k.id === target) return [k.id]
+    const sub = k.kids ? pathTo(k.kids, target) : null
+    if (sub) return [k.id, ...sub]
+  }
+  return null
 }
 
 // ------------------------------------------------------------------ Trang
@@ -161,7 +143,6 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const detailRef = useRef<HTMLElement>(null)
-  const mapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     try {
@@ -173,54 +154,69 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
 
   useEffect(() => () => stopSpeaking(), [])
 
-  // Bản đồ rộng hơn khung thì cuộn ngang để ga đang chọn luôn nằm trong tầm nhìn.
+  // Bấm một phần / một câu ở bước 5 → cuộn bảng bên phải tới đúng chỗ đó.
   useEffect(() => {
-    const map = mapRef.current
-    const node = map?.querySelector<HTMLElement>('.mt-st.is-active')
-    if (!map || !node || map.scrollWidth <= map.clientWidth) return
-    const m = map.getBoundingClientRect()
-    const n = node.getBoundingClientRect()
-    if (n.right > m.right - 12) map.scrollBy({ left: n.right - m.right + 24, behavior: 'smooth' })
-    else if (n.left < m.left + 12) map.scrollBy({ left: n.left - m.left - 24, behavior: 'smooth' })
-  }, [st.active, st.openStep])
+    const id = st.active
+    if (id.startsWith('line.')) jumpToLine(Number(id.slice(5)))
+    else if (id.startsWith('part.')) {
+      // Đợi bảng bên phải dựng xong format rồi mới cuộn.
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`mt-part-${id.slice(5)}`)
+        if (el) scrollPanelTo(el, 'start')
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [st.active])
 
   const patch = (p: Partial<MindState>) => setSt((s) => ({ ...s, ...p }))
 
   const detected = useMemo(() => detectEssayType(st.prompt), [st.prompt])
   const typeId = st.manualType ?? detected
   const type = typeId ? findEssayType(typeId) : undefined
-  const choiceList = typeId ? OUTLINE_CHOICES[typeId] ?? [] : []
-  const choice = typeId ? st.choices[typeId] ?? defaultChoice(typeId, st.prompt) : undefined
+  const choiceList = typeId ? (OUTLINE_CHOICES[typeId] ?? []) : []
+  const choice = typeId ? (st.choices[typeId] ?? defaultChoice(typeId, st.prompt)) : undefined
   const choiceItem = choiceList.find((c) => c.id === choice)
   const outline = typeId ? outlineFor(typeId, choice) : undefined
   const picks = st.picks.map(findDirection).filter((d): d is Direction => Boolean(d))
 
+  // Dán đề → app nhận ra dạng đề → nhảy thẳng tới format của dạng đó.
+  const prevDetected = useRef(detected)
+  useEffect(() => {
+    if (detected && detected !== prevDetected.current) setSt((s) => ({ ...s, active: detected }))
+    prevDetected.current = detected
+  }, [detected])
+
   // ---------------------------------------------------------------- Hành động
   const scrollToDetail = () => {
     if (window.matchMedia('(max-width: 1180px)').matches) {
-      requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+      requestAnimationFrame(() =>
+        detailRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        }),
+      )
     }
   }
 
   const reveal = (id: string) => {
-    const step = stepOf(id)
-    setSt((s) => ({ ...s, active: id, openStep: step ?? s.openStep }))
-  }
-
-  const select = (m: StationM) => {
-    if (m.kind === 'step') {
-      const id = m.id as StepId
-      setSt((s) =>
-        s.openStep === id && s.active === id ? { ...s, openStep: null } : { ...s, openStep: id, active: id },
-      )
-      return
-    }
-    patch({ active: m.id })
+    patch({ active: id })
     scrollToDetail()
   }
 
-  const chooseType = (id: string | null) => patch({ manualType: id })
-  const setChoice = (id: string) => typeId && setSt((s) => ({ ...s, choices: { ...s.choices, [typeId]: id } }))
+  /** Dùng một dạng đề (và quan điểm nếu có) cho bài đang làm. */
+  const useType = (id: string, choiceId?: string) =>
+    setSt((s) => ({
+      ...s,
+      manualType: id === detected ? null : id,
+      choices: choiceId ? { ...s.choices, [id]: choiceId } : s.choices,
+    }))
+
+  const chooseType = (id: string | null) =>
+    setSt((s) => ({
+      ...s,
+      manualType: id === detected ? null : id,
+      active: id ?? 'root',
+    }))
 
   const togglePick = (id: string) =>
     setSt((s) => {
@@ -255,20 +251,22 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
     speak(text, 0.95, () => setSpeaking((k) => (k === key ? null : k)))
   }
 
-  const draft = outline ? buildDraft(st.prompt, type, outline, choice, choiceItem?.label, picks) : ''
-
-  const createDraft = async () => {
-    if (busy || !outline) return
+  const createDraft = async (t: EssayType, o: Outline, text: string) => {
+    if (busy) return
     setBusy(true)
     setMsg(null)
     try {
       const head = st.prompt.trim().replace(/\s+/g, ' ')
-      const title = head ? `Task 2 – ${clip(head, 60)}` : `Dàn bài Task 2 – ${outline.name}`
-      await CloudApi.createWriting(title, draft, countWords(draft), 'IELTS Task 2')
+      const title = head ? `Task 2 – ${clip(head, 60)}` : `Dàn bài Task 2 – ${o.name}`
+      await CloudApi.createWriting(title, text, countWords(text), 'IELTS Task 2')
+      useType(t.id)
       setMsg({ ok: true, text: 'Đã tạo bài nháp. Đang mở trang Viết.' })
       onNavigate?.('writing')
     } catch (e) {
-      setMsg({ ok: false, text: `Không tạo được bài nháp: ${errText(e)}. Dàn bài vẫn còn ở đây, bạn có thể bấm Chép dàn bài.` })
+      setMsg({
+        ok: false,
+        text: `Không tạo được bài nháp: ${errText(e)}. Dàn bài vẫn còn ở đây, bạn có thể bấm Chép dàn bài.`,
+      })
     } finally {
       setBusy(false)
     }
@@ -279,6 +277,26 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
     stopSpeaking()
     setMsg(null)
     setSt(INITIAL)
+  }
+
+  // Cuộn BẢNG bên phải (không cuộn cả trang) tới một phần tử trong format, rồi nháy sáng nó.
+  // Màn hẹp thì bảng không còn khung cuộn riêng → cuộn trang như bình thường.
+  const scrollPanelTo = (el: HTMLElement, where: 'start' | 'center') => {
+    const panel = detailRef.current
+    if (panel && panel.scrollHeight > panel.clientHeight) {
+      const top = el.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop
+      const offset = where === 'center' ? Math.max(0, (panel.clientHeight - el.offsetHeight) / 2) : 12
+      panel.scrollTo({ top: Math.max(0, top - offset), behavior: 'smooth' })
+    } else {
+      el.scrollIntoView({ behavior: 'smooth', block: where })
+    }
+    el.classList.add('is-flash')
+    window.setTimeout(() => el.classList.remove('is-flash'), 1200)
+  }
+
+  const jumpToLine = (no: number) => {
+    const el = document.getElementById(`mt-line-${no}`)
+    if (el) scrollPanelTo(el, 'center')
   }
 
   // ---------------------------------------------------------------- Mảnh UI nhỏ
@@ -308,228 +326,249 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
     </div>
   )
 
-  const choiceBar = (compact = false) =>
-    choiceList.length > 0 && (
-      <div className={compact ? 'mt-seg is-compact' : 'mt-seg'} role="group" aria-label="Quan điểm">
-        {choiceList.map((c) => (
-          <button type="button" key={c.id} aria-pressed={choice === c.id} onClick={() => setChoice(c.id)}>
-            {choice === c.id && <Icon name="check" />}
-            {c.label}
-          </button>
-        ))}
-      </div>
-    )
+  // ---------------------------------------------------------------- Dựng các bước
+  const promptText = st.prompt.trim().replace(/\s+/g, ' ')
+  const draft = type && outline ? buildDraft(st.prompt, type, outline, choice, choiceItem?.label, picks) : ''
+  const noOpinion = Boolean(type) && choiceList.length === 0
 
-  // ---------------------------------------------------------------- Dựng bản đồ
-  const trunk: StationM[] = [
+  const dirLeaf = (d: Direction): TNode => ({
+    id: d.id,
+    kind: 'leaf',
+    label: d.vi,
+    sub: d.en,
+    no: String(d.no),
+    picked: st.picks.includes(d.id),
+    flags: st.picks.includes(d.id) ? <Icon name="star" className="mt-star" /> : null,
+  })
+
+  const steps: FlowStep[] = [
     {
-      id: 'root',
-      x: ROOT_X,
-      y: TY,
-      kind: 'end',
-      side: 'up',
-      tone: 'm',
-      label: 'Đề bài',
-      sub: st.prompt.trim() ? 'Đã có đề' : 'Chưa có đề',
+      id: 'step.analyze',
+      no: 1,
+      label: 'Phân tích đề',
+      time: '2 phút',
+      done: Boolean(promptText),
+      intro: promptText ? (
+        <q className="fl-quote" lang="en">
+          {clip(promptText, 180)}
+        </q>
+      ) : (
+        <p className="fl-empty">Dán đề vào ô Đề bài ở trên. App tự nhận dạng đề và điền sẵn bước 2.</p>
+      ),
+      kids: [
+        { id: 'layer.topic', kind: 'leaf', no: 'a', label: 'Chủ đề chung', sub: 'môi trường, giáo dục, công nghệ…' },
+        { id: 'layer.issue', kind: 'leaf', no: 'b', label: 'Vấn đề cụ thể', sub: 'khía cạnh hẹp mà đề thật sự hỏi' },
+        { id: 'layer.task', kind: 'leaf', no: 'c', label: 'Yêu cầu', sub: 'câu lệnh cuối đề → dạng đề' },
+        { id: 'layer.limit', kind: 'leaf', no: 'd', label: 'Từ giới hạn', sub: 'all, only, children…' },
+      ],
+      carry: { label: 'Đề bài', value: promptText ? clip(promptText, 70) : 'chưa dán đề', empty: !promptText },
     },
-    ...STEPS.map<StationM>((s) => ({
-      id: s.id,
-      x: STEP_X[s.id],
-      y: TY,
-      kind: 'step',
-      side: 'up',
-      tone: 'm',
-      no: s.no,
-      label: s.label,
-      sub:
-        s.id === 'step.analyze'
-          ? type
-            ? type.vi
-            : st.prompt.trim()
-              ? 'Chưa nhận ra dạng đề'
-              : 'Đề hỏi gì?'
-          : s.id === 'step.ideas'
-            ? `${choiceItem ? choiceItem.label : 'Tìm ý'} · ★ ${picks.length}/${MAX_PICKS}`
-            : outline
-              ? outline.name
-              : 'Cần chọn dạng đề',
-    })),
-  ]
-
-  const branch = useMemo<BranchM | null>(() => {
-    if (st.openStep === 'step.analyze') {
-      const x = STEP_X['step.analyze']
-      const y0 = TY + 66
-      const stations = ESSAY_TYPES.map<StationM>((t, i) => ({
+    {
+      id: 'step.types',
+      no: 2,
+      label: 'Nhận dạng dạng đề',
+      time: '7 dạng',
+      done: Boolean(type),
+      kids: ESSAY_TYPES.map<TNode>((t) => ({
         id: t.id,
-        x,
-        y: y0 + i * ROW,
-        kind: 'stop',
-        side: 'right',
-        tone: 'm',
+        kind: 'leaf',
         label: t.vi,
         sub: t.en,
         chosen: t.id === typeId,
-        flags: (
-          <>
-            {t.id === typeId && <span className="mt-tag is-on">đang dùng</span>}
-            {t.id === detected && <span className="mt-tag">tự nhận</span>}
-          </>
-        ),
-      }))
-      const last = y0 + (ESSAY_TYPES.length - 1) * ROW
-      return { key: 'analyze', height: last + 44, paths: [{ d: `M ${x} ${TY} V ${last}`, tone: 'm' }], stations, names: [] }
-    }
+        flags: t.id === detected ? <span className="mt-tag is-auto">tự nhận</span> : null,
+      })),
+      carry: { label: 'Dạng đề', value: type ? type.vi : 'chưa chọn', empty: !type },
+    },
+    {
+      id: 'ideas.choice',
+      no: 3,
+      label: 'Chốt quan điểm',
+      done: Boolean(type) && (noOpinion || Boolean(choiceItem)),
+      lock: type ? undefined : 'Chọn dạng đề ở bước 2 trước',
+      intro: noOpinion ? (
+        <p className="fl-empty">{type?.id === 'type.discuss' ? 'Nêu quan điểm ở thân bài 2 và kết bài.' : 'Dạng này không cần ý kiến riêng.'}</p>
+      ) : undefined,
+      kids: typeId
+        ? choiceList.map<TNode>((c) => ({
+            id: choiceNodeId(typeId, c.id),
+            kind: 'leaf',
+            label: c.label,
+            sub: findOutline(c.outlineId)?.name,
+            chosen: c.id === choice,
+          }))
+        : [],
+      carry: {
+        label: 'Quan điểm',
+        value: choiceItem ? choiceItem.label : noOpinion ? 'không cần' : 'chưa chọn',
+        empty: !choiceItem && !noOpinion,
+      },
+    },
+    {
+      id: 'step.ideas',
+      no: 4,
+      label: 'Tìm ý',
+      time: `4 phút · ★ ${picks.length}/${MAX_PICKS}`,
+      done: picks.length >= MAX_PICKS,
+      kids: [
+        {
+          id: 'ideas.sixw',
+          kind: 'group',
+          label: '6 câu hỏi',
+          sub: 'tự hỏi đề để ra ý',
+          kids: SIX_W.map<TNode>((w) => ({ id: `sixw.${w.key}`, kind: 'leaf', label: w.label, sub: w.question })),
+        },
+        { id: 'grp.actor', kind: 'group', label: 'Chủ thể', sub: 'WHO · HOW — ai làm gì', kids: DIRECTIONS.filter((d) => d.group === 'actor').map(dirLeaf) },
+        { id: 'grp.aspect', kind: 'group', label: 'Khía cạnh', sub: 'WHAT · WHEN — lợi, hại, hệ quả', kids: DIRECTIONS.filter((d) => d.group === 'aspect').map(dirLeaf) },
+      ],
+      carry: {
+        label: `Ý ★ ${picks.length}/${MAX_PICKS}`,
+        value: picks.length ? picks.map((d) => d.vi).join(' · ') : 'chưa chọn ý',
+        empty: !picks.length,
+      },
+    },
+    {
+      id: 'step.outline',
+      no: 5,
+      label: 'Outline 13 câu',
+      time: outline ? (outline.source === 'book' ? 'từ sách' : 'bổ sung') : undefined,
+      done: Boolean(outline),
+      lock: outline ? undefined : 'Cần dạng đề từ bước 2',
+      kids: outline
+        ? PARTS.map<TNode>((pt) => {
+            const tone: Tone | 'm' = pt.from === 3 ? outline.threads[0] : pt.from === 8 ? outline.threads[1] : 'm'
+            return {
+              id: `part.${pt.from}`,
+              kind: 'group',
+              label: pt.title(outline),
+              sub: pt.to > pt.from ? `câu ${pt.from}–${pt.to}` : `câu ${pt.from}`,
+              tone,
+              kids: outline.lines.slice(pt.from - 1, pt.to).map<TNode>((l) => ({
+                id: `line.${l.no}`,
+                kind: 'leaf',
+                label: l.role,
+                no: String(l.no),
+                tone,
+                minor: l.minor,
+              })),
+            }
+          })
+        : [],
+      carry: { label: 'Outline', value: outline ? outline.name : 'chưa có', empty: !outline },
+    },
+    {
+      id: 'step.write',
+      no: 6,
+      label: 'Viết bài',
+      time: '30 phút',
+      done: false,
+      lock: outline ? undefined : 'Cần outline từ bước 5',
+      kids: [],
+      extra:
+        type && outline ? (
+          <div className="fl-write">
+            <p className="fl-empty">Dàn bài gom đủ dữ liệu của 5 bước trên: đề, dạng đề, quan điểm, ý đã chọn và 13 câu.</p>
+            <div className="mt-row">
+              <button type="button" className="mt-btn is-primary" onClick={() => createDraft(type, outline, draft)} disabled={busy}>
+                <Icon name="pen" />
+                {busy ? 'Đang tạo bài nháp…' : 'Tạo bài nháp ở trang Viết'}
+              </button>
+              <button type="button" className="mt-btn" onClick={() => copy('flow.draft', draft)}>
+                <Icon name={copied === 'flow.draft' ? 'check' : 'copy'} />
+                {copied === 'flow.draft' ? 'Đã chép' : 'Chép dàn bài'}
+              </button>
+            </div>
+            {msg && (
+              <p className={msg.ok ? 'mt-note' : 'mt-warn'} role="status">
+                {!msg.ok && <Icon name="alert" />}
+                {msg.text}
+              </p>
+            )}
+          </div>
+        ) : undefined,
+    },
+  ]
+  const firstOpen = steps.findIndex((s) => !s.done)
 
-    if (st.openStep === 'step.ideas') {
-      const ySix = TY + 78
-      const yFork = ySix + 26
-      const yCol = yFork + D
-      const y0 = yCol + 40
-      const cx = STEP_X['step.ideas']
-      const actors = DIRECTIONS.filter((d) => d.group === 'actor')
-      const aspects = DIRECTIONS.filter((d) => d.group === 'aspect')
-      const dirStation = (d: Direction, i: number, side: 'left' | 'right'): StationM => ({
-        id: d.id,
-        x: side === 'left' ? cx - D : cx + D,
-        y: y0 + i * ROW,
-        kind: 'stop',
-        side,
-        tone: 'm',
-        no: String(d.no),
-        label: d.vi,
-        sub: d.en,
-        chosen: st.picks.includes(d.id),
-        flags: st.picks.includes(d.id) ? <Icon name="star" className="mt-star" /> : null,
-      })
-      const lastL = y0 + (actors.length - 1) * ROW
-      const lastR = y0 + (aspects.length - 1) * ROW
-      return {
-        key: 'ideas',
-        height: lastR + 44,
-        paths: [
-          { d: `M ${cx} ${TY} V ${yFork}`, tone: 'm' },
-          { d: `M ${cx} ${yFork} L ${cx - D} ${yCol} V ${lastL}`, tone: 'm' },
-          { d: `M ${cx} ${yFork} L ${cx + D} ${yCol} V ${lastR}`, tone: 'm' },
-        ],
-        stations: [
-          { id: 'ideas.sixw', x: cx, y: ySix, kind: 'hub', side: 'right', tone: 'm', label: '6 câu hỏi', sub: 'WHO → WHICH' },
-          ...actors.map((d, i) => dirStation(d, i, 'left')),
-          ...aspects.map((d, i) => dirStation(d, i, 'right')),
-        ],
-        names: [
-          { x: cx - D, y: yCol + 2, side: 'left', tone: 'm', label: 'Chủ thể', sub: 'WHO · HOW' },
-          { x: cx + D, y: yCol + 2, side: 'right', tone: 'm', label: 'Khía cạnh', sub: 'WHAT · WHEN' },
-        ],
-      }
-    }
-
-    if (st.openStep === 'step.outline' && outline) {
-      const y1 = TY + 70
-      const y2 = y1 + ROW
-      const yCol = y2 + D
-      const y0 = yCol + 26
-      const last = y0 + 4 * ROW
-      const yMerge = last + 16
-      const y13 = yMerge + D + 22
-      const ySample = y13 + ROW
-      const lines = outline.lines
-      const at = (n: number) => lines[n - 1]
-      const lineStation = (l: OutlineLine, x: number, y: number, side: StationM['side'], tone: LineTone, kind: Kind): StationM => ({
-        id: `line.${l.no}`,
-        x,
-        y,
-        kind,
-        side,
-        tone,
-        no: String(l.no),
-        label: l.role,
-      })
-      const [t1, t2] = outline.threads
-      const stations: StationM[] = [
-        lineStation(at(1), BX, y1, 'right', 'm', 'stop'),
-        lineStation(at(2), BX, y2, 'right', 'm', 'hub'),
-        ...[3, 4, 5, 6, 7].map((n, i) => lineStation(at(n), BX - D, y0 + i * ROW, 'left', t1, at(n).minor ? 'minor' : 'stop')),
-        ...[8, 9, 10, 11, 12].map((n, i) => lineStation(at(n), BX + D, y0 + i * ROW, 'right', t2, at(n).minor ? 'minor' : 'stop')),
-        lineStation(at(13), BX, y13, 'right', 'm', 'hub'),
-      ]
-      const paths: PathM[] = [
-        { d: drop(STEP_X['step.outline'], BX, TY + 34, y2), tone: 'm' },
-        { d: `M ${BX} ${y2} L ${BX - D} ${yCol} V ${yMerge} L ${BX} ${yMerge + D} V ${y13}`, tone: t1 },
-        { d: `M ${BX} ${y2} L ${BX + D} ${yCol} V ${yMerge} L ${BX} ${yMerge + D} V ${y13}`, tone: t2 },
-      ]
-      if (outline.sample) {
-        stations.push({ id: 'line.sample', x: BX, y: ySample, kind: 'end', side: 'right', tone: 'm', label: 'Bài mẫu', sub: '13 câu theo outline' })
-        paths.push({ d: `M ${BX} ${y13} V ${ySample}`, tone: 'm' })
-      }
-      return {
-        key: `outline.${outline.id}`,
-        height: (outline.sample ? ySample : y13) + 44,
-        paths,
-        stations,
-        names: [
-          { x: BX - D, y: yCol - 12, side: 'left', tone: t1, label: 'Thân bài 1', sub: outline.bodyNames[0] },
-          { x: BX + D, y: yCol - 12, side: 'right', tone: t2, label: 'Thân bài 2', sub: outline.bodyNames[1] },
-        ],
-      }
-    }
-    return null
-  }, [st.openStep, st.picks, outline, typeId, detected])
-
-  const mapHeight = branch ? branch.height : TY + 70
-
-  const renderStation = (m: StationM, i: number) => {
-    const active = st.active === m.id
+  const renderNode = (n: TNode, onPath: Set<string>) => {
+    const active = st.active === n.id
     const cls = [
-      'mt-st',
-      `is-${m.kind}`,
-      `side-${m.side}`,
-      `t-${m.tone}`,
-      active ? 'is-active' : '',
-      m.chosen ? 'is-chosen' : '',
+      'fl-node',
+      `k-${n.kind}`,
+      n.tone ? `t-${n.tone}` : '',
+      active ? 'is-active' : onPath.has(n.id) ? 'is-path' : '',
+      n.chosen ? 'is-chosen' : '',
+      n.picked ? 'is-picked' : '',
+      n.minor ? 'is-minor' : '',
     ]
       .filter(Boolean)
       .join(' ')
-    const half = MARK[m.kind]
-    const style: CSSProperties =
-      m.side === 'up'
-        ? { left: m.x, top: m.y + half }
-        : m.side === 'right'
-          ? { left: m.x - 18, top: m.y - 18 }
-          : { left: m.x + 18, top: m.y - 18 }
-    ;(style as Record<string, string | number>)['--i'] = i
-    const title = m.sub ? `${m.label} · ${m.sub}` : m.label
     return (
-      <button
-        key={m.id}
-        type="button"
-        className={cls}
-        style={style}
-        onClick={() => select(m)}
-        aria-current={active ? 'true' : undefined}
-        aria-expanded={m.kind === 'step' ? st.openStep === m.id : undefined}
-        title={title}
-      >
-        <span className="mt-mark" aria-hidden="true">
-          {m.kind === 'step' ? m.no : null}
+      <button type="button" className={cls} onClick={() => reveal(n.id)} aria-current={active ? 'true' : undefined} title={n.sub ? `${n.label} · ${n.sub}` : n.label}>
+        {n.no && <span className="fl-no">{n.no}</span>}
+        <span className="fl-txt">
+          <b>{n.label}</b>
+          {n.sub && <small>{n.sub}</small>}
         </span>
-        {m.no && m.kind !== 'step' && (
-          <span className="mt-no">
-            <span className="mt-sr">Ga </span>
-            {m.no}
-          </span>
-        )}
-        <span className="mt-name">
-          <b>{m.label}</b>
-          {m.sub && <small>{m.sub}</small>}
-        </span>
-        {m.flags}
+        {n.flags}
       </button>
     )
   }
 
-  // ---------------------------------------------------------------- Bảng ga
-  const renderSentence = (segs: Seg[]) => {
+  const renderTree = (kids: TNode[], onPath: Set<string>, top: boolean): ReactNode => (
+    <ul className={top ? 'fl-grid' : 'fl-tree'}>
+      {kids.map((k) => (
+        <li key={k.id}>
+          {renderNode(k, onPath)}
+          {k.kids && k.kids.length > 0 && renderTree(k.kids, onPath, false)}
+        </li>
+      ))}
+    </ul>
+  )
+
+  const renderStep = (s: FlowStep, i: number) => {
+    const status: StepStatus = s.done ? 'done' : i === firstOpen ? 'now' : 'todo'
+    const onPath = new Set(pathTo(s.kids, st.active) ?? [])
+    const headActive = st.active === s.id
+    const cls = ['fl-step', `is-${status}`, s.lock ? 'is-locked' : '', headActive || onPath.size ? 'is-open' : ''].filter(Boolean).join(' ')
+    return (
+      <li key={s.id} className={cls}>
+        <article className="fl-card">
+          <button type="button" className={headActive ? 'fl-head is-active' : 'fl-head'} onClick={() => reveal(s.id)} aria-current={headActive ? 'true' : undefined}>
+            <span className="fl-badge">{s.done ? <Icon name="check" /> : s.no}</span>
+            <span className="fl-title">
+              <small>
+                Bước {s.no}
+                {s.time ? ` · ${s.time}` : ''}
+              </small>
+              <b>{s.label}</b>
+            </span>
+            <span className="fl-state">{s.lock ? 'Chờ bước trước' : STATUS_TEXT[status]}</span>
+          </button>
+          {s.lock ? (
+            <p className="fl-empty">{s.lock}.</p>
+          ) : (
+            <div className="fl-body">
+              {s.intro}
+              {s.kids.length > 0 && renderTree(s.kids, onPath, true)}
+              {s.extra}
+            </div>
+          )}
+        </article>
+        {s.carry && (
+          <div className={s.carry.empty ? 'fl-carry is-empty' : 'fl-carry'}>
+            <span className="fl-carry-pill" title={`Mang sang bước ${s.no + 1}`}>
+              <small>{s.carry.label}</small>
+              <b>{s.carry.value}</b>
+              <span className="mt-sr">, mang sang bước {s.no + 1}</span>
+            </span>
+          </div>
+        )}
+      </li>
+    )
+  }
+
+  // ---------------------------------------------------------------- Câu mẫu có vế màu
+  const renderSentence = (segs: Seg[], ch?: string) => {
     // Gộp các mảnh liền nhau cùng màu thành một vệt, như ô màu trong sách.
     const groups: { tone?: Tone; segs: Seg[] }[] = []
     segs.forEach((sg) => {
@@ -541,8 +580,18 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
       <span className="mt-sentence" lang="en">
         {groups.map((gr, i) => {
           const inner = gr.segs.map((sg, k) => {
-            if (sg.label) return <span key={k} className="mt-lb">{sg.t}</span>
-            if (choice && sg.byChoice?.[choice]) return <span key={k} className="mt-fill" title="Điền theo quan điểm bạn đã chọn">{sg.byChoice[choice]}</span>
+            if (sg.label)
+              return (
+                <span key={k} className="mt-lb">
+                  {sg.t}
+                </span>
+              )
+            if (ch && sg.byChoice?.[ch])
+              return (
+                <span key={k} className="mt-fill" title="Điền theo quan điểm bạn đã chọn">
+                  {sg.byChoice[ch]}
+                </span>
+              )
             if (sg.blank) return <span key={k} className="mt-blank" aria-label="chỗ trống" />
             return sg.strong ? <b key={k}>{sg.t}</b> : <span key={k}>{sg.t}</span>
           })
@@ -558,30 +607,34 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
     )
   }
 
-  const thesisPart = (o: Outline, t: Tone) =>
+  const thesisPart = (o: Outline, t: Tone, ch?: string) =>
     o.lines[1].text
       .filter((sg) => !sg.label && sg.tone === t)
-      .map((sg) => segText(sg, choice))
+      .map((sg) => segText(sg, ch))
       .join('')
       .trim()
 
-  const threadNote = (o: Outline, l: OutlineLine): ReactNode => {
+  const threadNote = (o: Outline, l: OutlineLine, ch?: string): ReactNode => {
     const [t1, t2] = o.threads
     if (t1 === t2) {
-      if (l.no === 2 || l.no === 13) return <p className="mt-note">Quan điểm ở câu 2 và câu 13 phải giống nhau: cùng đồng ý hoặc cùng không đồng ý.</p>
+      if (l.no === 2) return <p className="mt-note">Quan điểm ở câu 2 và câu 13 phải giống nhau: cùng đồng ý hoặc cùng không đồng ý.</p>
       return null
     }
     if (l.no === 2)
       return (
         <p className="mt-note">
-          Vế <b className={`mt-ink t-${t1}`}>{TONE_NAME[t1]}</b> mở thân bài 1 (câu 3), vế <b className={`mt-ink t-${t2}`}>{TONE_NAME[t2]}</b> mở thân bài 2 (câu 8). Câu 13 gom lại cả hai.
+          Vế <b className={`mt-ink t-${t1}`}>{TONE_NAME[t1]}</b> mở thân bài 1 (câu 3), vế{' '}
+          <b className={`mt-ink t-${t2}`}>{TONE_NAME[t2]}</b> mở thân bài 2 (câu 8). Câu 13 gom lại cả hai.
         </p>
       )
     if (l.no === 3 || l.no === 8) {
       const t = l.no === 3 ? t1 : t2
       return (
         <p className="mt-note">
-          Viết lại vế {TONE_NAME[t]} của câu 2: <span className={`mt-ve t-${t}`} lang="en">{thesisPart(o, t)}</span>
+          Viết lại vế {TONE_NAME[t]} của câu 2:{' '}
+          <span className={`mt-ve t-${t}`} lang="en">
+            {thesisPart(o, t, ch)}
+          </span>
         </p>
       )
     }
@@ -589,177 +642,217 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
     return null
   }
 
-  const renderLine = (o: Outline, l: OutlineLine) => {
-    const part = PARTS.find((pt) => l.no >= pt.from && l.no <= pt.to)!
-    const tone: LineTone = l.no >= 3 && l.no <= 7 ? o.threads[0] : l.no >= 8 && l.no <= 12 ? o.threads[1] : 'm'
-    const prev = l.no > 1 ? o.lines[l.no - 2] : null
-    const next = l.no < 13 ? o.lines[l.no] : null
-    const text = segsToText(l.text, choice)
-    return (
-      <>
-        <PanelHead
-          bullet={<span className={`mt-bullet t-${tone}`}>Ga {l.no}</span>}
-          kicker={part.title(o)}
-          title={l.role}
-          text={l.guide}
-        />
-        <section className="mt-sec">
-          <div className="mt-sec-head">
-            <h3>{l.minor ? 'Trong sách' : 'Câu mẫu trong outline'}</h3>
-            {!l.minor && copyBtn(`${l.no}.t`, text)}
-          </div>
-          {renderSentence(l.text)}
-          {l.hint && <p className="mt-hint">{l.hint}</p>}
-          {l.ink?.map((n) => (
-            <p key={n} className="mt-handnote" lang="en">
-              <span aria-hidden="true">✍ </span>
-              <span className="mt-sr">Ghi chú tay trong sách: </span>
-              {n}
-            </p>
-          ))}
-          {threadNote(o, l)}
-        </section>
-        {l.patterns && (
-          <section className="mt-sec">
-            <div className="mt-sec-head">
-              <h3>Mẫu câu để bắt đầu</h3>
-              <small className="mt-hint">Bấm để chép</small>
-            </div>
-            {patternChips(`line.${o.id}.${l.no}`, l.patterns)}
-          </section>
-        )}
-        <nav className="mt-stepnav" aria-label="Chuyển ga">
-          {prev ? (
-            <button type="button" className="mt-btn" onClick={() => reveal(`line.${prev.no}`)}>
-              <Icon name="left" />
-              Ga {prev.no} · {prev.role}
-            </button>
-          ) : (
-            <span />
-          )}
-          {next ? (
-            <button type="button" className="mt-btn" onClick={() => reveal(`line.${next.no}`)}>
-              Ga {next.no} · {next.role}
-              <Icon name="right" />
-            </button>
-          ) : o.sample ? (
-            <button type="button" className="mt-btn" onClick={() => reveal('line.sample')}>
-              Bài mẫu
-              <Icon name="right" />
-            </button>
-          ) : null}
-        </nav>
-      </>
-    )
-  }
+  // ---------------------------------------------------------------- Format bài viết theo dạng đề
+  const renderFormatLine = (o: Outline, l: OutlineLine, tone: Tone | 'm', ch?: string) => (
+    <div key={l.no} id={`mt-line-${l.no}`} className={l.minor ? 'mt-fmt-line is-minor' : 'mt-fmt-line'}>
+      <span className={`mt-n t-${tone}`}>{l.no}</span>
+      <div className="mt-fmt-body">
+        <div className="mt-fmt-role">
+          <span>{l.role}</span>
+          {!l.minor && copyBtn(`${o.id}.${l.no}`, segsToText(l.text, ch))}
+        </div>
+        {!l.minor && renderSentence(l.text, ch)}
+        <p className="mt-fmt-guide">{l.guide}</p>
+        {l.hint && <p className="mt-hint">{l.hint}</p>}
+        {l.ink?.map((n) => (
+          <p key={n} className="mt-handnote" lang="en">
+            <span aria-hidden="true">✍ </span>
+            <span className="mt-sr">Ghi chú tay trong sách: </span>
+            {n}
+          </p>
+        ))}
+        {threadNote(o, l, ch)}
+        {l.patterns && patternChips(`${o.id}.${l.no}`, l.patterns)}
+      </div>
+    </div>
+  )
 
   const renderSample = (o: Outline) => {
     const sm = o.sample!
     const paras = PARTS.map((pt) => sm.sentences.slice(pt.from - 1, pt.to).map((s, i) => ({ no: pt.from + i, s })))
     const full = sm.sentences.join(' ')
     return (
-      <>
-        <PanelHead
-          bullet={<span className="mt-bullet t-m">Ga cuối</span>}
-          kicker={`Bài mẫu · ${o.name}`}
-          title="Bài mẫu theo outline"
-          text={`Mỗi câu đánh số đúng như ga trên bản đồ. Bài dài ${countWords(full)} từ.`}
-        />
-        <section className="mt-sec">
-          <div className="mt-sec-head">
-            <h3>Đề luyện tập</h3>
-          </div>
-          <p className="mt-prompt-ex" lang="en">
-            {sm.prompt}
-          </p>
-        </section>
-        <section className="mt-sec">
-          <div className="mt-sec-head">
-            <h3>Bài viết</h3>
-            <span className="mt-row">
-              {speakBtn('sample', full)}
-              {copyBtn('sample', full)}
-            </span>
-          </div>
-          <div className="mt-essay" lang="en">
-            {paras.map((ps, i) => (
-              <p key={i}>
-                {ps.map(({ no, s }) => (
-                  <span key={no}>
-                    <button type="button" className="mt-sn" onClick={() => reveal(`line.${no}`)} aria-label={`Xem ga ${no}`}>
-                      {no}
-                    </button>
-                    {s}{' '}
-                  </span>
-                ))}
-              </p>
-            ))}
-          </div>
-        </section>
-      </>
+      <details className="mt-fmt-sample">
+        <summary>
+          <Icon name="right" />
+          <b>Bài mẫu viết theo format này</b>
+          <small>{countWords(full)} từ · số trước mỗi câu là số câu trong outline</small>
+        </summary>
+        <p className="mt-prompt-ex" lang="en">
+          {sm.prompt}
+        </p>
+        <div className="mt-sec-head">
+          <h3>Bài viết</h3>
+          <span className="mt-row">
+            {speakBtn('sample', full)}
+            {copyBtn('sample', full)}
+          </span>
+        </div>
+        <div className="mt-essay" lang="en">
+          {paras.map((ps, i) => (
+            <p key={i}>
+              {ps.map(({ no, s }) => (
+                <span key={no}>
+                  <button type="button" className="mt-sn" onClick={() => jumpToLine(no)} aria-label={`Xem câu ${no} trong outline`}>
+                    {no}
+                  </button>
+                  {s}{' '}
+                </span>
+              ))}
+            </p>
+          ))}
+        </div>
+      </details>
     )
   }
 
-  const renderType = (t: EssayType) => {
-    const on = typeId === t.id
-    const outlines = (OUTLINE_CHOICES[t.id]?.map((c) => outlineFor(t.id, c.id)) ?? [outlineFor(t.id)]).filter(
-      (x, i, arr): x is Outline => Boolean(x) && arr.indexOf(x) === i,
-    )
+  const renderFormat = (t: EssayType, forcedChoice?: string) => {
+    const list = OUTLINE_CHOICES[t.id] ?? []
+    const ch = forcedChoice ?? st.choices[t.id] ?? defaultChoice(t.id, st.prompt)
+    const chItem = list.find((c) => c.id === ch)
+    const o = outlineFor(t.id, ch)
+    const inUse = typeId === t.id && (list.length === 0 || choice === ch)
+    const draft = o ? buildDraft(st.prompt, t, o, ch, chItem?.label, picks) : ''
+    const pickChoice = (id: string) =>
+      setSt((s) => ({
+        ...s,
+        choices: { ...s.choices, [t.id]: id },
+        active: choiceNodeId(t.id, id),
+      }))
+
     return (
       <>
         <PanelHead
-          bullet={<span className="mt-bullet t-m">Bước 1</span>}
-          kicker={`Dạng đề${detected === t.id ? ' · tự nhận từ đề bài' : ''}`}
+          bullet={<span className="mt-bullet t-m">Dạng đề</span>}
+          kicker={detected === t.id ? 'Tự nhận từ đề bài' : 'Chọn trên sơ đồ'}
           title={t.vi}
           sub={t.en}
           text={t.task}
         />
-        <div className="mt-actions">
-          <button type="button" className={on ? 'mt-btn is-on' : 'mt-btn is-primary'} onClick={() => chooseType(on && st.manualType ? null : t.id)} disabled={on && !st.manualType}>
-            <Icon name={on ? 'check' : 'star'} />
-            {on ? (st.manualType ? 'Đang dùng · bấm để về dạng tự nhận' : 'Đang dùng dạng này') : 'Dùng dạng đề này'}
-          </button>
+        <div className="mt-tags">
+          {inUse && <span className="mt-tag is-on">đang dùng cho bài này</span>}
+          {o && (
+            <span className={o.source === 'book' ? 'mt-tag' : 'mt-tag is-added'}>
+              {o.source === 'book' ? 'outline từ sách' : 'outline bổ sung'}
+            </span>
+          )}
         </div>
-        <dl className="mt-facts">
+        <dl className="mt-facts is-tight">
           <div>
             <dt>Dấu hiệu</dt>
             <dd lang="en">{t.signal}</dd>
           </div>
           <div>
-            <dt>Cần ý kiến riêng?</dt>
+            <dt>Ý kiến riêng?</dt>
             <dd>{t.opinion}</dd>
           </div>
           <div>
             <dt>Thân bài 1</dt>
-            <dd>{t.body1}</dd>
+            <dd>{o ? o.bodyNames[0] : t.body1}</dd>
           </div>
           <div>
             <dt>Thân bài 2</dt>
-            <dd>{t.body2}</dd>
-          </div>
-          <div>
-            <dt>Outline</dt>
-            <dd>
-              {outlines.map((x) => (
-                <span key={x.id} className="mt-outline-name">
-                  {x.name}
-                  <span className={x.source === 'book' ? 'mt-tag' : 'mt-tag is-added'}>{x.source === 'book' ? 'từ sách' : 'bổ sung'}</span>
-                </span>
-              ))}
-            </dd>
+            <dd>{o ? o.bodyNames[1] : t.body2}</dd>
           </div>
         </dl>
+
+        {list.length > 0 && (
+          <Section title="Quan điểm của bạn">
+            <div className="mt-seg" role="group" aria-label="Quan điểm">
+              {list.map((c) => (
+                <button type="button" key={c.id} aria-pressed={ch === c.id} onClick={() => pickChoice(c.id)}>
+                  {ch === c.id && <Icon name="check" />}
+                  {c.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-hint">{chItem ? chItem.note : 'Chọn một quan điểm để outline điền sẵn chỗ nêu ý kiến.'}</p>
+          </Section>
+        )}
+
+        <div className="mt-actions">
+          <button type="button" className={inUse ? 'mt-btn is-on' : 'mt-btn is-primary'} onClick={() => useType(t.id, ch)} disabled={inUse}>
+            <Icon name={inUse ? 'check' : 'star'} />
+            {inUse ? 'Đang dùng dạng đề này' : 'Dùng dạng đề này cho bài'}
+          </button>
+        </div>
+
+        {o ? (
+          <>
+            <Section title={`Format bài viết · ${o.name}`} aside={copyBtn(`outline.${o.id}.${ch ?? ''}`, draft, 'Chép dàn bài')}>
+              <p className="mt-colorkey" aria-label="Chú giải màu">
+                <span>
+                  <i className="t-m" /> mở, kết
+                </span>
+                <span>
+                  <i className={`t-${o.threads[0]}`} /> thân bài 1
+                </span>
+                <span>
+                  <i className={`t-${o.threads[1]}`} /> thân bài 2
+                </span>
+                <span>
+                  <i className="is-minor" /> Expand · Example
+                </span>
+              </p>
+              {PARTS.map((pt) => {
+                const tone: Tone | 'm' = pt.from === 3 ? o.threads[0] : pt.from === 8 ? o.threads[1] : 'm'
+                return (
+                  <section key={pt.from} id={`mt-part-${pt.from}`} className={`mt-fmt-part t-${tone}`}>
+                    <header>
+                      <b>{pt.title(o)}</b>
+                      <small>{pt.to > pt.from ? `câu ${pt.from}–${pt.to}` : `câu ${pt.from}`}</small>
+                    </header>
+                    {o.lines.slice(pt.from - 1, pt.to).map((l) => renderFormatLine(o, l, tone, ch))}
+                  </section>
+                )
+              })}
+            </Section>
+            {outlineNotes(o).length > 0 && (
+              <Section title="Ghi chú trong sách">
+                {o.notes?.map((n) => (
+                  <p key={n} className="mt-note">
+                    {n}
+                  </p>
+                ))}
+                {o.ink?.map((n) => (
+                  <p key={n} className="mt-handnote" lang="en">
+                    <span aria-hidden="true">✍ </span>
+                    <span className="mt-sr">Ghi chú tay trong sách: </span>
+                    {n}
+                  </p>
+                ))}
+                <p className="mt-hint">Nguồn: {o.origin}</p>
+              </Section>
+            )}
+            {o.sample && renderSample(o)}
+            <div className="mt-actions">
+              <button type="button" className="mt-btn is-primary" onClick={() => createDraft(t, o, draft)} disabled={busy}>
+                <Icon name="pen" />
+                {busy ? 'Đang tạo bài nháp…' : 'Tạo bài nháp ở trang Viết'}
+              </button>
+              {msg && (
+                <p className={msg.ok ? 'mt-note' : 'mt-warn'} role="status">
+                  {!msg.ok && <Icon name="alert" />}
+                  {msg.text}
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          <p className="mt-empty">Dạng đề này chưa có outline.</p>
+        )}
       </>
     )
   }
 
+  // ---------------------------------------------------------------- Hướng tìm ý
   const renderDirection = (d: Direction) => {
     const picked = st.picks.includes(d.id)
     const full = !picked && st.picks.length >= MAX_PICKS
     return (
       <>
         <PanelHead
-          bullet={<span className="mt-bullet t-m">Ga {d.no}</span>}
+          bullet={<span className="mt-bullet t-m">Hướng {d.no}</span>}
           kicker={d.group === 'actor' ? 'Chủ thể · WHO, HOW' : 'Khía cạnh · WHAT, WHEN'}
           title={d.vi}
           sub={d.en}
@@ -825,27 +918,142 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
     )
   }
 
+  const renderIdeas = (group: 'grp.actor' | 'grp.aspect' | 'step.ideas' | 'ideas.choice') => {
+    const list =
+      group === 'grp.actor'
+        ? DIRECTIONS.filter((d) => d.group === 'actor')
+        : group === 'grp.aspect'
+          ? DIRECTIONS.filter((d) => d.group === 'aspect')
+          : []
+    return (
+      <>
+        <PanelHead
+          bullet={<span className="mt-bullet t-m">{group === 'ideas.choice' ? 'Bước 3' : 'Bước 4 · 4 phút'}</span>}
+          kicker={group === 'ideas.choice' ? 'Chốt quan điểm' : 'Tìm ý'}
+          title={group === 'grp.actor' ? 'Chủ thể' : group === 'grp.aspect' ? 'Khía cạnh' : 'Chọn quan điểm và tìm ý'}
+          sub={group === 'grp.actor' ? 'WHO · HOW — ai làm gì' : group === 'grp.aspect' ? 'WHAT · WHEN — lợi, hại, hệ quả' : undefined}
+          text="Chốt quan điểm trước khi viết và giữ nguyên đến hết bài. Giám khảo chấm cách lập luận, không chấm quan điểm."
+        />
+        <Section title="Quan điểm">
+          {!type ? (
+            <p className="mt-empty">Chọn dạng đề ở bước 2 trước, rồi quay lại đây để chốt quan điểm.</p>
+          ) : choiceList.length ? (
+            <>
+              <div className="mt-seg" role="group" aria-label="Quan điểm">
+                {choiceList.map((c) => (
+                  <button
+                    type="button"
+                    key={c.id}
+                    aria-pressed={choice === c.id}
+                    onClick={() => setSt((s) => ({ ...s, choices: { ...s.choices, [type.id]: c.id }, active: choiceNodeId(type.id, c.id) }))}
+                  >
+                    {choice === c.id && <Icon name="check" />}
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-hint">{choiceItem ? choiceItem.note : 'Chưa chọn. Outline ở bước 5 sẽ để trống chỗ nêu quan điểm.'}</p>
+            </>
+          ) : type.id === 'type.discuss' ? (
+            <p className="mt-note">Đặt quan điểm bạn ủng hộ ở thân bài 2 và viết đoạn đó mạnh hơn.</p>
+          ) : (
+            <p className="mt-note">Dạng {type.vi} không bắt buộc nêu quan điểm riêng. Tập trung tìm ý cho hai thân bài.</p>
+          )}
+        </Section>
+        {list.length > 0 && (
+          <Section title={`${list.length} hướng · bấm để xem cụm từ và đoạn mẫu`}>
+            <div className="mt-chips">
+              {list.map((d) => (
+                <button
+                  type="button"
+                  key={d.id}
+                  className={st.picks.includes(d.id) ? 'mt-chip is-pick' : 'mt-chip'}
+                  onClick={() => reveal(d.id)}
+                >
+                  {st.picks.includes(d.id) && <Icon name="star" className="mt-star" />}
+                  {d.no}. {d.vi}
+                </button>
+              ))}
+            </div>
+          </Section>
+        )}
+        <Section title={`Ý cho bài · ★ ${picks.length}/${MAX_PICKS}`}>
+          {picks.length ? (
+            <div className="mt-chips">
+              {picks.map((p) => (
+                <button type="button" key={p.id} className="mt-chip is-pick" onClick={() => reveal(p.id)}>
+                  <Icon name="star" className="mt-star" />
+                  {p.vi}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-empty">Chưa chọn ý nào. Bấm một hướng ở bước 4 của sơ đồ, rồi bấm Chọn làm ý cho bài.</p>
+          )}
+        </Section>
+        <Section title="Cách tìm ý">
+          <ul className="mt-tips">
+            <li>Chọn phía mà bạn có nhiều ý và nhiều từ vựng nhất, không nhất thiết là điều bạn tin nhất.</li>
+            <li>Tìm ý bằng 6 câu hỏi WHO – WHY – WHAT – HOW – WHEN – WHICH và 12 hướng phát triển ý trên sơ đồ.</li>
+            <li>Chỉ giữ lại 2 ý mạnh nhất. Mỗi ý phải viết được 3–4 câu và có một ví dụ cụ thể, không được thì bỏ.</li>
+          </ul>
+        </Section>
+      </>
+    )
+  }
+
+  const renderTypes = () => (
+    <>
+      <PanelHead
+        bullet={<span className="mt-bullet t-m">Bước 2</span>}
+        kicker="Nhận dạng dạng đề"
+        title="7 dạng đề Task 2"
+        text="Mỗi dạng có cách chia hai đoạn thân bài riêng. Bấm một dạng để xem dấu hiệu và format bài viết của nó."
+      />
+      <ol className="mt-steps">
+        {ESSAY_TYPES.map((t) => (
+          <li key={t.id}>
+            <button type="button" onClick={() => reveal(t.id)}>
+              <span className={t.id === typeId ? 'mt-stepno is-on' : 'mt-stepno'}>{t.id === typeId ? '✓' : ''}</span>
+              <span>
+                <b>
+                  {t.vi} <span lang="en">· {t.en}</span>
+                </b>
+                <small lang="en">{t.signal}</small>
+              </span>
+              <Icon name="right" />
+            </button>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-warn">
+        <Icon name="alert" />
+        Bỏ sót một phần của đề (ví dụ đề Discuss both views mà quên nêu ý kiến) thì điểm Task Response thường chỉ được khoảng band 5, dù tiếng Anh tốt.
+      </p>
+    </>
+  )
+
   const renderDetail = (): ReactNode => {
     const id = st.active
     const t = findEssayType(id)
-    if (t) return renderType(t)
+    if (t) return renderFormat(t)
+    const cn = parseChoiceNode(id)
+    if (cn) {
+      const ct = findEssayType(cn.typeId)
+      if (ct) return renderFormat(ct, cn.choiceId)
+    }
     const d = findDirection(id)
     if (d) return renderDirection(d)
+    if (id === 'grp.actor' || id === 'grp.aspect' || id === 'step.ideas' || id === 'ideas.choice') return renderIdeas(id)
+    if (id === 'step.types') return renderTypes()
 
-    if (id.startsWith('line.')) {
-      if (!outline) return emptyOutline()
-      if (id === 'line.sample' && outline.sample) return renderSample(outline)
-      const l = outline.lines[Number(id.slice(5)) - 1]
-      if (l) return renderLine(outline, l)
-    }
-
-    if (id === 'step.analyze')
+    if (id === 'step.analyze' || id.startsWith('layer.'))
       return (
         <>
           <PanelHead
             bullet={<span className="mt-bullet t-m">Bước 1 · 2 phút</span>}
-            kicker="Ga đổi tuyến"
-            title="Phân tích đề"
+            kicker="Phân tích đề"
+            title="Đề hỏi gì?"
             text="Gạch chân từ khóa và tách đề thành 4 lớp. Dạng đề quyết định cách chia hai đoạn thân bài."
           />
           <ul className="mt-layers">
@@ -868,71 +1076,25 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
                 Dạng đề đang dùng: <b>{type.vi}</b> ({type.en}){detected === type.id && !st.manualType ? ', tự nhận từ đề bài.' : '.'}
               </>
             ) : st.prompt.trim() ? (
-              'Chưa nhận ra dạng đề. Chọn một ga dạng đề trên bản đồ hoặc trong ô Dạng đề ở trên.'
+              'Chưa nhận ra dạng đề. Bấm một dạng đề ở bước 2 của sơ đồ hoặc chọn trong ô Dạng đề ở trên.'
             ) : (
-              'Dán đề vào ô Đề bài ở trên để app tự nhận dạng đề, hoặc chọn một ga dạng đề trên bản đồ.'
+              'Dán đề vào ô Đề bài ở trên để app tự nhận dạng đề, hoặc bấm một dạng đề ở bước 2 của sơ đồ.'
             )}
           </p>
           <p className="mt-warn">
             <Icon name="alert" />
-            Bỏ sót một phần của đề (ví dụ đề Discuss both views mà quên nêu ý kiến) thì điểm TR (Task Response) thường chỉ được khoảng band 5, dù tiếng Anh tốt.
+            Bỏ sót một phần của đề (ví dụ đề Discuss both views mà quên nêu ý kiến) thì điểm TR (Task Response) thường chỉ được khoảng band
+            5, dù tiếng Anh tốt.
           </p>
         </>
       )
 
-    if (id === 'step.ideas')
+    if (id === 'ideas.sixw' || id.startsWith('sixw.'))
       return (
         <>
           <PanelHead
-            bullet={<span className="mt-bullet t-m">Bước 2 · 4 phút</span>}
-            kicker="Ga đổi tuyến"
-            title="Chọn quan điểm và tìm ý"
-            text="Chốt quan điểm trước khi viết và giữ nguyên đến hết bài. Giám khảo chấm cách lập luận, không chấm quan điểm."
-          />
-          <Section title="Quan điểm">
-            {!type ? (
-              <p className="mt-empty">Chọn dạng đề ở bước 1 trước, rồi quay lại đây để chọn quan điểm.</p>
-            ) : choiceList.length ? (
-              <>
-                {choiceBar()}
-                <p className="mt-hint">{choiceItem ? choiceItem.note : 'Chưa chọn. Outline ở bước 3 sẽ để trống chỗ nêu quan điểm.'}</p>
-              </>
-            ) : type.id === 'type.discuss' ? (
-              <p className="mt-note">Đặt quan điểm bạn ủng hộ ở thân bài 2 và viết đoạn đó mạnh hơn.</p>
-            ) : (
-              <p className="mt-note">Dạng {type.vi} không bắt buộc nêu quan điểm riêng. Tập trung tìm ý cho hai thân bài.</p>
-            )}
-          </Section>
-          <Section title={`Ý cho bài · ★ ${picks.length}/${MAX_PICKS}`}>
-            {picks.length ? (
-              <div className="mt-chips">
-                {picks.map((p) => (
-                  <button type="button" key={p.id} className="mt-chip is-pick" onClick={() => reveal(p.id)}>
-                    <Icon name="star" className="mt-star" />
-                    {p.vi}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-empty">Chưa chọn ý nào. Bấm một ga Chủ thể hoặc Khía cạnh trên bản đồ, rồi bấm Chọn làm ý cho bài.</p>
-            )}
-          </Section>
-          <Section title="Cách tìm ý">
-            <ul className="mt-tips">
-              <li>Chọn phía mà bạn có nhiều ý và nhiều từ vựng nhất, không nhất thiết là điều bạn tin nhất.</li>
-              <li>Tìm ý bằng 6 câu hỏi WHO – WHY – WHAT – HOW – WHEN – WHICH và 12 hướng phát triển ý trên bản đồ.</li>
-              <li>Chỉ giữ lại 2 ý mạnh nhất. Mỗi ý phải viết được 3–4 câu và có một ví dụ cụ thể, không được thì bỏ.</li>
-            </ul>
-          </Section>
-        </>
-      )
-
-    if (id === 'ideas.sixw')
-      return (
-        <>
-          <PanelHead
-            bullet={<span className="mt-bullet t-m">Ga đổi tuyến</span>}
-            kicker="Bước 2 · Tìm ý"
+            bullet={<span className="mt-bullet t-m">Bước 4</span>}
+            kicker="Tìm ý"
             title="6 câu hỏi"
             text="Khi đọc bất kỳ đề nào, tự hỏi 6 câu dưới đây. WHO chọn chủ thể, các câu còn lại đào sâu chủ thể đó."
           />
@@ -963,85 +1125,25 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
         </>
       )
 
-    if (id === 'step.outline') {
-      if (!outline) return emptyOutline()
-      return (
-        <>
-          <PanelHead
-            bullet={<span className="mt-bullet t-m">Bước 3</span>}
-            kicker={outline.source === 'book' ? `Từ sách · ${outline.origin}` : 'Bổ sung · không có trong sách'}
-            title={`Outline ${outline.name}`}
-            text="Hai thân bài là hai tuyến song song: tách ra ở câu 2 (Thesis) và nhập lại ở câu 13 (Kết bài). Bấm từng ga trên bản đồ để xem câu mẫu và mẫu câu."
-          />
-          {choiceList.length > 0 && (
-            <Section title="Kiểu outline theo quan điểm">
-              {choiceBar(true)}
-            </Section>
-          )}
-          {(outline.notes?.length || outline.ink?.length) && (
-            <Section title="Ghi chú trong sách">
-              {outline.notes?.map((n) => (
-                <p key={n} className="mt-note">
-                  {n}
-                </p>
-              ))}
-              {outline.ink?.map((n) => (
-                <p key={n} className="mt-handnote" lang="en">
-                  <span aria-hidden="true">✍ </span>
-                  <span className="mt-sr">Ghi chú tay trong sách: </span>
-                  {n}
-                </p>
-              ))}
-            </Section>
-          )}
-          <Section title="Cả outline" aside={copyBtn('outline', draft, 'Chép dàn bài')}>
-            <ol className="mt-all">
-              {outline.lines.map((l) => {
-                const tone: LineTone = l.no >= 3 && l.no <= 7 ? outline.threads[0] : l.no >= 8 && l.no <= 12 ? outline.threads[1] : 'm'
-                return (
-                  <li key={l.no} className={l.minor ? 'is-minor' : ''}>
-                    <button type="button" onClick={() => reveal(`line.${l.no}`)}>
-                      <span className={`mt-n t-${tone}`}>{l.no}</span>
-                      {renderSentence(l.text)}
-                    </button>
-                  </li>
-                )
-              })}
-            </ol>
-          </Section>
-          <div className="mt-actions">
-            <button type="button" className="mt-btn is-primary" onClick={createDraft} disabled={busy}>
-              <Icon name="pen" />
-              {busy ? 'Đang tạo bài nháp…' : 'Tạo bài nháp ở trang Viết'}
-            </button>
-            {msg && (
-              <p className={msg.ok ? 'mt-note' : 'mt-warn'} role="status">
-                {!msg.ok && <Icon name="alert" />}
-                {msg.text}
-              </p>
-            )}
-          </div>
-        </>
-      )
-    }
+    if (id === 'step.outline' || id.startsWith('part.') || id.startsWith('line.') || id === 'step.write') return type ? renderFormat(type) : emptyOutline()
 
-    // Ga đầu tuyến
+    // Mặc định: tóm tắt cả 6 bước và dữ liệu mỗi bước đang mang
     return (
       <>
         <PanelHead
-          bullet={<span className="mt-bullet t-m">Ga đầu tuyến</span>}
+          bullet={<span className="mt-bullet t-m">Tổng quan</span>}
           kicker="Tư duy Task 2"
           title="Từ đề bài tới dàn bài 13 câu"
-          text="Đi theo tuyến chính từ trái sang phải. Mỗi bước là một ga đổi tuyến; bấm vào để mở tuyến nhánh bên dưới."
+          text="Làm lần lượt từ bước 1 đến bước 6. Mỗi bước dùng kết quả của bước trước: đề bài cho ra dạng đề, dạng đề quyết định quan điểm và outline."
         />
         <ol className="mt-steps">
-          {STEPS.map((s, i) => (
+          {steps.map((s) => (
             <li key={s.id}>
               <button type="button" onClick={() => reveal(s.id)}>
-                <span className="mt-stepno">{s.no}</span>
+                <span className={s.done ? 'mt-stepno is-on' : 'mt-stepno'}>{s.done ? '✓' : s.no}</span>
                 <span>
                   <b>{s.label}</b>
-                  <small>{trunk[i + 1].sub}</small>
+                  <small>{s.carry ? `${s.carry.label}: ${s.carry.value}` : (s.lock ?? 'Tạo bài nháp hoặc chép dàn bài')}</small>
                 </span>
                 <Icon name="right" />
               </button>
@@ -1056,16 +1158,17 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
   const emptyOutline = () => (
     <>
       <PanelHead
-        bullet={<span className="mt-bullet t-m">Bước 3</span>}
-        kicker="Outline 13 câu"
+        bullet={<span className="mt-bullet t-m">Bước 5</span>}
+        kicker="Format bài viết"
         title="Chưa có dạng đề"
-        text="Outline phụ thuộc vào dạng đề. Dán đề ở trên để app tự nhận, hoặc chọn một ga dạng đề ở bước 1."
+        text="Format phụ thuộc vào dạng đề. Dán đề ở trên để app tự nhận, hoặc bấm một dạng đề ở bước 2 của sơ đồ."
       />
-      <div className="mt-actions">
-        <button type="button" className="mt-btn is-primary" onClick={() => reveal('step.analyze')}>
-          <Icon name="left" />
-          Mở bước 1: chọn dạng đề
-        </button>
+      <div className="mt-chips">
+        {ESSAY_TYPES.map((t) => (
+          <button type="button" key={t.id} className="mt-chip" onClick={() => reveal(t.id)}>
+            {t.vi}
+          </button>
+        ))}
       </div>
     </>
   )
@@ -1076,7 +1179,7 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
       <div className="mt-head">
         <div>
           <h1>Tư duy Task 2</h1>
-          <p>Đi theo tuyến từ đề bài tới dàn bài: phân tích đề, chọn quan điểm và tìm ý, rồi viết theo outline 13 câu của đúng dạng đề.</p>
+          <p>Sơ đồ tư duy từ đề bài tới dàn bài: nhận dạng đề, chọn quan điểm và tìm ý, rồi viết theo format 13 câu của đúng dạng đề.</p>
         </div>
         <button type="button" className="mt-btn" onClick={reset}>
           <Icon name="refresh" />
@@ -1104,10 +1207,10 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
               </option>
             ))}
           </select>
-          {detected && !st.manualType && <span className="mt-tag">tự nhận</span>}
-          {outline && (
-            <button type="button" className="mt-link" onClick={() => reveal('step.outline')}>
-              Outline {outline.name}
+          {detected && !st.manualType && <span className="mt-tag is-auto">tự nhận</span>}
+          {outline && typeId && (
+            <button type="button" className="mt-link" onClick={() => reveal(choice ? choiceNodeId(typeId, choice) : typeId)}>
+              Format {outline.name}
               <Icon name="right" />
             </button>
           )}
@@ -1115,66 +1218,26 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
       </section>
 
       <div className="mt-layout">
-        <section className="mt-mapcard" aria-label="Bản đồ tuyến">
-          <div className="mt-map" ref={mapRef}>
-            <div className="mt-canvas" style={{ width: W, height: mapHeight }}>
-              <svg className="mt-svg" width={W} height={mapHeight} viewBox={`0 0 ${W} ${mapHeight}`} aria-hidden="true">
-                <path className="mt-ln t-m" d={`M ${ROOT_X} ${TY} H ${STEP_X['step.outline']}`} />
-                {branch && (
-                  <g key={branch.key} className="mt-draw">
-                    {branch.paths.map((p, i) => (
-                      <path key={i} className={`mt-ln t-${p.tone}`} d={p.d} pathLength={1} />
-                    ))}
-                  </g>
-                )}
-              </svg>
-              {trunk.map(renderStation)}
-              {branch && (
-                <div key={branch.key} className="mt-branch">
-                  {branch.names.map((n) => (
-                    <span
-                      key={n.label}
-                      className={`mt-linename side-${n.side} t-${n.tone}`}
-                      style={n.side === 'left' ? { left: n.x - 16, top: n.y } : { left: n.x + 16, top: n.y }}
-                    >
-                      <b>{n.label}</b>
-                      <small>{n.sub}</small>
-                    </span>
-                  ))}
-                  {branch.stations.map(renderStation)}
-                </div>
-              )}
-              {!branch && (
-                <p className="mt-maphint" style={{ top: TY + 30 }}>
-                  {st.openStep === 'step.outline' ? 'Tuyến outline mở khi đã có dạng đề.' : 'Bấm một ga trên tuyến chính để mở tuyến nhánh.'}
-                </p>
-              )}
-            </div>
-          </div>
+        <section className="fl-wrap" aria-label="Sơ đồ từng bước">
+          <ol className="fl-steps">{steps.map(renderStep)}</ol>
           <div className="mt-legend" aria-label="Chú giải">
             <span>
-              <i className="mt-key t-m" /> tuyến chính
+              <i className="fl-key-carry" /> dữ liệu mang sang bước sau
             </span>
             <span>
-              <i className="mt-key t-g" /> vế 1 · thân bài 1
+              <i className="mt-key-chosen" /> đang dùng cho bài
             </span>
             <span>
-              <i className="mt-key t-r" /> vế 2 · thân bài 2
+              <i className="mt-key-active" /> đang xem
             </span>
             <span>
-              <i className="mt-key t-p" /> giải pháp
+              <Icon name="star" className="mt-star" /> ý đã chọn
             </span>
             <span>
-              <i className="mt-key t-o" /> quan điểm
+              <i className="mt-tag is-auto">tự nhận</i> app đoán từ đề bài
             </span>
             <span>
-              <i className="mt-key-st" /> ga
-            </span>
-            <span>
-              <i className="mt-key-hub" /> ga đổi tuyến
-            </span>
-            <span>
-              <i className="mt-key-minor" /> ga phụ: Expand · Example
+              <i className="mt-key-minor" /> câu Expand · Example
             </span>
           </div>
         </section>
@@ -1188,6 +1251,10 @@ export default function MindMapPage({ onNavigate }: { onNavigate?: (p: PageKey) 
 }
 
 // ------------------------------------------------------------------ Dàn bài dạng chữ
+function outlineNotes(o: Outline): string[] {
+  return [...(o.notes ?? []), ...(o.ink ?? [])]
+}
+
 function buildDraft(
   prompt: string,
   type: EssayType | undefined,
@@ -1224,7 +1291,19 @@ const Section = ({ title, aside, children }: { title: string; aside?: ReactNode;
   </section>
 )
 
-const PanelHead = ({ bullet, kicker, title, sub, text }: { bullet: ReactNode; kicker: string; title: string; sub?: string; text?: string }) => (
+const PanelHead = ({
+  bullet,
+  kicker,
+  title,
+  sub,
+  text,
+}: {
+  bullet: ReactNode
+  kicker: string
+  title: string
+  sub?: string
+  text?: string
+}) => (
   <div className="mt-p-head">
     <div className="mt-kicker">
       {bullet}
