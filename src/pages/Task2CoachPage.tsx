@@ -175,7 +175,7 @@ export default function Task2CoachPage({ onNavigate }: { onNavigate?: (p: PageKe
   const [copied, setCopied] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
-  const workRef = useRef<HTMLElement>(null)
+  const workRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     try {
@@ -225,10 +225,15 @@ export default function Task2CoachPage({ onNavigate }: { onNavigate?: (p: PageKe
   const goTo = (step: 1 | 2, key?: string) => {
     patch({ step })
     requestAnimationFrame(() => {
-      const el = key ? document.getElementById(fieldId(key)) : workRef.current
+      if (!key) {
+        // Đổi bước: đưa cột phải về đầu để còn thấy thanh bước
+        workRef.current?.parentElement?.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      }
+      const el = document.getElementById(fieldId(key))
       if (!el) return
-      el.scrollIntoView({ behavior: 'smooth', block: key ? 'center' : 'start' })
-      if (key) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      {
         ;(el as HTMLElement).focus({ preventScroll: true })
         el.closest('.tc-field')?.classList.add('is-flash')
         window.setTimeout(() => el.closest('.tc-field')?.classList.remove('is-flash'), 1200)
@@ -645,7 +650,7 @@ export default function Task2CoachPage({ onNavigate }: { onNavigate?: (p: PageKe
       <div className="mt-head">
         <div>
           <h1>Luyện Task 2</h1>
-          <p>Tự làm một đề theo từng bước: nhận dạng đề rồi phát triển ý cho hai thân bài. App chỉ đặt câu hỏi và đưa tài liệu, không viết sẵn bài cho bạn.</p>
+          <p>Viết 13 câu outline ở giữa. Cột bên phải dẫn từng bước: nhận dạng đề rồi tìm ý cho hai thân bài. App chỉ đặt câu hỏi và đưa tài liệu, không viết sẵn bài cho bạn.</p>
         </div>
         <button type="button" className="mt-btn" onClick={reset}>
           <Icon name="refresh" />
@@ -653,32 +658,36 @@ export default function Task2CoachPage({ onNavigate }: { onNavigate?: (p: PageKe
         </button>
       </div>
 
-      <nav className="tc-steps" aria-label="Các bước">
-        {steps.map((s, k) => (
-          <button
-            key={s.no}
-            type="button"
-            className={['tc-stepbtn', st.step === s.no ? 'is-on' : '', s.done === s.total ? 'is-done' : ''].filter(Boolean).join(' ')}
-            aria-current={st.step === s.no ? 'step' : undefined}
-            onClick={() => goTo(s.no)}
-          >
-            <span className="tc-stepno">{s.done === s.total ? <Icon name="check" /> : s.no}</span>
-            <span className="tc-steptxt">
-              <small>Bước {s.no}</small>
-              <b>{s.label}</b>
-            </span>
-            <Progress done={s.done} total={s.total} />
-            {k === 0 && <span className="tc-steparrow" aria-hidden="true" />}
-          </button>
-        ))}
-      </nav>
-
       <div className="tc-layout">
-        <section className="tc-work" ref={workRef} aria-label={`Bước ${st.step}`}>
-          {st.step === 1 ? renderStep1() : renderStep2()}
-        </section>
-        <aside className="mt-panel tc-outline" aria-label="Outline">
+        {/* Giữa: outline 13 câu là chỗ viết chính */}
+        <section className="tc-main tc-outline" aria-label="Outline">
           {renderOutline()}
+        </section>
+
+        {/* Phải: các bước hỗ trợ tìm ý, dính khi cuộn */}
+        <aside className="mt-panel tc-side" aria-label="Hỗ trợ viết">
+          <nav className="tc-steps" aria-label="Các bước">
+            {steps.map((s, k) => (
+              <button
+                key={s.no}
+                type="button"
+                className={['tc-stepbtn', st.step === s.no ? 'is-on' : '', s.done === s.total ? 'is-done' : ''].filter(Boolean).join(' ')}
+                aria-current={st.step === s.no ? 'step' : undefined}
+                onClick={() => goTo(s.no)}
+              >
+                <span className="tc-stepno">{s.done === s.total ? <Icon name="check" /> : s.no}</span>
+                <span className="tc-steptxt">
+                  <small>Bước {s.no}</small>
+                  <b>{s.label}</b>
+                </span>
+                <Progress done={s.done} total={s.total} />
+                {k === 0 && <span className="tc-steparrow" aria-hidden="true" />}
+              </button>
+            ))}
+          </nav>
+          <div className="tc-work" ref={workRef} aria-label={`Bước ${st.step}`}>
+            {st.step === 1 ? renderStep1() : renderStep2()}
+          </div>
         </aside>
       </div>
     </div>

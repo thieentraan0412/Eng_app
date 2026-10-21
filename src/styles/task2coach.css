@@ -1,8 +1,9 @@
 /* ============================================================================
    Trang LUYỆN TASK 2 — người học tự làm một đề theo từng bước
-     - Thanh bước: Bước 1 Nhận dạng đề → Bước 2 Phát triển ý, mỗi bước có thanh tiến độ.
-     - Bên trái: các thẻ để người học viết (tc-card). Bên phải: outline dính khi cuộn,
-       đọc cùng trạng thái nên cập nhật ngay và sửa được tại chỗ.
+     - Giữa (rộng): outline 13 câu của dạng đề đã chọn, là chỗ viết chính (tc-main).
+     - Phải (dính khi cuộn): thanh bước Bước 1 Nhận dạng đề → Bước 2 Phát triển ý và các
+       thẻ hỗ trợ tìm ý (tc-side > tc-work > tc-card); cùng một trạng thái nên outline
+       cập nhật ngay khi gõ ở cột phải.
    Dùng chung token và thành phần mt-* của mindmap.css (trang mang cả hai class
    mt-page và tc-page). Tiền tố riêng: tc-
    ============================================================================ */
@@ -826,12 +827,139 @@
   margin-top: 4px;
 }
 
+/* ------------------------------------------------------------------ Outline ở giữa: to hơn để viết */
+.tc-main {
+  min-width: 0;
+}
+.tc-main .tc-ohead h2 {
+  font-size: 24px;
+}
+.tc-main > .mt-hint {
+  font-size: 13.5px;
+}
+.tc-main .tc-opart {
+  gap: 8px;
+  padding: 12px 16px 14px 18px;
+}
+.tc-main .tc-opart > header b {
+  font-size: 16px;
+}
+.tc-main .tc-oline + .tc-oline {
+  padding-top: 10px;
+}
+.tc-main .tc-oline-head .mt-n {
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+}
+.tc-main .tc-orole {
+  font-size: 12.5px;
+}
+.tc-main .tc-oline .mt-sentence.tc-otpl {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.tc-main .tc-opatterns .mt-chip {
+  padding: 4px 10px;
+  font-size: 13.5px;
+}
+.tc-main .tc-oinput {
+  min-height: 48px;
+  padding: 9px 12px;
+  font-size: 15.5px;
+  line-height: 1.6;
+}
+.tc-main .tc-oinput:focus-visible {
+  background: var(--mt-surface);
+  box-shadow: 0 0 0 3px var(--mt-m-soft);
+}
+.tc-main .tc-oideas {
+  font-size: 13.5px;
+}
+.tc-main .tc-oidea-list {
+  font-size: 13.5px;
+}
+
+/* ------------------------------------------------------------------ Cột phải: các bước hỗ trợ */
+.tc-side {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 12px 12px 14px;
+}
+.tc-side .tc-steps {
+  gap: 12px;
+  margin-bottom: 0;
+}
+.tc-side .tc-stepbtn {
+  gap: 8px;
+  padding: 8px 10px;
+  box-shadow: none;
+}
+.tc-side .tc-stepno {
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+}
+.tc-side .tc-steptxt b {
+  font-size: 14px;
+}
+.tc-side .tc-steptxt small {
+  font-size: 10px;
+}
+.tc-side .tc-bar {
+  width: 32px;
+}
+.tc-side .tc-prog b {
+  min-width: 0;
+  font-size: 11px;
+}
+.tc-side .tc-steptxt b {
+  font-size: 13px;
+}
+.tc-side .tc-steparrow {
+  right: -12px;
+  width: 10px;
+}
+.tc-side .tc-card {
+  box-shadow: none;
+}
+.tc-side .tc-card-head {
+  padding: 10px 12px 6px;
+}
+.tc-side .tc-card-head h3 {
+  font-size: 15px;
+}
+.tc-side .tc-card-head p {
+  font-size: 13px;
+}
+.tc-side .tc-card-body {
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+.tc-side .tc-types {
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.tc-side .tc-type {
+  padding: 8px 10px;
+}
+.tc-side .tc-input {
+  font-size: 14px;
+}
+.tc-side .tc-carry {
+  padding: 8px 12px;
+}
+.tc-side .tc-carry .mt-link {
+  margin-left: 0;
+}
+
 /* ------------------------------------------------------------------ Màn hẹp */
 @media (max-width: 1180px) {
   .tc-layout {
     grid-template-columns: 1fr;
   }
-  .tc-outline {
+  .tc-side {
     position: static;
     max-height: none;
   }
