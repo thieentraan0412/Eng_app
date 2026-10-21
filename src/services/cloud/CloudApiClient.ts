@@ -104,6 +104,16 @@ export interface Writing {
   updated_at: string
 }
 
+// ---------- Luyện Task 2: mỗi bài một dòng, data là trạng thái của trang ----------
+export interface Task2Essay {
+  id: string
+  user_id: string
+  title: string | null
+  data: unknown
+  created_at: string
+  updated_at: string
+}
+
 // ---------- Chép câu: thư mục / câu / bài làm ----------
 export interface CloudSentenceFolder {
   id: string
@@ -718,6 +728,49 @@ export const CloudApi = {
   async deleteWriting(id: string): Promise<void> {
     const { error } = await supabase
       .from('writings')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  // ---------- Luyện Task 2 (đồng bộ mọi thiết bị) ----------
+  // data là jsonb do trang Luyện Task 2 tự định nghĩa — API không cần hiểu cấu trúc
+  async listTask2Essays(): Promise<Task2Essay[]> {
+    const { data, error } = await supabase
+      .from('task2_essays')
+      .select('id, user_id, title, data, created_at, updated_at')
+      .is('deleted_at', null)
+      .order('updated_at', { ascending: false })
+    if (error) throw error
+    return data as Task2Essay[]
+  },
+
+  async createTask2Essay(title: string, payload: unknown): Promise<Task2Essay> {
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { data, error } = await supabase
+      .from('task2_essays')
+      .insert({ user_id: user.id, title, data: payload })
+      .select('id, user_id, title, data, created_at, updated_at')
+      .single()
+    if (error) throw error
+    return data as Task2Essay
+  },
+
+  async updateTask2Essay(id: string, title: string, payload: unknown): Promise<Task2Essay> {
+    const { data, error } = await supabase
+      .from('task2_essays')
+      .update({ title, data: payload, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('id, user_id, title, data, created_at, updated_at')
+      .single()
+    if (error) throw error
+    return data as Task2Essay
+  },
+
+  async deleteTask2Essay(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('task2_essays')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
     if (error) throw error

@@ -16,6 +16,9 @@ export interface Seg {
   strong?: boolean
   /** Nội dung điền sẵn theo quan điểm người học đã chọn. */
   byChoice?: Record<string, string>
+  /** Các cách điền vào chỗ trống, hoặc các chữ thay được cho chữ trong sách (bổ sung, không có trong sách).
+   *  Trang Luyện Task 2 cho bấm vào để chọn rồi ráp thành câu. */
+  options?: string[]
 }
 
 export interface OutlineLine {
@@ -63,6 +66,14 @@ const r = tone('r')
 const p = tone('p')
 const o = tone('o')
 const blank = (k?: Tone, extra: Partial<Seg> = {}): Seg => ({ blank: true, tone: k, ...extra })
+/** Chữ trong sách (options[0]) có thể đổi sang các chữ cùng nghĩa còn lại. */
+const swap = (k: Tone, options: string[]): Seg => ({ t: options[0], tone: k, options })
+
+// Cách điền dùng chung cho các câu thesis
+const ADOPTED = ['adopted', 'implemented', 'introduced', 'considered']
+const SIGNIFICANT = ['significant', 'important', 'considerable', 'substantial']
+const MINUSES = ['disadvantages', 'drawbacks', 'downsides', 'negative effects', 'limitations']
+const PLUSES = ['benefits', 'advantages', 'merits', 'positive effects']
 
 const paraphrase: OutlineLine = {
   no: 1,
@@ -120,7 +131,10 @@ export const OUTLINES: Outline[] = [
         text: [
           lb('Thesis:'),
           o('This essay '),
-          blank('o', { byChoice: { agree: 'totally agrees', disagree: 'totally disagrees' } }),
+          blank('o', {
+            byChoice: { agree: 'totally agrees', disagree: 'totally disagrees' },
+            options: ['totally agrees', 'strongly agrees', 'completely agrees', 'totally disagrees', 'strongly disagrees', 'completely disagrees'],
+          }),
           o(' with this suggestion for several reasons.'),
         ],
         guide: 'Nêu rõ bạn đồng ý hay không đồng ý. Chọn hẳn một phía.',
@@ -240,7 +254,15 @@ export const OUTLINES: Outline[] = [
       {
         no: 2,
         role: 'Thesis',
-        text: [lb('Thesis:'), g('Although this can bring about some '), blank('g'), g(', '), r('it can also be '), blank('r'), r(' to a certain extent.')],
+        text: [
+          lb('Thesis:'),
+          g('Although this can bring about some '),
+          blank('g', { options: ['benefits', 'advantages', 'positive effects', 'merits'] }),
+          g(', '),
+          r('it can also be '),
+          blank('r', { options: ['detrimental', 'harmful', 'damaging', 'problematic', 'disadvantageous'] }),
+          r(' to a certain extent.'),
+        ],
         guide: G_THESIS,
         hint: 'Gợi ý điền: benefits / advantages … detrimental / harmful',
       },
@@ -252,7 +274,11 @@ export const OUTLINES: Outline[] = [
       {
         no: 8,
         role: 'Câu chủ đề',
-        text: [r("Nevertheless, [N / the fact that S' + V'] can have "), blank('r'), r('.')],
+        text: [
+          r("Nevertheless, [N / the fact that S' + V'] can have "),
+          blank('r', { options: ['some drawbacks', 'several negative impacts', 'certain disadvantages', 'a number of downsides', 'some adverse effects'] }),
+          r('.'),
+        ],
         guide: G_TOPIC2,
         hint: 'Gợi ý điền: some drawbacks / several negative impacts',
       },
@@ -263,7 +289,15 @@ export const OUTLINES: Outline[] = [
       {
         no: 13,
         role: 'Kết bài',
-        text: [s('In conclusion, '), g("while [N / the fact that S' + V'] can be "), blank('g'), g(', '), r('it also has several '), blank('r'), r('.')],
+        text: [
+          s('In conclusion, '),
+          g("while [N / the fact that S' + V'] can be "),
+          blank('g', { options: ['beneficial', 'advantageous', 'useful', 'valuable'] }),
+          g(', '),
+          r('it also has several '),
+          blank('r', { options: MINUSES }),
+          r('.'),
+        ],
         guide: G_END,
         hint: 'Gợi ý điền: beneficial … drawbacks',
       },
@@ -281,7 +315,17 @@ export const OUTLINES: Outline[] = [
       {
         no: 2,
         role: 'Thesis',
-        text: [lb('Thesis:'), g('Although this (doing this) has several disadvantages, '), r('the benefits may be far more significant.')],
+        text: [
+          lb('Thesis:'),
+          g('Although this (doing this) has several '),
+          swap('g', MINUSES),
+          g(', '),
+          r('the '),
+          swap('r', PLUSES),
+          r(' may be far more '),
+          swap('r', SIGNIFICANT),
+          r('.'),
+        ],
         guide: 'Nhượng bộ mặt yếu (bất lợi) ở vế 1, khẳng định mặt mạnh (lợi ích) ở vế 2.',
       },
       { no: 3, role: 'Câu chủ đề', text: [g('On the one hand, there can be some minor disadvantages of [N / N + V-ing].')], guide: G_TOPIC1 },
@@ -320,7 +364,17 @@ export const OUTLINES: Outline[] = [
       {
         no: 2,
         role: 'Thesis',
-        text: [lb('Thesis:'), g('Although this (doing this) has several advantages, '), r('the drawbacks may be far more significant.')],
+        text: [
+          lb('Thesis:'),
+          g('Although this (doing this) has several '),
+          swap('g', ['advantages', 'benefits', 'merits', 'positive effects']),
+          g(', '),
+          r('the '),
+          swap('r', ['drawbacks', 'disadvantages', 'downsides', 'negative effects']),
+          r(' may be far more '),
+          swap('r', SIGNIFICANT),
+          r('.'),
+        ],
         guide: 'Nhượng bộ mặt yếu (lợi ích) ở vế 1, khẳng định mặt mạnh (bất lợi) ở vế 2.',
         ink: ['adj. — significant'],
       },
@@ -361,7 +415,19 @@ export const OUTLINES: Outline[] = [
       {
         no: 2,
         role: 'Thesis',
-        text: [lb('Thesis:'), g('This can be attributed to several factors, '), p('which can require possible solutions to be adopted.')],
+        text: [
+          lb('Thesis:'),
+          g('This can be '),
+          swap('g', ['attributed to', 'put down to', 'explained by', 'traced back to']),
+          g(' several '),
+          swap('g', ['factors', 'reasons', 'causes']),
+          g(', '),
+          p('which can '),
+          swap('p', ['require', 'call for']),
+          p(' possible solutions to be '),
+          swap('p', ADOPTED),
+          p('.'),
+        ],
         guide: G_THESIS,
         ink: ['answers the question'],
       },
@@ -395,7 +461,17 @@ export const OUTLINES: Outline[] = [
       {
         no: 2,
         role: 'Thesis',
-        text: [lb('Thesis:'), g('This can lead to some negative consequences, '), p('which calls for possible solutions to be adopted.')],
+        text: [
+          lb('Thesis:'),
+          g('This can '),
+          swap('g', ['lead to', 'result in', 'give rise to', 'bring about']),
+          g(' some '),
+          swap('g', ['negative consequences', 'serious problems', 'adverse effects', 'detrimental effects']),
+          g(', '),
+          p('which calls for possible solutions to be '),
+          swap('p', ADOPTED),
+          p('.'),
+        ],
         guide: G_THESIS,
       },
       { no: 3, role: 'Câu chủ đề', text: [g("There are many problems resulting from [N / N + V-ing / the fact that S' + V'].")], guide: G_TOPIC1 },

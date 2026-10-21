@@ -291,9 +291,23 @@ create table if not exists public.grammar_hidden_topics (
   unique (user_id, topic_key)
 );
 
+-- ---------- 20. TASK2_ESSAYS (các bài ở trang "Luyện Task 2") ----------
+-- Mỗi bài 1 dòng; toàn bộ bài làm (đề, dạng đề, ý, 13 câu outline) để trong jsonb
+-- vì trang chỉ đọc/ghi nguyên khối. DB đã có sẵn thì chạy supabase/task2_essays.sql.
+create table if not exists public.task2_essays (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  title      text,
+  data       jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
 -- ============================================================
 -- CHỈ MỤC (index) cho truy vấn thường dùng
 -- ============================================================
+create index if not exists idx_task2_user       on public.task2_essays (user_id);
 create index if not exists idx_gtopics_user     on public.grammar_topics (user_id);
 create index if not exists idx_ghidden_user     on public.grammar_hidden_topics (user_id);
 create index if not exists idx_gitems_topic     on public.grammar_items (topic_id);
@@ -327,7 +341,7 @@ declare
     'sentence_folders','sentences','sentence_progress',
     'exercise_progress','review_progress',
     'grammar_topics','grammar_items','grammar_progress','grammar_errors',
-    'grammar_hidden_topics'
+    'grammar_hidden_topics','task2_essays'
   ];
 begin
   foreach t in array tables loop
