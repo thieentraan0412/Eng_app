@@ -11,6 +11,7 @@ import {
   type SentenceStatus,
 } from './CloudApiClient'
 import { SENTENCES, type SentenceItem, type CefrLevel } from '../../data/sentences'
+import { isMissingSchema } from './cloudError'
 
 export type { CefrLevel }
 
@@ -18,6 +19,8 @@ export type { CefrLevel }
 export interface Folder {
   id: string
   name: string
+  /** Vị trí kéo thả trong lưới; không có = xếp sau cùng theo ngày tạo */
+  position?: number
   createdAt: number
 }
 
@@ -47,7 +50,23 @@ export interface PracticeRecord {
 
 // ---------- Ánh xạ DB -> app ----------
 function folderFromCloud(f: CloudSentenceFolder): Folder {
-  return { id: f.id, name: f.name, createdAt: Date.parse(f.created_at) || 0 }
+  return {
+    id: f.id,
+    name: f.name,
+    position: f.position ?? undefined,
+    createdAt: Date.parse(f.created_at) || 0,
+  }
+}
+
+// Theo vị trí đã kéo thả; thư mục chưa có vị trí (mới tạo) xếp sau, theo ngày tạo.
+// Sắp ở client để DB chưa có cột position vẫn chạy như cũ.
+function sortFolders(rows: CloudSentenceFolder[]): Folder[] {
+  return rows
+    .map(folderFromCloud)
+    .sort(
+      (a, b) =>
+        (a.position ?? Infinity) - (b.position ?? Infinity) || a.createdAt - b.createdAt,
+    )
 }
 
 function sentenceFromCloud(s: CloudSentence): StoredSentence {
@@ -83,8 +102,7 @@ function inputToNew(i: { vi: string; en?: string; altAnswers?: string[]; hints?:
 
 // ---------- Folder ----------
 export async function listFolders(): Promise<Folder[]> {
-  const rows = await CloudApi.listSentenceFolders()
-  return rows.map(folderFromCloud)
+  return sortFolders(await CloudApi.listSentenceFolders())
 }
 
 export async function createFolder(name: string): Promise<Folder> {
@@ -99,6 +117,20 @@ export async function renameFolder(id: string, name: string): Promise<Folder> {
 
 export async function deleteFolder(id: string): Promise<void> {
   await CloudApi.deleteSentenceFolder(id)
+}
+
+const NEED_POSITION_SQL =
+  'Kho dữ liệu chưa có cột lưu vị trí thư mục. Mở Supabase → SQL Editor, chạy file supabase/sentence_folder_position.sql rồi thử lại.'
+
+// Lưu thứ tự mới: `ordered` là danh sách sau khi kéo thả, còn giữ vị trí cũ
+// để chỉ ghi những thư mục thật sự đổi chỗ.
+export async function reorderFolders(ordered: Folder[]): Promise<void> {
+  const changed = ordered.flatMap((f, i) => (f.position === i ? [] : [{ id: f.id, position: i }]))
+  try {
+    await CloudApi.setSentenceFolderPositions(changed)
+  } catch (e) {
+    throw isMissingSchema(e, 'position') ? new Error(NEED_POSITION_SQL) : e
+  }
 }
 
 export async function countByFolder(): Promise<Record<string, number>> {
@@ -240,7 +272,7 @@ async function seedDefault(): Promise<void> {
 // Đảm bảo tài khoản có dữ liệu; trả về danh sách thư mục sau cùng.
 export async function ensureReady(): Promise<Folder[]> {
   let folders = await CloudApi.listSentenceFolders()
-  if (folders.length > 0) return folders.map(folderFromCloud)
+  if (folders.length > 0) return sortFolders(folders)
 
   // Cloud trống
   const alreadyMigrated = localStorage.getItem(LOCAL_MIGRATED_FLAG) === '1'
@@ -253,5 +285,5 @@ export async function ensureReady(): Promise<Folder[]> {
   }
 
   folders = await CloudApi.listSentenceFolders()
-  return folders.map(folderFromCloud)
+  return sortFolders(folders)
 }

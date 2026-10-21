@@ -134,10 +134,14 @@ create table if not exists public.sentence_folders (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references auth.users (id) on delete cascade,
   name       text not null,
+  position   integer,                             -- vị trí trong lưới (kéo thả); null = xếp sau cùng
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
 );
+
+-- Migration (an toàn khi chạy lại): thêm cột cho DB đã tạo trước đó
+alter table public.sentence_folders add column if not exists position integer;
 
 -- ---------- 11. SENTENCES (câu luyện dịch Việt → Anh) ----------
 create table if not exists public.sentences (

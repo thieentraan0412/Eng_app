@@ -109,6 +109,7 @@ export interface CloudSentenceFolder {
   id: string
   user_id: string
   name: string
+  position?: number | null // thiếu khi DB chưa chạy supabase/sentence_folder_position.sql
   created_at: string
   updated_at: string
 }
@@ -762,6 +763,17 @@ export const CloudApi = {
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
     if (error) throw error
+  },
+
+  // Lưu vị trí mới (kéo thả) — chỉ gửi các thư mục đổi chỗ
+  async setSentenceFolderPositions(rows: { id: string; position: number }[]): Promise<void> {
+    const results = await Promise.all(
+      rows.map((r) =>
+        supabase.from('sentence_folders').update({ position: r.position }).eq('id', r.id),
+      ),
+    )
+    const failed = results.find((r) => r.error)
+    if (failed?.error) throw failed.error
   },
 
   // ---------- Chép câu: câu ----------

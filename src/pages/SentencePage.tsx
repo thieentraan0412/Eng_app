@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type DragEvent,
   type FormEvent,
   type KeyboardEvent,
   type UIEvent,
@@ -22,6 +23,7 @@ import {
   createFolder,
   renameFolder,
   deleteFolder,
+  reorderFolders,
   countByFolder,
   countDoneByFolder,
   countCorrectByFolder,
@@ -237,6 +239,10 @@ export default function SentencePage() {
   const [editName, setEditName] = useState('')
   const [savingRenameId, setSavingRenameId] = useState<string | null>(null)
   const renameInFlight = useRef<string | null>(null)
+  // Kéo thả đổi vị trí: thả lên thẻ nào thì thư mục chiếm chỗ thẻ đó
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null)
+  const justDragged = useRef(false)
 
   const refresh = async () => {
     const [fs, cs, ds, ok] = await Promise.all([
@@ -342,6 +348,60 @@ export default function SentencePage() {
       setSavingRenameId(null)
     }
   }
+  const startDrag = (e: DragEvent<HTMLDivElement>, f: Folder) => {
+    if (editingId) {
+      e.preventDefault()
+      return
+    }
+    justDragged.current = true
+    setDraggingId(f.id)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', f.id)
+  }
+
+  const finishDrag = () => {
+    setDraggingId(null)
+    setDropTargetId(null)
+    window.setTimeout(() => {
+      justDragged.current = false
+    }, 0)
+  }
+
+  const dragOverFolder = (e: DragEvent<HTMLDivElement>, targetId: string) => {
+    if (!draggingId) return // kéo thứ khác (chữ, file) qua thẻ -> bỏ qua
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = 'move'
+    const next = targetId === draggingId ? null : targetId
+    setDropTargetId((current) => (current === next ? current : next))
+  }
+
+  const dropFolder = (e: DragEvent<HTMLElement>, targetId: string) => {
+    if (!draggingId) return
+    e.preventDefault()
+    e.stopPropagation()
+    const fromId = draggingId
+    finishDrag()
+    const from = folders.findIndex((folder) => folder.id === fromId)
+    const to = folders.findIndex((folder) => folder.id === targetId)
+    if (from < 0 || to < 0 || from === to) return
+    const next = folders.slice()
+    next.splice(to, 0, ...next.splice(from, 1))
+    void saveOrder(next)
+  }
+
+  // Đổi chỗ ngay trên màn hình rồi mới lưu; lỗi thì trả về thứ tự cũ
+  const saveOrder = async (next: Folder[]) => {
+    const prev = folders
+    setFolders(next.map((folder, i) => ({ ...folder, position: i })))
+    try {
+      await reorderFolders(next)
+    } catch (err) {
+      setFolders(prev)
+      alert('Không lưu được vị trí thư mục: ' + errMsg(err))
+    }
+  }
+
   const remove = async (f: Folder) => {
     if (!confirm(`Xóa thư mục "${f.name}" và toàn bộ câu bên trong?`)) return
     try {
@@ -375,6 +435,7 @@ export default function SentencePage() {
           <h1>Chép câu</h1>
           <p>
             Tạo thư mục và quản lý các câu luyện dịch Việt → Anh. Dữ liệu đồng bộ đám mây.
+            Kéo thả thẻ để đổi vị trí.
           </p>
         </div>
         <div className="cc-head-actions">
@@ -418,21 +479,48 @@ export default function SentencePage() {
           <p>Tạo thư mục đầu tiên để nhóm các câu luyện dịch theo buổi học hoặc trình độ.</p>
         </div>
       ) : (
-        <section className="cc-grid">
-          {folders.map((f) => {
+        <section
+          className="cc-grid"
+          // Thả vào khe giữa các thẻ: dùng chỗ vạch báo đang hiện
+          onDragOver={(e) => {
+            if (!draggingId) return
+            e.preventDefault()
+            e.dataTransfer.dropEffect = 'move'
+          }}
+          onDrop={(e) => {
+            if (!draggingId) return
+            if (dropTargetId) dropFolder(e, dropTargetId)
+            else e.preventDefault()
+          }}
+        >
+          {folders.map((f, index) => {
             const total = counts[f.id] ?? 0
             const done = Math.min(doneCounts[f.id] ?? 0, total)
             const ok = Math.min(correctCounts[f.id] ?? 0, total)
             const isEditing = editingId === f.id
             const isSavingRename = savingRenameId === f.id
+            // Vạch báo chỗ thả: kéo về sau thì nằm sau thẻ đích, kéo lên trước thì nằm trước
+            const dropSide =
+              dropTargetId === f.id
+                ? folders.findIndex((folder) => folder.id === draggingId) < index
+                  ? ' is-drop-after'
+                  : ' is-drop-before'
+                : ''
             return (
               <div
                 key={f.id}
-                className={isEditing ? 'cc-deck is-renaming' : 'cc-deck'}
+                className={`cc-deck${isEditing ? ' is-renaming' : ''}${
+                  draggingId === f.id ? ' is-dragging' : ''
+                }${dropSide}`}
                 role="button"
                 tabIndex={0}
                 aria-busy={isSavingRename || undefined}
-                onClick={() => (editingId ? undefined : setSelected(f))}
+                draggable={!editingId}
+                onDragStart={(e) => startDrag(e, f)}
+                onDragEnd={finishDrag}
+                onDragOver={(e) => dragOverFolder(e, f.id)}
+                onDrop={(e) => dropFolder(e, f.id)}
+                onClick={() => (editingId || justDragged.current ? undefined : setSelected(f))}
                 onBlur={(e) => {
                   if (isEditing && !e.currentTarget.contains(e.relatedTarget as Node | null)) {
                     void saveRename(f.id)

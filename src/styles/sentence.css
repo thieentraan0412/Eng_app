@@ -407,6 +407,33 @@
 .cc-deck.is-renaming .cc-deck-top {
   padding-right: 58px;
 }
+
+/* Kéo thả đổi vị trí: thẻ đang kéo mờ đi, vạch màu ở khe giữa 2 thẻ báo chỗ thả */
+.cc-deck.is-dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+.cc-deck.is-drop-before,
+.cc-deck.is-drop-after {
+  border-color: var(--primary);
+}
+.cc-deck.is-drop-before::after,
+.cc-deck.is-drop-after::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--primary);
+  pointer-events: none;
+}
+.cc-deck.is-drop-before::after {
+  left: -8px;
+}
+.cc-deck.is-drop-after::after {
+  right: -8px;
+}
 .cc-page .cc-rename-save {
   background: color-mix(in srgb, var(--success) 10%, var(--surface));
   color: var(--success);
@@ -1351,6 +1378,22 @@
   }
   .cc-deck-tools {
     opacity: 1;
+  }
+  /* Một cột: vạch báo chỗ thả nằm ngang, trên hoặc dưới thẻ */
+  .cc-deck.is-drop-before::after,
+  .cc-deck.is-drop-after::after {
+    top: auto;
+    bottom: auto;
+    left: 6px;
+    right: 6px;
+    width: auto;
+    height: 3px;
+  }
+  .cc-deck.is-drop-before::after {
+    top: -8px;
+  }
+  .cc-deck.is-drop-after::after {
+    bottom: -8px;
   }
 
   .cc-filters {
