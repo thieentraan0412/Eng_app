@@ -1601,6 +1601,7 @@ button.read-card-hint:hover {
 
 /* ---------- Chế độ tập trung: ẩn sidebar + cột phải ---------- */
 body.read-focus .sidebar,
+body.read-focus .sidebar-reveal,
 body.read-focus .mobile-topbar,
 body.read-focus .read-aside,
 body.read-focus .read-lookup-backdrop,

@@ -45,7 +45,10 @@ const viOf = (body) => /<div class="vi" lang="vi">([\s\S]*?)<\/div>/.exec(body)?
 const enOf = (body) => /<div class="en" lang="en">([\s\S]*)$/.exec(body)?.[1] ?? ''
 
 const data = sections.map(([, no, body]) => {
-  const d = { no: Number(no), q: null, ideas: [], six: {}, colls: [], chain: null, sample: null }
+  const d = { no: Number(no), name: null, kind: null, q: null, ideas: [], six: {}, colls: [], chain: null, sample: null }
+  const h3 = /<h3><span lang="vi">([\s\S]*?)<\/span><span class="h-en" lang="en">([\s\S]*?)<\/span><\/h3>/.exec(body)
+  if (h3) d.name = { vi: text(h3[1]), en: text(h3[2]) }
+  d.kind = /<span class="kind (actor|aspect)">/.exec(body)?.[1] ?? null
   let cur = null
   for (const [, cls, inner] of body.matchAll(pairRe)) {
     const vi = viOf(inner)
@@ -72,7 +75,7 @@ const data = sections.map(([, no, body]) => {
     else if (cls === 'sample') d.sample = { vi: text(vi), en: text(enRaw) }
   }
   for (const k of W) if (!d.six[k] || d.six[k].ex.length === 0) throw new Error(`Hướng ${no}: thiếu ${k}`)
-  if (!d.q || !d.chain || !d.sample || !d.ideas.length || !d.colls.length) throw new Error(`Hướng ${no}: thiếu phần`)
+  if (!d.name || !d.kind || !d.q || !d.chain || !d.sample || !d.ideas.length || !d.colls.length) throw new Error(`Hướng ${no}: thiếu phần`)
   return d
 })
 
@@ -128,6 +131,10 @@ export interface DirCollocation extends BiText {
 }
 
 export interface DirectionGuide {
+  /** Tên hướng trong tiêu đề của tài liệu. */
+  name: BiText
+  /** Đối tượng (WHO) hay khía cạnh (WHAT / WHEN). */
+  kind: 'actor' | 'aspect'
   /** Câu hỏi chính của hướng. */
   question: BiText
   ideas: BiText[]
@@ -142,6 +149,8 @@ export const DIRECTION_GUIDES: Record<string, DirectionGuide> = {\n`
 data.forEach((d, i) => {
   const six = W.map((k) => `      ${k}: ${fmt({ vi: d.six[k].vi, en: d.six[k].en, ex: d.six[k].ex }, '      ')},`).join('\n')
   ts += `  ${lit(IDS[i])}: {
+    name: ${fmt(d.name)},
+    kind: ${lit(d.kind)},
     question: ${fmt(d.q)},
     ideas: ${fmt(d.ideas, '    ')},
     six: {

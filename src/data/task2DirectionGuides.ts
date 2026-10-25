@@ -25,6 +25,10 @@ export interface DirCollocation extends BiText {
 }
 
 export interface DirectionGuide {
+  /** Tên hướng trong tiêu đề của tài liệu. */
+  name: BiText
+  /** Đối tượng (WHO) hay khía cạnh (WHAT / WHEN). */
+  kind: 'actor' | 'aspect'
   /** Câu hỏi chính của hướng. */
   question: BiText
   ideas: BiText[]
@@ -37,6 +41,8 @@ export interface DirectionGuide {
 
 export const DIRECTION_GUIDES: Record<string, DirectionGuide> = {
   'dir.government': {
+    name: { vi: 'Chính phủ', en: 'Government' },
+    kind: 'actor',
     question: { vi: 'Chính phủ nên làm gì?', en: 'What should the government do?' },
     ideas: [
       { vi: 'Ban hành luật và quy định.', en: 'Introduce **laws and regulations**.' },
@@ -89,6 +95,8 @@ export const DIRECTION_GUIDES: Record<string, DirectionGuide> = {
     sample: { vi: 'Chính phủ là bên có vị thế tốt nhất để giải quyết vấn đề này vì họ có cả thẩm quyền lẫn nguồn lực. Ví dụ, đánh thuế đồ uống có đường sẽ đẩy giá lên, khiến người dân ngại mua. Nhờ đó, tỷ lệ béo phì có thể giảm và hệ thống y tế sẽ tiết kiệm được một khoản tiền đáng kể về lâu dài.', en: 'Governments are in the best position to tackle this problem because they have both the authority and the resources. For example, a tax on sugary drinks would raise their price, which would discourage people from buying them. As a result, obesity rates could fall, and the healthcare system would save a considerable amount of money in the long term.' },
   },
   'dir.individuals': {
+    name: { vi: 'Cá nhân', en: 'Individuals' },
+    kind: 'actor',
     question: { vi: 'Mỗi người có thể làm gì?', en: 'What can each person do?' },
     ideas: [
       { vi: 'Thay đổi thói quen và hành vi.', en: '**Change personal habits** and behaviour.' },
@@ -141,6 +149,8 @@ export const DIRECTION_GUIDES: Record<string, DirectionGuide> = {
     sample: { vi: 'Mặt khác, mỗi cá nhân cũng đóng vai trò quan trọng. Nhiều vấn đề môi trường bắt nguồn từ thói quen hằng ngày, như dùng túi nilon hay lái xe cho những quãng đường ngắn. Nếu mỗi người tự mang túi và đi bộ hoặc đạp xe thường xuyên hơn, lượng rác thải và khí thải sẽ giảm. Dù hành động của một người có vẻ nhỏ bé, tác động cộng dồn của hàng triệu người có thể rất đáng kể.', en: "On the other hand, individuals also play an important role. Many environmental problems are caused by everyday habits, such as using plastic bags or driving short distances. If each person brought their own bag and walked or cycled more often, the amount of waste and emissions would fall. Although one person's actions seem small, the combined effect of millions of people can be significant." },
   },
   'dir.schools': {
+    name: { vi: 'Trường học', en: 'Schools and Universities' },
+    kind: 'actor',
     question: { vi: 'Nhà trường có thể làm gì?', en: 'What can schools and universities do?' },
     ideas: [
       { vi: 'Cải thiện chất lượng giáo dục.', en: '**Improve the quality of education**.' },
@@ -193,6 +203,8 @@ export const DIRECTION_GUIDES: Record<string, DirectionGuide> = {
     sample: { vi: 'Nhà trường cũng có thể tạo ra khác biệt bằng cách dạy kỹ năng sống thực tế. Nếu quản lý tài chính là một phần của chương trình học, học sinh sẽ biết lập ngân sách và tiết kiệm trước khi bắt đầu kiếm tiền. Nhờ vậy, khi trưởng thành các em ít có nguy cơ rơi vào nợ nần, điều này có lợi không chỉ cho bản thân mà còn cho cả xã hội.', en: 'Schools can also make a difference by teaching practical life skills. If financial management were part of the curriculum, students would learn how to budget and save before they start earning money. Consequently, they would be less likely to fall into debt as adults, which benefits not only themselves but also society as a whole.' },
   },
   'dir.parents': {
+    name: { vi: 'Cha mẹ và gia đình', en: 'Parents and Families' },
+    kind: 'actor',
     question: { vi: 'Cha mẹ và gia đình có thể làm gì?', en: 'What can parents and families do?' },
     ideas: [
       { vi: 'Làm gương cho con cái.', en: '**Set a good example** for their children.' },
@@ -245,6 +257,8 @@ export const DIRECTION_GUIDES: Record<string, DirectionGuide> = {
     sample: { vi: 'Có thể nói cha mẹ là những người có ảnh hưởng lớn nhất trong cuộc đời một đứa trẻ, vì trẻ thường bắt chước những gì chúng thấy ở nhà. Nếu cha mẹ hạn chế thời gian dùng thiết bị của chính mình và đặt ra quy tắc rõ ràng cho con, trẻ sẽ dễ dành thời gian đọc sách hoặc chơi ngoài trời hơn. Điều này cải thiện cả sức khỏe thể chất lẫn khả năng tập trung ở trường của các em.', en: "Parents are arguably the most influential people in a child's life, since children tend to copy what they see at home. If parents limit their own screen time and set clear rules for their children, young people are more likely to spend time reading or playing outside. This would improve both their physical health and their ability to concentrate at school." },
   },
   'dir.business': {
+    name: { vi: 'Doanh nghiệp', en: 'Businesses and Employers' },
+    kind: 'actor',
     question: { vi: 'Doanh nghiệp có thể làm gì?', en: 'What can businesses and employers do?' },
     ideas: [
       { vi: 'Đào tạo và nâng cao kỹ năng cho nhân viên.', en: '**Provide staff training** and upskilling.' },
@@ -297,6 +311,8 @@ export const DIRECTION_GUIDES: Record<string, DirectionGuide> = {
     sample: { vi: 'Nhà tuyển dụng cũng được lợi khi quan tâm đến nhân viên. Chẳng hạn, các công ty cho phép giờ làm linh hoạt thường thấy nhân viên ít căng thẳng và làm việc hiệu quả hơn. Khi ít người nghỉ việc, công ty tiết kiệm được chi phí tuyển dụng và đào tạo người mới, nên chính sách này có lợi cho cả hai bên.', en: 'Employers also benefit from looking after their staff. For instance, companies that offer flexible working hours often find that their employees are less stressed and more productive. As fewer people leave their jobs, the company saves money on recruiting and training new staff, so this policy is good for both sides.' },
   },
   'dir.health': {
+    name: { vi: 'Sức khỏe', en: 'Health' },
+    kind: 'aspect',
     question: { vi: 'Vấn đề này ảnh hưởng tới sức khỏe thế nào?', en: 'How does the issue affect health?' },
     ideas: [
       { vi: 'Cải thiện sức khỏe thể chất.', en: '**Improve physical health**.' },
@@ -349,6 +365,8 @@ export const DIRECTION_GUIDES: Record<string, DirectionGuide> = {
     sample: { vi: 'Xét về sức khỏe, thay đổi này mang lại rất nhiều lợi ích. Vận động thể chất thường xuyên làm giảm nguy cơ mắc các bệnh nghiêm trọng như bệnh tim và tiểu đường. Nếu ít người mắc những bệnh này hơn, bệnh viện sẽ bớt quá tải và chính phủ có thể chi ít hơn cho việc điều trị, vì phòng bệnh rẻ hơn nhiều so với chữa bệnh.', en: 'From a health perspective, this change would be highly beneficial. Regular physical activity reduces the risk of serious illnesses such as heart disease and diabetes. If fewer people developed these conditions, hospitals would be less overcrowded and the government could spend less on treatment, since preventing a disease is far cheaper than curing it.' },
   },
   'dir.economy': {
+    name: { vi: 'Kinh tế và tài chính', en: 'Economy' },
+    kind: 'aspect',
     question: { vi: 'Vấn đề này ảnh hưởng tới kinh tế và tiền bạc thế nào?', en: 'How does the issue affect the economy and money?' },
     ideas: [
       { vi: 'Tạo việc làm.', en: '**Create jobs**.' },
@@ -401,6 +419,8 @@ export const DIRECTION_GUIDES: Record<string, DirectionGuide> = {
     sample: { vi: 'Về mặt kinh tế, du lịch mang lại những lợi ích đáng kể cho cộng đồng địa phương. Sự phát triển của khách sạn, nhà hàng và dịch vụ vận tải tạo ra hàng nghìn việc làm, đặc biệt cho người trẻ, những người lẽ ra có thể phải lên thành phố lớn. Điều này làm tăng thu nhập hộ gia đình và giúp chính quyền địa phương thu thêm thuế, khoản tiền này sau đó có thể dùng để xây trường học và đường sá.', en: 'Economically, tourism brings considerable advantages to local communities. The growth of hotels, restaurants and transport services creates thousands of jobs, particularly for young people who might otherwise move to big cities. This increases household income and allows the local government to collect more taxes, which can then be spent on schools and roads.' },
   },
   'dir.society': {
+    name: { vi: 'Xã hội và cộng đồng', en: 'Society and Community' },
+    kind: 'aspect',
     question: { vi: 'Vấn đề này ảnh hưởng tới cộng đồng thế nào?', en: 'How does the issue affect society and the community?' },
     ideas: [
       { vi: 'Tăng cường sự gắn kết cộng đồng.', en: '**Strengthen community ties**.' },
@@ -453,6 +473,8 @@ export const DIRECTION_GUIDES: Record<string, DirectionGuide> = {
     sample: { vi: 'Một lợi ích khác liên quan đến đời sống cộng đồng. Các cơ sở công cộng như thư viện và trung tâm cộng đồng cho người dân ở mọi lứa tuổi một nơi để gặp gỡ và tham gia các hoạt động chung. Điều này giúp người già bớt cô đơn và giữ thanh thiếu niên tránh xa các hành vi tiêu cực, khiến khu dân cư an toàn và gắn kết hơn.', en: 'Another advantage relates to community life. Public facilities such as libraries and community centres give people of different ages a place to meet and take part in shared activities. This reduces loneliness among the elderly and keeps teenagers away from antisocial behaviour, making neighbourhoods safer and more united.' },
   },
   'dir.environment': {
+    name: { vi: 'Môi trường', en: 'Environment' },
+    kind: 'aspect',
     question: { vi: 'Vấn đề này ảnh hưởng tới môi trường thế nào?', en: 'How does the issue affect the environment?' },
     ideas: [
       { vi: 'Giảm ô nhiễm không khí và nguồn nước.', en: '**Reduce air and water pollution**.' },
@@ -505,6 +527,8 @@ export const DIRECTION_GUIDES: Record<string, DirectionGuide> = {
     sample: { vi: 'Lợi ích về môi trường của giao thông công cộng là rất rõ ràng. Khi một thành phố có xe buýt và tàu nhanh, giá rẻ, nhiều người dân sẽ để ô tô ở nhà. Điều này giúp giảm khí thải carbon và giảm ùn tắc, nên chất lượng không khí được cải thiện rõ rệt. Về lâu dài, khoản đầu tư như vậy là thiết yếu cho sự phát triển đô thị bền vững.', en: 'The environmental benefits of public transport are clear. When a city provides fast and affordable buses and trains, many residents leave their cars at home. This leads to lower carbon emissions and less traffic congestion, so air quality improves noticeably. In the long term, such investment is essential for sustainable urban development.' },
   },
   'dir.technology': {
+    name: { vi: 'Công nghệ', en: 'Technology' },
+    kind: 'aspect',
     question: { vi: 'Công nghệ mang lại lợi ích và tác hại gì?', en: 'What benefits and harms does technology bring?' },
     ideas: [
       { vi: 'Tự động hóa công việc.', en: '**Automate tasks**.' },
@@ -557,6 +581,8 @@ export const DIRECTION_GUIDES: Record<string, DirectionGuide> = {
     sample: { vi: 'Công nghệ đã thay đổi giáo dục theo nhiều hướng tích cực. Các khóa học trực tuyến cho phép học sinh ở vùng xa học với giáo viên giàu kinh nghiệm mà không cần lên thành phố, giúp thu hẹp khoảng cách giáo dục giữa nông thôn và thành thị. Tuy nhiên, nếu việc học chỉ diễn ra qua màn hình, học sinh sẽ có ít cơ hội phát triển kỹ năng xã hội, vì vậy học trực tuyến nên bổ trợ chứ không thay thế lớp học truyền thống.', en: 'Technology has transformed education in many positive ways. Online courses allow students in remote areas to learn from experienced teachers without travelling to a city, which narrows the gap between rural and urban education. However, if learning takes place only through a screen, students may have fewer chances to develop social skills, so online learning should complement rather than replace classroom teaching.' },
   },
   'dir.time': {
+    name: { vi: 'Thời gian và sự tiện lợi', en: 'Time and Convenience' },
+    kind: 'aspect',
     question: { vi: 'Vấn đề này tiết kiệm hay làm tốn thời gian, công sức?', en: 'Does the issue save or cost time and effort?' },
     ideas: [
       { vi: 'Tiết kiệm thời gian.', en: '**Save time**.' },
@@ -608,6 +634,8 @@ export const DIRECTION_GUIDES: Record<string, DirectionGuide> = {
     sample: { vi: 'Một lợi ích lớn của làm việc tại nhà là tiết kiệm thời gian. Nhân viên không còn phải mất một đến hai tiếng đi lại mỗi ngày và có thể dùng thời gian này để tập thể dục, nấu bữa ăn lành mạnh hoặc ở bên gia đình. Kết quả là nhiều người làm việc từ xa cho biết họ cân bằng công việc và cuộc sống tốt hơn và hài lòng với công việc hơn.', en: 'One major advantage of working from home is the time it saves. Employees no longer need to spend one or two hours commuting every day, and they can use this time to exercise, cook healthy meals or be with their families. As a result, many remote workers report a better work–life balance and higher job satisfaction.' },
   },
   'dir.longterm': {
+    name: { vi: 'Tác động ngắn hạn và dài hạn', en: 'Short-term and Long-term Effects' },
+    kind: 'aspect',
     question: { vi: 'Trước mắt thế nào, lâu dài thế nào?', en: 'What happens in the short term and in the long term?' },
     ideas: [
       { vi: 'Ngắn hạn: chi phí ban đầu, khó thích nghi, mất thời gian đào tạo.', en: 'Short term: **initial costs**, **an adjustment period** and time spent on training.' },

@@ -1,32 +1,43 @@
 // Trang "Luyện Task 2" — người học tự làm một đề IELTS Writing Task 2 theo từng bước.
 //   Bước 1 · Nhận dạng đề: dán đề, tự tách 4 lớp, tự chọn dạng đề rồi mới so với app, chốt quan điểm.
-//   Bước 2 · Phát triển ý: xem 12 hướng phát triển ý (DATA/huong-dan-song-ngu.html mục 3) — câu hỏi chính,
-//            câu ví dụ cho từng câu hỏi WHO…WHICH, ý triển khai, collocation, đoạn mẫu.
+//   Bước 2 · Phát triển ý: 12 hướng phát triển ý (DATA/huong-dan-song-ngu.html mục 3) — bấm một hướng để xem
+//            câu hỏi chính, ý triển khai, 6 câu hỏi kèm câu ví dụ, collocation, chuỗi lập luận, đoạn mẫu.
 // Giữa là ĐÚNG 13 câu của outline dạng đề đã chọn (DATA/outline-dang-de.html): mỗi câu hiện câu mẫu
 // trong sách (vế màu, mẫu câu Expand/Example) và một ô để người học viết câu đó; bên phải là các bước.
 // Tài liệu chỉ để đọc lấy ý, app không viết sẵn bài luận.
 // Trang mở ra danh sách bài (bảng task2_essays trên Supabase, đồng bộ app ↔ web); bấm một bài mới vào
 // giao diện làm bài ở trên, mọi thay đổi tự lưu sau khi ngừng gõ.
 // Dữ liệu: src/data/task2MindMap.ts · task2Outlines.ts · task2DirectionGuides.ts
-import {
-  Fragment,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
-} from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import '@fontsource/overpass/600.css'
 import '@fontsource/overpass/700.css'
 import '@fontsource/overpass/800.css'
 import '@fontsource/overpass-mono/500.css'
 import '@fontsource/overpass-mono/600.css'
 import Icon from '../components/Icon'
+import {
+  Card,
+  EditorTop,
+  Field,
+  Progress,
+  Rich,
+  Sentence,
+  StepNav,
+  StepTabs,
+  ToneDots,
+  appendText,
+  clip,
+  countWords,
+  has,
+  lineFills,
+  relTime,
+  slotKey,
+  useAutosave,
+  withFills,
+  type StepItem,
+} from '../components/CoachKit'
 import type { PageKey } from './pages'
-import { DIRECTIONS, ESSAY_TYPES, SIX_W, findDirection, findEssayType, type Direction, type SixWKey } from '../data/task2MindMap'
+import { DIRECTIONS, ESSAY_TYPES, SIX_W, findDirection, findEssayType } from '../data/task2MindMap'
 import {
   OUTLINE_CHOICES,
   defaultChoice,
@@ -35,11 +46,11 @@ import {
   segsToText,
   type Outline,
   type OutlineLine,
-  type Seg,
   type Tone,
 } from '../data/task2Outlines'
 import type { PatternLevel } from '../data/task2Patterns'
-import { DIRECTION_GUIDES } from '../data/task2DirectionGuides'
+import { DIRECTION_GUIDES, type DirectionGuide } from '../data/task2DirectionGuides'
+import { ideaSentences } from '../data/task2IdeaSentences'
 import { detectEssayType } from '../services/essayType'
 import { CloudApi, type Task2Essay } from '../services/cloud/CloudApiClient'
 import { errText, isMissingSchema } from '../services/cloud/cloudError'
@@ -113,23 +124,6 @@ const INITIAL: CoachState = {
   lines: {},
   fills: {},
 }
-
-/** Một chỗ chọn được trong câu mẫu: outline · số câu · vị trí mảnh trong câu. */
-const slotKey = (outlineId: string, no: number, i: number) => `${outlineId}:${no}:${i}`
-
-/** Chữ đã chọn cho các chỗ trống của một câu (theo vị trí mảnh); bỏ chữ không còn trong danh sách. */
-function lineFills(fills: Record<string, string>, outlineId: string, l: OutlineLine): Record<number, string> {
-  const out: Record<number, string> = {}
-  l.text.forEach((sg, i) => {
-    const v = fills[slotKey(outlineId, l.no, i)]
-    if (v && sg.options?.includes(v)) out[i] = v
-  })
-  return out
-}
-
-/** Câu mẫu đã thay chữ người học chọn vào chỗ trống. */
-const withFills = (segs: Seg[], fills: Record<number, string>): Seg[] =>
-  segs.map((sg, i) => (fills[i] ? { ...sg, t: fills[i], blank: false, byChoice: undefined } : sg))
 
 /** Bản lưu cũ có 3 ô Mở bài / Thesis / Kết luận → chuyển thành câu 1, 2, 13. */
 function migrateLines(s: { intro?: string; thesis?: string; conclusion?: string }): Record<string, string> {
@@ -229,34 +223,11 @@ function loadFilter(): ListFilter {
   return NO_FILTER
 }
 
-// "Hôm nay · 10:49" · "Hôm qua · 21:12" · "5 ngày trước"
-function relTime(iso: string): string {
-  const DAY = 86_400_000
-  const d = new Date(iso)
-  const midnight = new Date()
-  midnight.setHours(0, 0, 0, 0)
-  const diffDays = Math.floor((midnight.getTime() - d.getTime()) / DAY) + 1
-  const hhmm = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-  if (diffDays <= 0) return `Hôm nay · ${hhmm}`
-  if (diffDays === 1) return `Hôm qua · ${hhmm}`
-  if (diffDays < 30) return `${diffDays} ngày trước`
-  return d.toLocaleDateString('vi-VN')
-}
-
-const has = (s: string) => s.trim().length > 0
-const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
-const countWords = (s: string) => (s.trim() ? s.trim().split(/\s+/).length : 0)
 const fieldId = (key: string) => `tc-f-${key.replace(/\./g, '-')}`
-const ACTORS = DIRECTIONS.filter((d) => d.group === 'actor')
-const ASPECTS = DIRECTIONS.filter((d) => d.group === 'aspect')
-
-// Mục 2.2: xem 12 hướng phát triển ý theo từng phần của tài liệu
-type GuideTab = 'six' | 'ideas' | 'colls' | 'sample'
-const GUIDE_TABS: { id: GuideTab; label: string }[] = [
-  { id: 'six', label: '6 câu hỏi' },
-  { id: 'ideas', label: 'Ý triển khai' },
-  { id: 'colls', label: 'Collocation' },
-  { id: 'sample', label: 'Đoạn mẫu' },
+// Bước 2: 12 hướng chia 2 nhóm như tài liệu — đối tượng (1–5) và khía cạnh (6–12)
+const DIR_GROUPS = [
+  { kind: 'actor', label: 'Đối tượng · Actor · WHO', tone: 'm', dirs: DIRECTIONS.filter((d) => DIRECTION_GUIDES[d.id]?.kind === 'actor') },
+  { kind: 'aspect', label: 'Khía cạnh · Aspect · WHAT / WHEN', tone: 'g', dirs: DIRECTIONS.filter((d) => DIRECTION_GUIDES[d.id]?.kind === 'aspect') },
 ]
 const LEVEL_VI: Record<PatternLevel, string> = { basic: 'Cơ bản', mid: 'Trung cấp', adv: 'Nâng cao' }
 
@@ -489,17 +460,6 @@ export default function Task2CoachPage({ onNavigate }: { onNavigate?: (p: PageKe
   )
 }
 
-/** Hai chấm màu = hai vế của outline (cam/cam · xanh lá/đỏ · xanh lá/tím). */
-function ToneDots({ tones }: { tones?: [Tone, Tone] }) {
-  if (!tones) return null
-  return (
-    <span className="tc-dots" aria-hidden="true">
-      <i className={`t-${tones[0]}`} />
-      <i className={`t-${tones[1]}`} />
-    </span>
-  )
-}
-
 /** Thẻ một bài: mép trên hai màu vế, đề bài, dải 13 ô (Mở 2 · Thân 1 5 · Thân 2 5 · Kết 1). */
 function EssayCard({
   title,
@@ -574,8 +534,6 @@ function EssayCard({
 }
 
 // ------------------------------------------------------------------ Trang: làm một bài
-type SaveState = 'saved' | 'dirty' | 'saving' | 'error'
-
 function Task2Editor({
   essay,
   onBack,
@@ -591,68 +549,14 @@ function Task2Editor({
   const [copied, setCopied] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
-  const [save, setSave] = useState<SaveState>('saved')
-  const [saveErr, setSaveErr] = useState('')
   const [leaving, setLeaving] = useState(false)
-  // Hướng đang xem ở bước 2
-  const [guide, setGuide] = useState<{ dir: string; tab: GuideTab; w: SixWKey }>({ dir: DIRECTIONS[0].id, tab: 'six', w: 'who' })
+  // Hướng đang mở ở bước 2 (null = chưa mở hướng nào)
+  const [dir, setDir] = useState<string | null>(null)
   const workRef = useRef<HTMLDivElement>(null)
+  const dirRef = useRef<HTMLDivElement>(null)
 
-  // ---------------------------------------------------------------- Tự lưu lên cloud
-  const latest = useRef(st)
-  latest.current = st
-  const savedJson = useRef(JSON.stringify(st)) // bản đang nằm trên cloud
-  const inFlight = useRef<Promise<boolean> | null>(null)
-
-  /** Lưu bản mới nhất nếu khác bản trên cloud; có thay đổi trong lúc đang lưu thì lưu tiếp. */
-  const flush = async (): Promise<boolean> => {
-    while (inFlight.current) await inFlight.current
-    const s = latest.current
-    const json = JSON.stringify(s)
-    if (json === savedJson.current) {
-      setSave('saved')
-      return true
-    }
-    setSave('saving')
-    const run = CloudApi.updateTask2Essay(essay.id, titleOf(s), s)
-      .then((row) => {
-        savedJson.current = json
-        onSaved(row)
-        return true
-      })
-      .catch((e) => {
-        setSaveErr(errText(e))
-        return false
-      })
-      .finally(() => {
-        inFlight.current = null
-      })
-    inFlight.current = run
-    if (!(await run)) {
-      setSave('error')
-      return false
-    }
-    return flush()
-  }
-
-  useEffect(() => {
-    if (JSON.stringify(st) === savedJson.current) return
-    setSave((v) => (v === 'saving' ? v : 'dirty'))
-    const t = window.setTimeout(() => void flush(), 800)
-    return () => window.clearTimeout(t)
-  }, [st])
-
-  // Rời trang (đổi mục ở thanh bên) hoặc ẩn cửa sổ thì lưu ngay, không chờ hết hẹn giờ
-  useEffect(() => {
-    const onHide = () => {
-      if (document.visibilityState === 'hidden') void flush()
-    }
-    document.addEventListener('visibilitychange', onHide)
-    return () => {
-      document.removeEventListener('visibilitychange', onHide)
-      void flush()
-    }
-  }, [])
+  // Tự lưu lên cloud
+  const { save, saveErr, flush } = useAutosave(st, (s) => CloudApi.updateTask2Essay(essay.id, titleOf(s), s), onSaved)
 
   const back = async () => {
     setLeaving(true)
@@ -802,42 +706,49 @@ function Task2Editor({
     </>
   )
 
-  // ---------------------------------------------------------------- Bước 2: 12 hướng phát triển ý
+  // ---------------------------------------------------------------- Bước 2: 12 hướng phát triển ý (DATA/huong-dan-song-ngu.html mục 3)
+  /** Mở một hướng (bấm lại hướng đang mở thì đóng) rồi đưa phần nội dung vào tầm nhìn. */
+  const openDir = (id: string) => {
+    setDir((cur) => (cur === id ? null : id))
+    requestAnimationFrame(() => dirRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+
   const renderStep2 = () => {
-    const d = findDirection(guide.dir) ?? DIRECTIONS[0]
-    const dirChips = (list: Direction[]) =>
-      list.map((x) => (
-        <button
-          type="button"
-          key={x.id}
-          className={x.id === d.id ? 'mt-chip tc-pick is-on' : 'mt-chip tc-pick'}
-          aria-pressed={x.id === d.id}
-          onClick={() => setGuide((g) => ({ ...g, dir: x.id }))}
-          title={x.question}
-        >
-          {x.no}. {x.vi}
-        </button>
-      ))
+    const g = dir ? DIRECTION_GUIDES[dir] : undefined
     return (
-      <Card no="2.1" title="12 hướng phát triển ý" hint="Chọn một hướng để xem ý và câu ví dụ từ tài liệu. Đọc để lấy ý, rồi tự viết lại bằng chữ của bạn.">
-        <div className="tc-field">
-          <span className="tc-flabel">
-            <b>Chủ thể · WHO</b>
-          </span>
-          <div className="mt-chips">{dirChips(ACTORS)}</div>
-          <span className="tc-flabel">
-            <b>Khía cạnh · WHAT / WHEN</b>
-          </span>
-          <div className="mt-chips">{dirChips(ASPECTS)}</div>
-        </div>
-        <DirectionGuideView
-          d={d}
-          tab={guide.tab}
-          w={guide.w}
-          onTab={(tab) => setGuide((g) => ({ ...g, tab }))}
-          onW={(w) => setGuide((g) => ({ ...g, w }))}
-        />
-      </Card>
+      <>
+        <Card no="2.1" title="12 hướng phát triển ý" hint="Bấm một hướng để xem nội dung trong tài liệu. Đọc để lấy ý, rồi tự viết lại bằng chữ của bạn.">
+          {DIR_GROUPS.map((gr) => (
+            <div key={gr.kind} className="tc-field">
+              <span className="tc-flabel">
+                <b>{gr.label}</b>
+              </span>
+              <div className="tc-dirs">
+                {gr.dirs.map((d) => {
+                  const x = DIRECTION_GUIDES[d.id]
+                  const on = d.id === dir
+                  return (
+                    <button key={d.id} type="button" className={`tc-dir t-${gr.tone}${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => openDir(d.id)}>
+                      <span className="tc-gno">{d.no}</span>
+                      <span className="tc-dirtxt">
+                        <b>{x.name.vi}</b>
+                        <small lang="en">{x.name.en}</small>
+                        <span>{x.question.vi}</span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </Card>
+        {g && dir && (
+          <div ref={dirRef} className="tc-dirwrap">
+            <DirectionView id={dir} no={findDirection(dir)?.no ?? 0} g={g} onClose={() => setDir(null)} />
+          </div>
+        )}
+        <StepNav prev={{ label: 'Về bước 1 · Nhận dạng đề', onClick: () => goTo(1) }} />
+      </>
     )
   }
 
@@ -958,32 +869,13 @@ function Task2Editor({
 
   // ---------------------------------------------------------------- Bố cục trang
   // Bước 2 chỉ để xem tài liệu nên không có tiến độ
-  const steps: { no: 1 | 2; label: string; done?: number; total?: number }[] = [
+  const steps: StepItem[] = [
     { no: 1, label: 'Nhận dạng đề', done: done1, total: step1Checks.length },
     { no: 2, label: 'Phát triển ý' },
   ]
   return (
-    <div className="page mt-page tc-page">
-      <div className="tc-top">
-        <button type="button" className="mt-link" onClick={back} disabled={leaving}>
-          <Icon name="left" />
-          Danh sách bài
-        </button>
-        {save === 'error' ? (
-          <span className="tc-save is-error" role="alert">
-            <Icon name="alert" />
-            Chưa lưu được: {saveErr}
-            <button type="button" className="mt-mini" onClick={() => void flush()}>
-              Thử lại
-            </button>
-          </span>
-        ) : (
-          <span className={save === 'saved' ? 'tc-save is-saved' : 'tc-save'} role="status">
-            {save === 'saved' ? <Icon name="cloud" /> : <span className="tc-dot" aria-hidden="true" />}
-            {save === 'saved' ? 'Đã lưu' : 'Đang lưu…'}
-          </span>
-        )}
-      </div>
+    <div className="page mt-page tc-page tc-editor">
+      <EditorTop onBack={back} leaving={leaving} save={save} saveErr={saveErr} onRetry={() => void flush()} />
       <div className="tc-layout">
         {/* Giữa: outline 13 câu là chỗ viết chính */}
         <section className="tc-main tc-outline" aria-label="Outline">
@@ -992,28 +884,7 @@ function Task2Editor({
 
         {/* Phải: các bước hỗ trợ tìm ý, dính khi cuộn */}
         <aside className="mt-panel tc-side" aria-label="Hỗ trợ viết">
-          <nav className="tc-steps" aria-label="Các bước">
-            {steps.map((s, k) => {
-              const full = s.total !== undefined && s.done === s.total
-              return (
-                <button
-                  key={s.no}
-                  type="button"
-                  className={['tc-stepbtn', st.step === s.no ? 'is-on' : '', full ? 'is-done' : ''].filter(Boolean).join(' ')}
-                  aria-current={st.step === s.no ? 'step' : undefined}
-                  onClick={() => goTo(s.no)}
-                >
-                  <span className="tc-stepno">{full ? <Icon name="check" /> : s.no}</span>
-                  <span className="tc-steptxt">
-                    <small>Bước {s.no}</small>
-                    <b>{s.label}</b>
-                  </span>
-                  {s.total !== undefined && <Progress done={s.done ?? 0} total={s.total} />}
-                  {k === 0 && <span className="tc-steparrow" aria-hidden="true" />}
-                </button>
-              )
-            })}
-          </nav>
+          <StepTabs steps={steps} current={st.step} onGo={goTo} />
           <div className="tc-work" ref={workRef} aria-label={`Bước ${st.step}`}>
             {st.step === 1 ? renderStep1() : renderStep2()}
           </div>
@@ -1024,11 +895,6 @@ function Task2Editor({
 }
 
 // ------------------------------------------------------------------ Outline dạng chữ
-function appendText(cur: string, add: string): string {
-  const c = cur.replace(/\s+$/, '')
-  return c ? `${c} ${add}` : add
-}
-
 function buildOutlineText(
   st: CoachState,
   outline: Outline | undefined,
@@ -1051,316 +917,85 @@ function buildOutlineText(
   return L.join('\n')
 }
 
-/** Câu mẫu trong outline, vế tô màu như ô màu trong sách. Chỗ có danh sách cách điền thì bấm để chọn. */
-function Sentence({
-  segs,
-  choice,
-  fills = {},
-  onPick,
-}: {
-  segs: Seg[]
-  choice?: string
-  fills?: Record<number, string>
-  onPick?: (i: number, v: string | null) => void
-}) {
-  const groups: { tone?: Tone; segs: { sg: Seg; i: number }[] }[] = []
-  segs.forEach((sg, i) => {
-    const last = groups[groups.length - 1]
-    if (!sg.label && last && last.tone === sg.tone && !last.segs[0].sg.label) last.segs.push({ sg, i })
-    else groups.push({ tone: sg.tone, segs: [{ sg, i }] })
-  })
+/** Nội dung một hướng ở mục 3 của tài liệu, đủ các phần theo đúng thứ tự: câu hỏi chính, ý triển khai,
+ *  đào sâu bằng 6 câu hỏi, collocation & pattern áp dụng, chuỗi lập luận, đoạn mẫu. */
+function DirectionView({ id, no, g, onClose }: { id: string; no: number; g: DirectionGuide; onClose: () => void }) {
   return (
-    <p className="mt-sentence tc-otpl" lang="en">
-      {groups.map((gr, gi) => {
-        const inner = gr.segs.map(({ sg, i: k }) => {
-          if (sg.label) return <span key={k} className="mt-lb">{sg.t}</span>
-          const preset = choice ? sg.byChoice?.[choice] : undefined
-          if (sg.options && onPick) return <SlotPick key={k} seg={sg} value={fills[k] ?? preset} picked={Boolean(fills[k])} onPick={(v) => onPick(k, v)} />
-          if (preset) return <span key={k} className="mt-fill">{preset}</span>
-          if (sg.blank) return <span key={k} className="mt-blank" aria-label="chỗ trống" />
-          return sg.strong ? <b key={k}>{sg.t}</b> : <span key={k}>{sg.t}</span>
-        })
-        return gr.tone ? (
-          <span key={gi} className={`mt-ve t-${gr.tone}`}>
-            {inner}
-          </span>
-        ) : (
-          <span key={gi}>{inner}</span>
-        )
-      })}
-    </p>
-  )
-}
-
-/** Một chỗ trống (hoặc chữ thay được) trong câu mẫu: rê chuột hoặc bấm để mở danh sách cách điền. */
-function SlotPick({ seg, value, picked, onPick }: { seg: Seg; value?: string; picked: boolean; onPick: (v: string | null) => void }) {
-  // 'hover': đang rê chuột, rời ra là đóng · 'pin': đã bấm (hoặc mở bằng bàn phím), bấm ra ngoài mới đóng
-  const [open, setOpen] = useState<false | 'hover' | 'pin'>(false)
-  const wrap = useRef<HTMLSpanElement>(null)
-  const btn = useRef<HTMLButtonElement>(null)
-  const timer = useRef<number | undefined>(undefined)
-  const shown = value ?? seg.t
-  const items = () => Array.from(wrap.current?.querySelectorAll<HTMLButtonElement>('.tc-slotopt') ?? [])
-  const later = (fn: () => void, ms: number) => {
-    window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(fn, ms)
-  }
-  useEffect(() => () => window.clearTimeout(timer.current), [])
-
-  // Bấm mở thì đưa con trỏ vào cách đang chọn (rê chuột thì không giành con trỏ); bấm ra ngoài thì đóng
-  useEffect(() => {
-    if (!open) return
-    if (open === 'pin') {
-      const list = items()
-      ;(list.find((b) => b.getAttribute('aria-checked') === 'true') ?? list[0])?.focus()
-    }
-    const onDown = (e: PointerEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('pointerdown', onDown)
-    return () => document.removeEventListener('pointerdown', onDown)
-  }, [open])
-
-  // Chỉ chuột mới mở bằng rê; màn cảm ứng thì bấm
-  const onEnter = (e: ReactPointerEvent) => {
-    if (e.pointerType === 'mouse') later(() => setOpen((o) => o || 'hover'), 120)
-  }
-  const onLeave = (e: ReactPointerEvent) => {
-    if (e.pointerType === 'mouse') later(() => setOpen((o) => (o === 'hover' ? false : o)), 200)
-  }
-
-  const onKey = (e: ReactKeyboardEvent) => {
-    if (!open) return
-    if (e.key === 'Escape' || e.key === 'Tab') {
-      setOpen(false)
-      if (e.key === 'Escape') btn.current?.focus()
-      return
-    }
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-    e.preventDefault()
-    const list = items()
-    const at = list.indexOf(document.activeElement as HTMLButtonElement)
-    list[(at + (e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length]?.focus()
-  }
-
-  const choose = (v: string | null) => {
-    window.clearTimeout(timer.current)
-    setOpen(false)
-    onPick(v)
-    btn.current?.focus()
-  }
-
-  return (
-    <span className="tc-slot" ref={wrap} onKeyDown={onKey} onPointerEnter={onEnter} onPointerLeave={onLeave}>
-      <button
-        ref={btn}
-        type="button"
-        className={picked ? 'tc-slotbtn is-picked' : shown ? 'tc-slotbtn' : 'tc-slotbtn is-blank'}
-        aria-haspopup="menu"
-        aria-expanded={Boolean(open)}
-        aria-label={shown ? undefined : 'Chỗ trống, chọn cách điền'}
-        onClick={() => {
-          window.clearTimeout(timer.current)
-          setOpen((o) => (o === 'pin' ? false : 'pin'))
-        }}
-      >
-        {shown ?? <span className="mt-blank" />}
-        <Icon name="down" />
-      </button>
-      {open && (
-        <span className="tc-slotmenu" role="menu" aria-label={seg.blank ? 'Cách điền' : 'Chữ thay được'}>
-          <small lang="vi" aria-hidden="true">
-            {seg.blank ? 'Chọn cách điền' : 'Đổi chữ cùng nghĩa'}
-          </small>
-          {seg.options!.map((o) => (
-            <button key={o} type="button" role="menuitemradio" aria-checked={o === shown} className="tc-slotopt" onClick={() => choose(o)}>
-              <Icon name="check" />
-              {o}
-            </button>
-          ))}
-          {picked && (
-            <button type="button" role="menuitem" className="tc-slotopt is-reset" lang="vi" onClick={() => choose(null)}>
-              <Icon name="undo" />
-              {seg.blank ? 'Để trống lại' : 'Về chữ trong sách'}
-            </button>
-          )}
-        </span>
-      )}
-    </span>
-  )
-}
-
-// ------------------------------------------------------------------ Thành phần dùng chung
-/** Ô nhập tự giãn theo nội dung. */
-function Field({
-  id,
-  value,
-  onChange,
-  placeholder,
-  rows = 2,
-  lang,
-  className = 'tc-input',
-  ariaLabel,
-}: {
-  id: string
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-  rows?: number
-  lang?: string
-  className?: string
-  ariaLabel?: string
-}) {
-  const ref = useRef<HTMLTextAreaElement>(null)
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight + 2}px`
-  }, [value, placeholder])
-  return (
-    <textarea
-      ref={ref}
-      id={id}
-      className={className}
-      rows={rows}
-      lang={lang}
-      value={value}
-      placeholder={placeholder}
-      aria-label={ariaLabel}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  )
-}
-
-function Card({ no, title, hint, aside, locked, children }: { no: string; title: string; hint?: string; aside?: ReactNode; locked?: string; children: ReactNode }) {
-  return (
-    <section className={locked ? 'tc-card is-locked' : 'tc-card'}>
-      <header className="tc-card-head">
-        <span className="tc-cardno">{no}</span>
-        <div>
-          <h3>{title}</h3>
-          {hint && <p>{hint}</p>}
-        </div>
-        {aside}
-      </header>
-      {locked ? <p className="mt-empty">{locked}</p> : <div className="tc-card-body">{children}</div>}
-    </section>
-  )
-}
-
-function Progress({ done, total }: { done: number; total: number }) {
-  return (
-    <span className={done === total ? 'tc-prog is-full' : 'tc-prog'} aria-label={`${done} trên ${total} mục`}>
-      <span className="tc-bar">
-        <i style={{ width: `${(done / total) * 100}%` }} />
-      </span>
-      <b>
-        {done}/{total}
-      </b>
-    </span>
-  )
-}
-
-function StepNav({ prev, next, note }: { prev?: { label: string; onClick: () => void }; next?: { label: string; onClick: () => void }; note?: string }) {
-  return (
-    <div className="tc-stepnav">
-      {note && <p className="mt-hint">{note}</p>}
-      <div className="mt-row">
-        {prev && (
-          <button type="button" className="mt-btn" onClick={prev.onClick}>
-            <Icon name="undo" />
-            {prev.label}
-          </button>
-        )}
-        {next && (
-          <button type="button" className="mt-btn is-primary" onClick={next.onClick}>
-            {next.label}
-            <Icon name="right" />
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/** Một hướng ở bước 2, theo đúng các phần của tài liệu: 6 câu hỏi kèm câu ví dụ, ý triển khai, collocation, đoạn mẫu. */
-function DirectionGuideView({
-  d,
-  tab,
-  w,
-  onTab,
-  onW,
-}: {
-  d: Direction
-  tab: GuideTab
-  w: SixWKey
-  onTab: (t: GuideTab) => void
-  onW: (w: SixWKey) => void
-}) {
-  const g = DIRECTION_GUIDES[d.id]
-  if (!g) return null
-  const row = g.six[w]
-  return (
-    <section className={`tc-guide ${d.group === 'actor' ? 't-m' : 't-g'}`} aria-label={`Hướng ${d.no}: ${d.vi}`}>
+    <section className={`tc-guide ${g.kind === 'actor' ? 't-m' : 't-g'}`} aria-label={`Hướng ${no}: ${g.name.vi}`}>
       <header className="tc-ghead">
-        <span className="tc-gno">{d.no}</span>
+        <span className="tc-gno">{no}</span>
         <span className="tc-gname">
-          <b>{d.vi}</b>
-          <small lang="en">{d.en}</small>
+          <b>{g.name.vi}</b>
+          <small lang="en">{g.name.en}</small>
         </span>
-        <span className="mt-tag">{d.group === 'actor' ? 'Chủ thể' : 'Khía cạnh'}</span>
+        <span className="mt-tag">{g.kind === 'actor' ? 'Đối tượng · WHO' : 'Khía cạnh · WHAT / WHEN'}</span>
+        <button type="button" className="mt-mini" onClick={onClose}>
+          <Icon name="x" />
+          Đóng
+        </button>
       </header>
       <p className="tc-gq">
         {g.question.vi}
         <small lang="en">{g.question.en}</small>
       </p>
 
-      <div className="mt-seg tc-gtabs" role="group" aria-label="Phần của hướng">
-        {GUIDE_TABS.map((t) => (
-          <button type="button" key={t.id} aria-pressed={tab === t.id} onClick={() => onTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'six' && (
-        <>
-          <div className="tc-gw" role="group" aria-label="Câu hỏi">
-            {SIX_W.map((x) => (
-              <button type="button" key={x.key} aria-pressed={w === x.key} onClick={() => onW(x.key)} lang="en">
-                {x.label}
-              </button>
-            ))}
-          </div>
-          <p className="tc-gsum">
-            <span>{row.vi}</span>
-            <Rich lang="en" text={row.en} />
-          </p>
-          <ol className="tc-gex">
-            {row.ex.map((e) => (
-              <li key={e.en}>
-                <Rich className="tc-gen" lang="en" text={e.en} />
-                <span className="tc-gvi">{e.vi}</span>
-                <PatTag pattern={e.pattern} meaning={e.meaning} level={e.level} />
-              </li>
-            ))}
-          </ol>
-        </>
-      )}
-
-      {tab === 'ideas' && (
+      <DirSection
+        title="Ý triển khai"
+        en="Ideas to develop"
+        hint="Dưới mỗi ý là câu hoàn chỉnh dùng được cho mọi đề (phần bổ sung, không có trong tài liệu): thay “this problem / this policy” bằng chủ đề của đề."
+      >
         <ul className="tc-gex is-plain">
-          {g.ideas.map((p) => (
-            <li key={p.vi}>
-              <span className="tc-gvi is-main">{p.vi}</span>
-              <Rich className="tc-gen is-sub" lang="en" text={p.en} />
-            </li>
-          ))}
+          {g.ideas.map((p) => {
+            const ex = ideaSentences(id, p.en)
+            return (
+              <li key={p.vi}>
+                <span className="tc-gvi is-main">{p.vi}</span>
+                <Rich className="tc-gen is-sub" lang="en" text={p.en} />
+                {ex.length > 0 && (
+                  <ul className="tc-ideaex" aria-label="Câu hoàn chỉnh">
+                    {ex.map((e) => (
+                      <li key={e.en}>
+                        <Rich className="tc-gen" lang="en" text={e.en} />
+                        <span className="tc-gvi">{e.vi}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            )
+          })}
         </ul>
-      )}
+      </DirSection>
 
-      {tab === 'colls' && (
+      <DirSection
+        title="Đào sâu bằng 6 câu hỏi · ý triển khai"
+        en="Six questions · ideas to develop"
+        hint="Mỗi câu tiếng Anh áp dụng một pattern ở mục 2; nhãn dưới câu là pattern đó và mức độ."
+      >
+        {SIX_W.map((w) => {
+          const row = g.six[w.key]
+          return (
+            <div key={w.key} className="tc-wblock">
+              <p className="tc-gsum">
+                <span className="tc-wtag">{w.label}</span>
+                <span>{row.vi}</span>
+                <Rich lang="en" text={row.en} />
+              </p>
+              <ol className="tc-gex">
+                {row.ex.map((e) => (
+                  <li key={e.en}>
+                    <Rich className="tc-gen" lang="en" text={e.en} />
+                    <span className="tc-gvi">{e.vi}</span>
+                    <PatTag pattern={e.pattern} meaning={e.meaning} level={e.level} />
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )
+        })}
+      </DirSection>
+
+      <DirSection title="Collocation & pattern áp dụng" en="Collocations & patterns in use">
         <ul className="tc-gex is-plain">
           {g.colls.map((c) => (
             <li key={c.pattern}>
@@ -1370,51 +1005,44 @@ function DirectionGuideView({
             </li>
           ))}
         </ul>
-      )}
+      </DirSection>
 
-      {tab === 'sample' && (
-        <>
-          <div className="tc-gblock">
-            <small>Chuỗi lập luận</small>
-            <p>{g.chain.vi}</p>
-            <p className="tc-gvi" lang="en">
-              {g.chain.en}
-            </p>
-          </div>
-          <div className="tc-gblock">
-            <small>Đoạn mẫu · band 6.0–6.5</small>
-            <p lang="en">{g.sample.en}</p>
-            <details className="tc-more">
-              <summary>
-                <Icon name="right" />
-                Xem bản dịch
-              </summary>
-              <p>{g.sample.vi}</p>
-            </details>
-          </div>
-        </>
-      )}
+      <DirSection title="Chuỗi lập luận" en="Line of reasoning">
+        <p className="tc-gvi is-main">{g.chain.vi}</p>
+        <p className="tc-gen is-sub" lang="en">
+          {g.chain.en}
+        </p>
+      </DirSection>
+
+      <DirSection title="Đoạn mẫu · band 6.0–6.5" en="Model paragraph">
+        <p className="tc-gen" lang="en">
+          {g.sample.en}
+        </p>
+        <p className="tc-gvi">{g.sample.vi}</p>
+      </DirSection>
     </section>
   )
 }
 
-/** Nhãn pattern dưới câu ví dụ: khung câu, nghĩa, mức độ. */
-function PatTag({ pattern, meaning, level }: { pattern: string; meaning: string; level: PatternLevel }) {
+/** Một phần của hướng, tiêu đề song ngữ như tài liệu. */
+function DirSection({ title, en, hint, children }: { title: string; en: string; hint?: string; children: ReactNode }) {
   return (
-    <span className={`tc-gpat lv-${level}`}>
-      <code lang="en">{pattern}</code>
-      <span>
-        {meaning} · {LEVEL_VI[level]}
-      </span>
-    </span>
+    <div className="tc-gblock tc-dirsec">
+      <small>
+        {title} <span lang="en">· {en}</span>
+      </small>
+      {hint && <p className="mt-hint">{hint}</p>}
+      {children}
+    </div>
   )
 }
 
-/** Chữ có đánh dấu **…** của tài liệu → phần in đậm. */
-function Rich({ text, className, lang }: { text: string; className?: string; lang?: string }) {
+/** Nhãn pattern dưới câu ví dụ: khung câu, nghĩa (nếu có), mức độ. */
+function PatTag({ pattern, meaning, level }: { pattern: string; meaning?: string; level: PatternLevel }) {
   return (
-    <span className={className} lang={lang}>
-      {text.split('**').map((p, i) => (i % 2 ? <b key={i}>{p}</b> : <Fragment key={i}>{p}</Fragment>))}
+    <span className={`tc-gpat lv-${level}`}>
+      <code lang="en">{pattern}</code>
+      <span>{meaning ? `${meaning} · ${LEVEL_VI[level]}` : LEVEL_VI[level]}</span>
     </span>
   )
 }

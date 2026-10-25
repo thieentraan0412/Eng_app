@@ -10,9 +10,10 @@ interface Props {
   current: PageKey
   onNavigate: (page: PageKey) => void
   onClose?: () => void // đóng drawer trên mobile
+  onCollapse?: () => void // thu gọn sidebar trên màn rộng
 }
 
-export default function Sidebar({ current, onNavigate, onClose }: Props) {
+export default function Sidebar({ current, onNavigate, onClose, onCollapse }: Props) {
   const [version, setVersion] = useState(__APP_VERSION__)
   const [counts, setCounts] = useState<{ cards: number; due: number } | null>(null)
   const { user } = useAuth()
@@ -55,6 +56,16 @@ export default function Sidebar({ current, onNavigate, onClose }: Props) {
         <span className="brand-badge">E</span>
         <span className="sidebar-brand">EngMaster</span>
         <span className="sidebar-spacer" />
+        {onCollapse && (
+          <button
+            className="sidebar-collapse"
+            onClick={onCollapse}
+            title="Ẩn thanh bên"
+            aria-label="Ẩn thanh bên"
+          >
+            <Icon name="sidebar" />
+          </button>
+        )}
         {onClose && (
           <button className="sidebar-close" onClick={onClose} aria-label="Đóng menu">
             <Icon name="x" />

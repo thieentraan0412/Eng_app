@@ -951,6 +951,74 @@ textarea::placeholder {
   background: var(--surface-hover);
   color: var(--text);
 }
+/* Nút ẩn/hiện sidebar — chỉ dùng ở màn rộng (màn hẹp đã có drawer) */
+.sidebar-collapse,
+.sidebar-reveal {
+  display: none;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--r-sm);
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.sidebar-collapse {
+  border: none;
+  background: transparent;
+}
+.sidebar-reveal {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 80;
+  border: 1px solid var(--border);
+  background: var(--sidebar-bg);
+  box-shadow: var(--shadow-sm);
+}
+.app-root.has-window-bar .sidebar-reveal {
+  top: 50px;
+}
+.sidebar-collapse:hover,
+.sidebar-reveal:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.sidebar-collapse .ico,
+.sidebar-reveal .ico {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+@media (min-width: 861px) {
+  .sidebar-collapse,
+  .sidebar-reveal {
+    display: grid;
+  }
+  .sidebar {
+    transition:
+      margin-left 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s;
+  }
+  /* Trượt ra ngoài thay vì display:none để có hiệu ứng; visibility ẩn hẳn
+     sau khi trượt xong để phím Tab không lọt vào các mục đã ẩn. */
+  .app-root.nav-collapsed .sidebar {
+    margin-left: -236px;
+    visibility: hidden;
+    transition:
+      margin-left 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s 0.22s;
+  }
+  /* Chừa lề trái cho nút "Hiện thanh bên" khỏi đè lên nội dung */
+  .app-root.nav-collapsed .content {
+    padding-left: 3.4rem;
+  }
+}
 .nav-overlay {
   display: none; /* chỉ hiện khi drawer mở trên mobile */
   position: fixed;

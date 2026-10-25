@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Sidebar from './Sidebar'
+import Icon from './Icon'
 import TranslatePopup from './TranslatePopup'
 import WindowBar from './WindowBar'
 import { useWindowChrome } from '../contexts/WindowChromeContext'
@@ -18,6 +19,7 @@ import GrammarPage from '../pages/GrammarPage'
 import WritingPage from '../pages/WritingPage'
 import SentencePage from '../pages/SentencePage'
 import MindMapPage from '../pages/MindMapPage'
+import Task1CoachPage from '../pages/Task1CoachPage'
 import Task2CoachPage from '../pages/Task2CoachPage'
 import UsagePage from '../pages/UsagePage'
 import SettingsPage from '../pages/SettingsPage'
@@ -37,6 +39,7 @@ const STUDY_PAGES = new Set<PageKey>([
   'writing',
   'sentence',
   'mindmap',
+  'task1',
   'task2',
   'vocabulary',
 ])
@@ -45,6 +48,16 @@ export default function AppLayout() {
   const [page, setPage] = useState<PageKey>('dashboard')
   const [toast, setToast] = useState<string | null>(null)
   const [navOpen, setNavOpen] = useState(false) // drawer menu trên mobile
+  // Ẩn sidebar trên màn rộng (nhớ qua các lần mở). Màn hẹp vẫn dùng drawer.
+  const [navCollapsed, setNavCollapsed] = useState(
+    () => localStorage.getItem('sidebar_collapsed') === '1',
+  )
+  const toggleNavCollapsed = () => {
+    setNavCollapsed((collapsed) => {
+      localStorage.setItem('sidebar_collapsed', collapsed ? '0' : '1')
+      return !collapsed
+    })
+  }
   const [quickTranslateOpen, setQuickTranslateOpen] = useState(false)
   const [quickTranslateSeed, setQuickTranslateSeed] = useState('')
   // Bộ nghe phím tắt chỉ gắn một lần nên phải soi trạng thái qua ref.
@@ -301,6 +314,8 @@ export default function AppLayout() {
         return <SentencePage />
       case 'mindmap':
         return <MindMapPage onNavigate={setPage} />
+      case 'task1':
+        return <Task1CoachPage onNavigate={setPage} />
       case 'task2':
         return <Task2CoachPage onNavigate={setPage} />
       case 'usage':
@@ -313,6 +328,7 @@ export default function AppLayout() {
       className={[
         'app-root',
         navOpen ? 'nav-open' : '',
+        navCollapsed ? 'nav-collapsed' : '',
         isDesktop && !chromeHidden && !fullScreen ? 'has-window-bar' : '',
       ]
         .filter(Boolean)
@@ -348,7 +364,22 @@ export default function AppLayout() {
         aria-hidden={!navOpen}
       />
 
-      <Sidebar current={page} onNavigate={goto} onClose={() => setNavOpen(false)} />
+      <Sidebar
+        current={page}
+        onNavigate={goto}
+        onClose={() => setNavOpen(false)}
+        onCollapse={toggleNavCollapsed}
+      />
+      {navCollapsed && (
+        <button
+          className="sidebar-reveal"
+          onClick={toggleNavCollapsed}
+          title="Hiện thanh bên"
+          aria-label="Hiện thanh bên"
+        >
+          <Icon name="sidebar" />
+        </button>
+      )}
       <div className="main-area">
         <main className="content">{renderPage()}</main>
       </div>

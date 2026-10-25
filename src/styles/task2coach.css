@@ -132,9 +132,15 @@
 }
 
 /* ------------------------------------------------------------------ Bố cục */
+/* Rộng hơn khung mặc định của mt-page (1360px) để bớt khoảng trống hai bên;
+   vẫn chặn trên màn siêu rộng cho dòng không quá dài. */
+.page.mt-page.tc-editor {
+  max-width: 1840px;
+}
+/* Cột phải co giãn theo màn (tối thiểu 420px) để tài liệu ý/câu mẫu dễ đọc */
 .tc-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(420px, 1fr);
   gap: 14px;
   align-items: start;
 }
@@ -170,6 +176,11 @@
 .tc-card-head > div {
   flex: 1 1 auto;
   min-width: 0;
+}
+/* Nút bên phải tiêu đề (So với app) giữ một dòng, không bị gợi ý dài bóp lại */
+.tc-card-head > .mt-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .tc-card-head h3 {
   font: 800 16px/1.3 var(--mt-font-d);
@@ -593,6 +604,173 @@
 .tc-gblock .tc-more p {
   color: var(--mt-ink-soft);
   font-size: 13.5px;
+}
+
+/* ------------------------------------------------------------------ Bảng chép từ tài liệu (Task 1, Task 2) */
+.tc-tablewrap {
+  overflow-x: auto;
+  border: 1px solid var(--mt-rule);
+  border-radius: 8px;
+}
+.tc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.tc-table th {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--mt-rule);
+  background: var(--mt-surface-2);
+  color: var(--mt-ink-soft);
+  font: 600 11.5px/1.35 var(--mt-font-m);
+  text-align: left;
+  white-space: nowrap;
+}
+.tc-table td {
+  padding: 6px 10px;
+  border-top: 1px solid var(--mt-rule-soft);
+  color: var(--mt-ink);
+  vertical-align: top;
+}
+.tc-table tbody tr:first-child td {
+  border-top: none;
+}
+/* Cột đầu là tình huống / tên phần: hơi đậm, không quá hẹp */
+.tc-table td:first-child {
+  min-width: 128px;
+  color: var(--mt-ink-soft);
+  font-weight: 500;
+}
+.tc-table b {
+  color: var(--tn-ink, var(--mt-m-ink));
+}
+/* Hàng của dạng đề đang làm */
+.tc-table tr.is-mark td {
+  background: var(--mt-m-soft);
+}
+.tc-cellline {
+  display: block;
+}
+.tc-cellline.is-more {
+  margin-top: 3px;
+  color: var(--mt-muted);
+  font-size: 12.5px;
+}
+
+/* ------------------------------------------------------------------ Bước 2 Task 2: 12 hướng phát triển ý */
+/* 12 ô hướng: số, tên, tên tiếng Anh, câu hỏi chính. Bấm để mở nội dung bên dưới. */
+.tc-dirs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 6px;
+}
+.tc-dir {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--mt-rule);
+  border-radius: 8px;
+  background: var(--mt-surface);
+  color: var(--mt-ink);
+  font-family: var(--mt-font-b);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.tc-dir:hover {
+  border-color: var(--tn);
+}
+.tc-dir:focus-visible {
+  outline: 2px solid var(--tn);
+  outline-offset: 1px;
+}
+.tc-dir.is-on {
+  border-color: var(--tn-pill);
+  background: var(--tn-soft);
+  box-shadow: inset 0 0 0 1px var(--tn-pill);
+}
+.tc-dir .tc-gno {
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+}
+.tc-dirtxt {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.tc-dirtxt b {
+  font: 700 14px/1.3 var(--mt-font-b);
+}
+.tc-dirtxt small {
+  color: var(--mt-muted);
+  font-size: 12px;
+}
+.tc-dirtxt span {
+  margin-top: 2px;
+  color: var(--mt-ink-soft);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+/* Nội dung một hướng */
+.tc-dirwrap {
+  scroll-margin-top: 8px;
+}
+.tc-guide .tc-ghead > .mt-mini {
+  flex: 0 0 auto;
+}
+.tc-dirsec .mt-hint {
+  margin-top: 0;
+  font-size: 12.5px;
+}
+.tc-dirsec > small span {
+  text-transform: none;
+}
+/* Câu hoàn chỉnh dưới mỗi ý triển khai: thụt vào, vạch màu bên trái */
+.tc-ideaex {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 2px;
+  padding: 0 0 0 10px;
+  border-left: 2px solid var(--tn-soft);
+  list-style: none;
+}
+.tc-ideaex > li {
+  display: grid;
+  gap: 1px;
+}
+.tc-ideaex .tc-gen {
+  font-size: 13.5px;
+}
+.tc-ideaex .tc-gvi {
+  font-size: 12.5px;
+}
+
+/* 6 câu hỏi: mỗi câu một khối, nhãn WHO … WHICH */
+.tc-wblock {
+  display: grid;
+  gap: 8px;
+}
+.tc-wblock + .tc-wblock {
+  padding-top: 10px;
+  border-top: 1px dashed var(--mt-rule);
+}
+.tc-wblock .tc-gsum {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.tc-wtag {
+  justify-self: start;
+  margin-bottom: 2px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--tn-pill);
+  color: var(--mt-on-pill);
+  font: 700 11px/1.6 var(--mt-font-m);
+  letter-spacing: 0.04em;
 }
 
 .tc-stepnav {
@@ -1381,6 +1559,37 @@
   height: 7px;
   border-radius: 50%;
   background: var(--mt-o);
+}
+
+/* ------------------------------------------------------------------ Hai cột cuộn riêng */
+/* Màn rộng: trang soạn bài vừa khít khung, không cuộn cả khối. Mỗi cột tự cuộn,
+   overscroll-behavior chặn cuộn lan sang khung ngoài khi chạm đầu/cuối cột, nên
+   lăn chuột ở cột này không kéo theo cột kia. Màn hẹp (1 cột) giữ cuộn cả trang. */
+@media (min-width: 1181px) {
+  .page.tc-editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .tc-editor .tc-layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .tc-editor .tc-main,
+  .tc-editor .tc-side {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .tc-editor .tc-main {
+    padding-right: 6px; /* chừa chỗ cho thanh cuộn khỏi sát nội dung */
+  }
+  .tc-editor .tc-side {
+    position: static;
+    max-height: none;
+  }
 }
 
 /* ------------------------------------------------------------------ Màn hẹp */

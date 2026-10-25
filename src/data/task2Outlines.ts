@@ -19,6 +19,8 @@ export interface Seg {
   /** Các cách điền vào chỗ trống, hoặc các chữ thay được cho chữ trong sách (bổ sung, không có trong sách).
    *  Trang Luyện Task 2 cho bấm vào để chọn rồi ráp thành câu. */
   options?: string[]
+  /** Tiêu đề danh sách cách điền và nút bỏ chọn, khi khác mặc định (Chọn cách điền / Đổi chữ cùng nghĩa). */
+  menu?: { title: string; reset: string }
 }
 
 export interface OutlineLine {

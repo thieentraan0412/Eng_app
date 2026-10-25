@@ -114,6 +114,9 @@ export interface Task2Essay {
   updated_at: string
 }
 
+// ---------- Luyện Task 1: cùng cấu trúc với Luyện Task 2, bảng riêng task1_essays ----------
+export type Task1Essay = Task2Essay
+
 // ---------- Chép câu: thư mục / câu / bài làm ----------
 export interface CloudSentenceFolder {
   id: string
@@ -771,6 +774,48 @@ export const CloudApi = {
   async deleteTask2Essay(id: string): Promise<void> {
     const { error } = await supabase
       .from('task2_essays')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  // ---------- Luyện Task 1 (đồng bộ mọi thiết bị) ----------
+  async listTask1Essays(): Promise<Task1Essay[]> {
+    const { data, error } = await supabase
+      .from('task1_essays')
+      .select('id, user_id, title, data, created_at, updated_at')
+      .is('deleted_at', null)
+      .order('updated_at', { ascending: false })
+    if (error) throw error
+    return data as Task1Essay[]
+  },
+
+  async createTask1Essay(title: string, payload: unknown): Promise<Task1Essay> {
+    const user = await this.currentUser()
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { data, error } = await supabase
+      .from('task1_essays')
+      .insert({ user_id: user.id, title, data: payload })
+      .select('id, user_id, title, data, created_at, updated_at')
+      .single()
+    if (error) throw error
+    return data as Task1Essay
+  },
+
+  async updateTask1Essay(id: string, title: string, payload: unknown): Promise<Task1Essay> {
+    const { data, error } = await supabase
+      .from('task1_essays')
+      .update({ title, data: payload, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('id, user_id, title, data, created_at, updated_at')
+      .single()
+    if (error) throw error
+    return data as Task1Essay
+  },
+
+  async deleteTask1Essay(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('task1_essays')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
     if (error) throw error

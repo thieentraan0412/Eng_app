@@ -153,6 +153,20 @@ const ICONS = {
     </>
   ),
   menu: <path d="M3.5 6.5h17M3.5 12h17M3.5 17.5h17" />,
+  bars: (
+    <>
+      <path d="M3.5 20.5h17" />
+      <rect x="5" y="11" width="3.4" height="7" rx="0.8" />
+      <rect x="10.3" y="5" width="3.4" height="13" rx="0.8" />
+      <rect x="15.6" y="8.5" width="3.4" height="9.5" rx="0.8" />
+    </>
+  ),
+  sidebar: (
+    <>
+      <rect x="3.2" y="4" width="17.6" height="16" rx="2.4" />
+      <path d="M9.4 4v16" />
+    </>
+  ),
   sun: (
     <>
       <circle cx="12" cy="12" r="4" />
