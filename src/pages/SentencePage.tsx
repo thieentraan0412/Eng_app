@@ -16,7 +16,6 @@ import Icon from '../components/Icon'
 import { type SentenceItem, type CefrLevel } from '../data/sentences'
 import { errText } from '../services/cloud/cloudError'
 import { gradeSentence, wrongWordSegments, type GradeResult } from '../services/sentencecheck'
-import { suggest, type Suggestion } from '../services/suggestion'
 import {
   ensureReady,
   listFolders,
@@ -1451,12 +1450,6 @@ function PracticeView({
   )
 }
 
-// ---------- Nhãn / icon cho loại gợi ý ----------
-const SUGGEST_ICON: Record<Suggestion['type'], string> = {
-  auto: '⌨',
-  nextword: '→',
-  synonym: '≈',
-}
 const STATUS_TEXT: Record<GradeResult['status'], string> = {
   correct: 'Đúng',
   close: 'Gần đúng',
@@ -1499,16 +1492,12 @@ const SentenceCard = memo(function SentenceCard({
   onCheck: (id: string, advance?: boolean) => void
   onReveal: (id: string) => void
 }) {
-  const suggestEnabled = localStorage.getItem('suggest_enabled') !== '0'
   const taRef = useRef<HTMLTextAreaElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
-  const pendingCaret = useRef<number | null>(null)
   // Bộ gõ (tiếng Việt, tiếng Nhật…) đang soạn dở một chữ: cấm đụng vào giá trị
   // ô nhập cho tới khi soạn xong, nếu không chữ sẽ bị nuốt và chèn lặp.
   const composing = useRef(false)
 
-  const [caret, setCaret] = useState(0)
-  const [focused, setFocused] = useState(false)
   // Lượt đọc của CHÍNH câu này: đổi nút Nghe ↔ Dừng, hiện đang ở lần thứ mấy
   const [dictState, setDictState] = useState<DictState>({
     playing: false,
@@ -1526,49 +1515,7 @@ const SentenceCard = memo(function SentenceCard({
   }, [result, value])
   // Giữ lớp đánh dấu cả khi đang focus để vị trí sai luôn hiện đỏ ngay trong ô.
   const showOverlay = !!wrongSegs && wrongSegs.some((s) => s.wrong)
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
-  const [active, setActive] = useState(0)
-  const [open, setOpen] = useState(false)
 
-  useEffect(() => {
-    // Chỉ tính gợi ý cho ô ĐANG focus (không chạy nền cho hàng trăm thẻ)
-    if (!suggestEnabled || !focused) {
-      setSuggestions([])
-      setOpen(false)
-      return
-    }
-    const h = setTimeout(() => {
-      const list = suggest(value.slice(0, caret))
-      setSuggestions(list)
-      setActive(0)
-      setOpen(list.length > 0)
-    }, 120)
-    return () => clearTimeout(h)
-  }, [value, caret, suggestEnabled, focused])
-
-  // Đặt lại con trỏ NGAY sau khi ô nhập bị viết đè (lọc ký tự, nhận gợi ý).
-  // Trình duyệt thả con trỏ về cuối câu mỗi lần giá trị bị thay bằng chuỗi khác,
-  // nên nếu không kéo nó về đúng chỗ thì chữ gõ tiếp — và cả phím Xóa — lại ăn
-  // vào cuối câu chứ không phải chỗ đang có vạch nháy.
-  // Chạy sau MỌI lần vẽ (không chỉ khi value đổi): nếu chuỗi mới trùng chuỗi cũ,
-  // effect theo [value] sẽ không chạy, vị trí đang chờ còn treo lại tới lần gõ
-  // sau mới bung ra làm con trỏ nhảy lung tung.
-  useLayoutEffect(() => {
-    const pos = pendingCaret.current
-    if (pos == null) return
-    pendingCaret.current = null
-    const ta = taRef.current
-    if (!ta) return
-    const at = Math.max(0, Math.min(pos, ta.value.length))
-    // ownerDocument: trong cửa sổ nổi, document của trang chính không biết ô này
-    if (ta.ownerDocument.activeElement !== ta) ta.focus({ preventScroll: true })
-    ta.setSelectionRange(at, at)
-    setCaret(at)
-  })
-
-  const syncCaret = () => {
-    if (taRef.current) setCaret(taRef.current.selectionStart)
-  }
   // Bộ lọc vừa sửa chữ trong ô -> ghi lại vào ô và đặt con trỏ NGAY trong nhịp
   // sự kiện này. Không chờ React vẽ lại được vì:
   //  • trình duyệt đẩy con trỏ về cuối câu ngay lúc giá trị ô bị thay;
@@ -1588,17 +1535,6 @@ const SentenceCard = memo(function SentenceCard({
     }
   }
 
-  const accept = (s: Suggestion) => {
-    const before = value.slice(0, caret)
-    const after = value.slice(caret)
-    const typing = before.match(/([A-Za-z]+)$/)
-    const base = typing ? before.slice(0, before.length - typing[1].length) : before
-    const newBefore = base + s.text + ' '
-    pendingCaret.current = newBefore.length
-    setOpen(false)
-    onChange(item.id, newBefore + after)
-  }
-
   // Chuyển focus sang ô nhập của câu kế tiếp (dir=1) hoặc trước đó (dir=-1)
   const focusSibling = (dir: 1 | -1) => {
     const inputs = Array.from(document.querySelectorAll<HTMLTextAreaElement>('.cc-answer'))
@@ -1616,34 +1552,14 @@ const SentenceCard = memo(function SentenceCard({
     // Shift+Enter để xuống dòng.
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      setOpen(false)
       onCheck(item.id, true)
       return
     }
-    // Tab → nếu đang mở gợi ý thì nhận gợi ý, ngược lại nhảy sang ô câu kế tiếp
-    // (Shift+Tab quay lại ô trước đó).
+    // Tab → nhảy sang ô câu kế tiếp (Shift+Tab quay lại ô trước đó).
     if (e.key === 'Tab') {
-      if (!e.shiftKey && open && suggestions.length > 0) {
-        e.preventDefault()
-        accept(suggestions[active])
-        return
-      }
       e.preventDefault()
-      setOpen(false)
       if (onStep) onStep(e.shiftKey ? -1 : 1)
       else focusSibling(e.shiftKey ? -1 : 1)
-      return
-    }
-    if (!open || suggestions.length === 0) return
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setActive((i) => (i + 1) % suggestions.length)
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setActive((i) => (i - 1 + suggestions.length) % suggestions.length)
-    } else if (e.key === 'Escape') {
-      e.preventDefault()
-      setOpen(false)
     }
   }
 
@@ -1771,7 +1687,6 @@ const SentenceCard = memo(function SentenceCard({
               composing.current || Boolean((e.nativeEvent as InputEvent).isComposing)
             if (isComposing) {
               onChange(item.id, raw)
-              setCaret(rawCaret)
               return
             }
             const nextValue = sanitizeEnglishInput(raw)
@@ -1781,7 +1696,6 @@ const SentenceCard = memo(function SentenceCard({
             const nextCaret = sanitizeEnglishInput(raw.slice(0, rawCaret)).length
             writeBack(el, nextValue, nextCaret)
             onChange(item.id, nextValue)
-            setCaret(nextCaret)
           }}
           onCompositionStart={() => {
             composing.current = true
@@ -1794,14 +1708,10 @@ const SentenceCard = memo(function SentenceCard({
             const nextCaret = sanitizeEnglishInput(raw.slice(0, el.selectionStart)).length
             writeBack(el, nextValue, nextCaret)
             onChange(item.id, nextValue)
-            setCaret(nextCaret)
           }}
-          onKeyUp={syncCaret}
-          onClick={syncCaret}
           onKeyDown={onKeyDown}
           onScroll={syncScroll}
           onFocus={(e) => {
-            setFocused(true)
             // Chuyển sang gõ câu khác -> câu đang được đọc (kể cả đang lặp) dừng
             stopDictationExcept(item.id)
             // Chế độ thu gọn khi gõ là cho bàn phím ảo trên trang chính — cửa sổ
@@ -1811,31 +1721,9 @@ const SentenceCard = memo(function SentenceCard({
             settleFocusedAnswer(e.currentTarget)
           }}
           onBlur={() => {
-            setFocused(false)
             if (!floating) setTypingMode(false)
-            setTimeout(() => setOpen(false), 120)
           }}
         />
-        {suggestEnabled && open && suggestions.length > 0 && (
-          <ul className="cc-suggest" role="listbox">
-            {suggestions.map((s, i) => (
-              <li
-                key={s.text + i}
-                role="option"
-                aria-selected={i === active}
-                className={`cc-suggest-item ${s.type} ${i === active ? 'active' : ''}`}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  accept(s)
-                }}
-                onMouseEnter={() => setActive(i)}
-              >
-                <span className="cc-suggest-icon">{SUGGEST_ICON[s.type]}</span>
-                {s.text}
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
 
       <div className="cc-sent-actions">

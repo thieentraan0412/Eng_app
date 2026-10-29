@@ -961,49 +961,6 @@
   text-underline-offset: 2px;
 }
 
-/* Gợi ý từ khi gõ */
-.cc-suggest {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 2px);
-  left: 0;
-  min-width: 220px;
-  max-width: 100%;
-  margin: 0;
-  padding: 4px;
-  list-style: none;
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-md);
-}
-.cc-suggest-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 9px;
-  border-radius: 7px;
-  font-size: 13px;
-  color: var(--text);
-  cursor: pointer;
-}
-.cc-suggest-item.active,
-.cc-suggest-item:hover {
-  background: var(--primary-soft);
-}
-.cc-suggest-icon {
-  width: 16px;
-  text-align: center;
-  font-size: 11.5px;
-  color: var(--muted);
-}
-.cc-suggest-item.synonym .cc-suggest-icon {
-  color: var(--accent-3);
-}
-.cc-suggest-item.nextword .cc-suggest-icon {
-  color: var(--accent-2);
-}
-
 /* ---------- Hàng nút của thẻ câu (mockup .sent-actions) ---------- */
 .cc-sent-actions {
   display: flex;
@@ -1631,20 +1588,6 @@
    đề/điều hướng chớp hiện lại, đẩy ô nhập trôi khỏi chỗ đang gõ.
    ============================================================ */
 @media (max-width: 860px) {
-  /* Danh sách gợi ý neo trên mép BÀN PHÍM, không phải mép màn hình. Dùng
-     position: fixed nên không khối overflow nào ở trên cắt mất nó. */
-  .cc-suggest {
-    position: fixed;
-    left: max(12px, env(safe-area-inset-left));
-    right: max(12px, env(safe-area-inset-right));
-    bottom: calc(10px + var(--kb-inset, 0px) + env(safe-area-inset-bottom));
-    top: auto;
-    width: auto;
-    max-width: none;
-    max-height: 132px;
-    overflow-y: auto;
-  }
-
   /* Cất mọi khối chỉ dùng để điều hướng — kể cả thanh trên cùng của bản web —
      lấy chỗ cho đề bài và ô nhập. Rời ô nhập là chúng hiện lại ngay. */
   html.cc-typing .mobile-topbar,
@@ -1792,20 +1735,6 @@ body.cc-pip-body {
 .cc-pip .cc-progress {
   position: static;
   margin: 0;
-}
-/* Điện thoại neo gợi ý trên mép bàn phím ảo (position: fixed). Cửa sổ nổi không
-   có bàn phím ảo -> trả về ngay dưới ô nhập như bản máy tính, không đè nút. */
-.cc-pip .cc-suggest {
-  position: absolute;
-  top: calc(100% + 2px);
-  right: auto;
-  bottom: auto;
-  left: 0;
-  width: auto;
-  min-width: 220px;
-  max-width: 100%;
-  max-height: 180px;
-  overflow-y: auto;
 }
 .cc-pip-placeholder .cc-btn {
   margin-top: 12px;
