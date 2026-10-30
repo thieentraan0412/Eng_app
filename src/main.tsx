@@ -21,15 +21,24 @@ import '@fontsource/space-grotesk/700.css'
 import App from './App'
 import DesktopTranslatePopup from './components/DesktopTranslatePopup'
 import QuickTranslateWindow from './components/QuickTranslateWindow'
+import SentenceReminderWindow from './components/SentenceReminderWindow'
 import './styles.css'
 
-// Cùng một bundle renderer phục vụ 2 cửa sổ:
+// Cùng một bundle renderer phục vụ nhiều cửa sổ:
 //  - Mặc định: ứng dụng chính (App)
 //  - ?view=translate: cửa sổ popup dịch nhanh toàn màn hình (nhỏ, trong suốt)
+//  - ?view=sentence-reminder: cửa sổ câu lớn của "Nhắc chép câu" (trong suốt)
 const view = new URLSearchParams(window.location.search).get('view')
 const root = ReactDOM.createRoot(document.getElementById('root')!)
 
-if (view === 'quick-translate') {
+if (view === 'sentence-reminder') {
+  document.body.classList.add('sentence-reminder-body')
+  root.render(
+    <React.StrictMode>
+      <SentenceReminderWindow />
+    </React.StrictMode>,
+  )
+} else if (view === 'quick-translate') {
   document.body.classList.add('quick-translate-body')
   root.render(
     <React.StrictMode>

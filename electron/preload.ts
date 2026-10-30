@@ -13,6 +13,10 @@ interface SaveEntry {
   deckId?: string // bộ từ người dùng chọn để lưu vào
 }
 
+// "Nhắc chép câu": preload chỉ chuyển tiếp — kiểu đầy đủ ở src/vite-env.d.ts
+type SentenceReminderContent = Record<string, unknown>
+type SentenceReminderProgress = Record<string, unknown>
+
 type UpdateStatus =
   | { state: 'checking' | 'none' }
   | { state: 'available' | 'ready'; version: string }
@@ -133,4 +137,50 @@ contextBridge.exposeInMainWorld('api', {
   saveDesktopTranslate: (entry: SaveEntry, deckId?: string): Promise<boolean> =>
     ipcRenderer.invoke('desktop-translate:save', { entry, deckId }),
   closeDesktopTranslate: (): Promise<boolean> => ipcRenderer.invoke('desktop-translate:close'),
+
+  // ----- Nhắc chép câu: thẻ luyện câu nổi trên mọi ứng dụng -----
+  // (Cửa sổ chính) Bật/tắt + thời lượng chờ/hiện mỗi lượt
+  setSentenceReminder: (opts: {
+    enabled: boolean
+    intervalMs?: number
+    displayMs?: number
+  }): Promise<boolean> => ipcRenderer.invoke('sentence-reminder:set', opts),
+  // (Cửa sổ chính) Main báo tới lượt -> chọn câu kế tiếp rồi trả lời bằng showSentenceReminder
+  onSentenceReminderDue: (cb: (seq: number) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, seq: number) => cb(seq)
+    ipcRenderer.on('sentence-reminder:due', h)
+    return () => ipcRenderer.removeListener('sentence-reminder:due', h)
+  },
+  showSentenceReminder: (
+    seq: number,
+    content: SentenceReminderContent | null,
+  ): Promise<boolean> => ipcRenderer.invoke('sentence-reminder:show', seq, content),
+  // (Cửa sổ chính) Bài làm trong cửa sổ câu -> lưu lên cloud (cửa sổ chính đã đăng nhập)
+  onSentenceReminderProgress: (
+    cb: (sentenceId: string, record: SentenceReminderProgress) => void,
+  ): (() => void) => {
+    const h = (_e: IpcRendererEvent, sentenceId: string, record: SentenceReminderProgress) =>
+      cb(sentenceId, record)
+    ipcRenderer.on('sentence-reminder:progress', h)
+    return () => ipcRenderer.removeListener('sentence-reminder:progress', h)
+  },
+  // (Cửa sổ câu) Nhận câu cần hiện (null = xoá màn hình) / hỏi lại khi vừa mount / đóng sớm
+  onSentenceReminderContent: (
+    cb: (content: SentenceReminderContent | null) => void,
+  ): (() => void) => {
+    const h = (_e: IpcRendererEvent, content: SentenceReminderContent | null) => cb(content)
+    ipcRenderer.on('sentence-reminder:content', h)
+    return () => ipcRenderer.removeListener('sentence-reminder:content', h)
+  },
+  getSentenceReminderContent: (): Promise<SentenceReminderContent | null> =>
+    ipcRenderer.invoke('sentence-reminder:get'),
+  dismissSentenceReminder: (): Promise<boolean> => ipcRenderer.invoke('sentence-reminder:dismiss'),
+  // (Cửa sổ câu) Bắt đầu làm -> thôi tự ẩn; báo chiều cao thẻ; gửi bài làm để lưu
+  holdSentenceReminder: (): Promise<boolean> => ipcRenderer.invoke('sentence-reminder:hold'),
+  resizeSentenceReminder: (height: number): Promise<boolean> =>
+    ipcRenderer.invoke('sentence-reminder:resize', height),
+  saveSentenceReminderProgress: (
+    sentenceId: string,
+    record: SentenceReminderProgress,
+  ): Promise<boolean> => ipcRenderer.invoke('sentence-reminder:progress', sentenceId, record),
 })

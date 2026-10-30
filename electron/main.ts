@@ -9,6 +9,7 @@ import {
   isDesktopTranslateEnabled,
   readForegroundSelection,
 } from './globalTranslate'
+import { initSentenceReminder, disposeSentenceReminder } from './sentenceReminder'
 import { initAutoUpdate } from './updater'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -96,6 +97,7 @@ function createWindow() {
   win.on('closed', () => {
     if (win === self) win = null
     disposeGlobalTranslate()
+    disposeSentenceReminder()
     app.quit()
   })
 }
@@ -143,6 +145,15 @@ ipcMain.handle(
 // Dịch nhanh toàn màn hình: khởi tạo IPC + hook (bật/tắt điều khiển từ Cài đặt)
 function setupGlobalTranslate() {
   initGlobalTranslate({
+    getMainWindow: () => win,
+    devUrl: VITE_DEV_SERVER_URL,
+    fileBase: path.join(RENDERER_DIST, 'index.html'),
+  })
+}
+
+// Nhắc chép câu: cửa sổ câu lớn nổi trên mọi ứng dụng (bật/tắt từ Cài đặt)
+function setupSentenceReminder() {
+  initSentenceReminder({
     getMainWindow: () => win,
     devUrl: VITE_DEV_SERVER_URL,
     fileBase: path.join(RENDERER_DIST, 'index.html'),
@@ -506,12 +517,14 @@ app.whenReady().then(() => {
     /* tổ hợp đang bị ứng dụng khác chiếm */
   }
   setupGlobalTranslate()
+  setupSentenceReminder()
   initAutoUpdate(() => win)
 })
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     disposeGlobalTranslate()
+    disposeSentenceReminder()
     app.quit()
     win = null
   }
@@ -519,6 +532,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   disposeGlobalTranslate()
+  disposeSentenceReminder()
 })
 
 app.on('will-quit', () => {

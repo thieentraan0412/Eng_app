@@ -4,7 +4,9 @@
       "Bash(sed 's/=.*//')",
       "Bash(npx tsc *)",
       "Bash(unset ELECTRON_RUN_AS_NODE)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(node -e ' *)",
+      "Bash(grep -n \"id: 'outline\\\\.\\\\|role: \\\\|idea\\(\\\\|expandExample\\(\\\\|paraphrase,\\\\|^  {$\\\\|source: '\" src/data/task2Outlines.ts)"
     ]
   }
 }

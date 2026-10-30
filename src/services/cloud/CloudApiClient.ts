@@ -886,6 +886,19 @@ export const CloudApi = {
     return data as CloudSentence[]
   },
 
+  // Mọi câu của tài khoản (qua nhiều trang nếu > 1000) — cho "Nhắc chép câu" khi
+  // chọn "Tất cả thư mục". Câu của thư mục đã xoá mềm vẫn còn: phía gọi tự lọc.
+  async listAllSentences(): Promise<CloudSentence[]> {
+    return fetchAllRows<CloudSentence>(() =>
+      supabase
+        .from('sentences')
+        .select('*')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true }),
+    )
+  },
+
   async createSentence(folderId: string, s: NewCloudSentence): Promise<CloudSentence> {
     const user = await this.currentUser()
     if (!user) throw new Error('Chưa đăng nhập')
@@ -991,6 +1004,19 @@ export const CloudApi = {
       .in('sentence_id', sentenceIds)
     if (error) throw error
     return data as CloudSentenceProgress[]
+  },
+
+  // Bài đã làm của 1 thư mục (bỏ trống = mọi thư mục) — "Nhắc chép câu" dùng để
+  // bỏ qua câu đã đúng. Lọc qua bảng sentences nên không phải gửi cả nghìn id.
+  async listProgressByFolder(folderId?: string): Promise<CloudSentenceProgress[]> {
+    return fetchAllRows<CloudSentenceProgress>(() => {
+      let q = supabase
+        .from('sentence_progress')
+        .select('*, sentences!inner(folder_id)')
+        .is('sentences.deleted_at', null)
+      if (folderId) q = q.eq('sentences.folder_id', folderId)
+      return q.order('id', { ascending: true })
+    })
   },
 
   // Lưu/ghi đè bài làm 1 câu (upsert theo user + sentence_id)

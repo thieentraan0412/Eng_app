@@ -115,20 +115,7 @@
 | Nâng cao | W | **vượt trội / kém hơn**<br>Dạy trực tiếp vượt trội hơn học online về mặt tương tác. | `be superior / inferior to sth`<br>Face-to-face teaching **is superior to** online learning in terms of interaction. |
 | Nâng cao | W | **… nhất, bỏ xa**<br>Giáo dục là cách giảm tội phạm hiệu quả nhất, bỏ xa các cách khác. | `by far the most + adj`<br>Education is **by far the most effective** way to reduce crime. |
 
-### 2.7. Ví dụ và bổ sung ý · Examples and adding ideas
-
-| Mức | Kỹ năng | Tiếng Việt | English |
-|---|---|---|---|
-| Cơ bản | W · S | **ví dụ**<br>Nhiều việc làm giờ đã tự động hóa. Ví dụ, siêu thị dùng máy tự thanh toán. | `for example / for instance`<br>Many jobs are now automated. **For example,** supermarkets use self-checkout machines. |
-| Cơ bản | W · S | **chẳng hạn như**<br>Các hoạt động ngoài trời như đạp xe và leo núi tốt cho sức khỏe. | `such as + noun`<br>Outdoor activities **such as** cycling and hiking are good for health. |
-| Cơ bản | W · S | **thêm vào đó, hơn nữa**<br>Đạp xe rẻ. Hơn nữa, nó giúp bạn khỏe mạnh. | `also / in addition / moreover`<br>Cycling is cheap. **Moreover,** it keeps you fit. |
-| Cơ bản | S | **thêm vào đó (văn nói)**<br>Căn hộ nhỏ. Thêm vào đó, nó rất ồn. | `On top of that, …`<br>The flat is small. **On top of that,** it's really noisy. |
-| Trung cấp | W | **một ví dụ điển hình là**<br>Một ví dụ điển hình là Singapore, nơi giao thông công cộng rẻ và hiệu quả. | `A good example of this is …`<br>**A good example of this is** Singapore, where public transport is cheap and efficient. |
-| Trung cấp | W · S | **không những … mà còn …**<br>Tập thể dục không những cải thiện sức khỏe mà còn giảm căng thẳng. | `not only … but (also) …`<br>Exercise **not only** improves health **but also** reduces stress. |
-| Nâng cao | W | **một ví dụ tiêu biểu là**<br>Ví dụ tiêu biểu là Nhật Bản, nơi dân số già khiến lực lượng lao động co lại. | `A case in point is …`<br>**A case in point is** Japan, whose ageing population is shrinking its workforce. |
-| Nâng cao | W | **điều này đặc biệt rõ ở**<br>Điều này đặc biệt rõ ở các thành phố lớn, nơi chất lượng không khí kém. | `This is particularly evident in …`<br>**This is particularly evident in** big cities, where air quality is poor. |
-
-### 2.8. Giải pháp và đề xuất · Solutions and suggestions
+### 2.7. Giải pháp và đề xuất · Solutions and suggestions
 
 | Mức | Kỹ năng | Tiếng Việt | English |
 |---|---|---|---|
@@ -141,7 +128,7 @@
 | Nâng cao | W | **đã đến lúc ai đó phải làm gì**<br>Đã đến lúc các chính phủ phải coi trọng biến đổi khí hậu. | `It is high time sb did sth`<br>**It is high time** governments **took** climate change seriously. |
 | Nâng cao | W | **cân bằng giữa A và B**<br>Các thành phố phải cân bằng giữa phát triển và bảo tồn. | `strike a balance between A and B`<br>Cities must **strike a balance between** development **and** conservation. |
 
-### 2.9. Điều kiện và giả định · Conditions and hypotheses
+### 2.8. Điều kiện và giả định · Conditions and hypotheses
 
 | Mức | Kỹ năng | Tiếng Việt | English |
 |---|---|---|---|
@@ -153,7 +140,7 @@
 | Nâng cao | W | **nếu … (đảo ngữ, ít khả năng)**<br>Nếu xu hướng này tiếp diễn, các thành phố sẽ còn đông đúc hơn. | `Should + S + V, …`<br>**Should** this trend **continue**, cities will become even more crowded. |
 | Nâng cao | W | **giá mà … thì đã … (quá khứ)**<br>Giá mà thành phố đầu tư đê chống lũ, thiệt hại đã nhỏ hơn. | `Had sb done sth, … would have …`<br>**Had** the city **invested** in flood defences, the damage **would have been** smaller. |
 
-### 2.10. Nhấn mạnh và cấu trúc nâng cao · Emphasis and advanced structures
+### 2.9. Nhấn mạnh và cấu trúc nâng cao · Emphasis and advanced structures
 
 | Mức | Kỹ năng | Tiếng Việt | English |
 |---|---|---|---|
@@ -165,7 +152,7 @@
 | Nâng cao | W | **hiếm khi**<br>Ngày nay giới trẻ hiếm khi đọc báo. | `Rarely / Seldom + trợ động từ + S + V`<br>**Rarely do** young people **read** newspapers nowadays. |
 | Nâng cao | W | **lý do … là vì …**<br>Lý do nhiều sinh viên tốt nghiệp thất nghiệp là vì kỹ năng không phù hợp với thị trường. | `The reason why … is that …`<br>**The reason why** many graduates are unemployed **is that** their skills do not match the market. |
 
-### 2.11. Xu hướng và dự đoán · Trends and predictions
+### 2.10. Xu hướng và dự đoán · Trends and predictions
 
 | Mức | Kỹ năng | Tiếng Việt | English |
 |---|---|---|---|
@@ -175,37 +162,6 @@
 | Trung cấp | W | **được dự đoán sẽ**<br>Dân số thế giới được dự đoán sẽ đạt mười tỷ người. | `be expected to V`<br>The world's population **is expected to reach** ten billion. |
 | Nâng cao | W | **ngày càng có xu hướng ai đó làm gì**<br>Ngày càng có xu hướng các cặp vợ chồng sinh ít con hơn. | `There is a growing tendency for sb to V`<br>**There is a growing tendency for** couples **to have** fewer children. |
 | Nâng cao | W | **chắc chắn sẽ, sắp sửa**<br>Trí tuệ nhân tạo chắc chắn sẽ thay đổi thị trường lao động. | `be set to V`<br>Artificial intelligence **is set to transform** the job market. |
-
-### 2.12. Collocation chủ đề thông dụng · Common topic collocations
-
-| Mức | Kỹ năng | Tiếng Việt | English |
-|---|---|---|---|
-| Cơ bản | W · S | **đóng vai trò quan trọng trong**<br>Giáo viên đóng vai trò quan trọng trong việc định hình tương lai của trẻ. | `play an important role in sth`<br>Teachers **play an important role in** shaping children's futures. |
-| Cơ bản | W · S | **chăm sóc**<br>Con cái trưởng thành nên chăm sóc cha mẹ già. | `take care of sb / sth`<br>Adult children should **take care of** their elderly parents. |
-| Cơ bản | W · S | **chú ý đến**<br>Cha mẹ nên chú ý đến những gì con cái xem. | `pay attention to sth`<br>Parents should **pay attention to** what their children watch. |
-| Trung cấp | W | **nâng cao nhận thức về**<br>Các chiến dịch có thể nâng cao nhận thức về sức khỏe tinh thần. | `raise awareness of sth`<br>Campaigns can **raise awareness of** mental health issues. |
-| Trung cấp | W | **chịu trách nhiệm về**<br>Doanh nghiệp phải chịu trách nhiệm về lượng rác họ thải ra. | `take responsibility for sth`<br>Companies must **take responsibility for** the waste they produce. |
-| Trung cấp | W | **đáp ứng nhu cầu về**<br>Các thành phố xây thêm căn hộ để đáp ứng nhu cầu nhà ở. | `meet the demand for sth`<br>Cities are building more flats to **meet the demand for** housing. |
-| Trung cấp | W | **đóng góp cho**<br>Người nhập cư đóng góp đáng kể cho nền kinh tế. | `make a contribution to sth`<br>Immigrants **make a significant contribution to** the economy. |
-| Trung cấp | W | **vấn đề cấp bách / mối lo ngại ngày càng lớn**<br>Ô nhiễm nhựa đã trở thành vấn đề cấp bách trên toàn thế giới. | `a pressing issue / a growing concern`<br>Plastic pollution has become **a pressing issue** worldwide. |
-| Nâng cao | W | **thu hẹp khoảng cách giữa A và B**<br>Học online có thể thu hẹp khoảng cách giữa học sinh nông thôn và thành thị. | `bridge the gap between A and B`<br>Online learning can **bridge the gap between** rural **and** urban students. |
-| Nâng cao | W | **đe dọa (nghiêm trọng) đến**<br>Biến đổi khí hậu đe dọa nghiêm trọng an ninh lương thực. | `pose a (serious) threat to sth`<br>Climate change **poses a serious threat to** food security. |
-| Nâng cao | W · S | **con dao hai lưỡi**<br>Mạng xã hội là con dao hai lưỡi với giới trẻ. | `a double-edged sword`<br>Social media is **a double-edged sword** for young people. |
-| Nâng cao | W | **có hậu quả sâu rộng đối với**<br>Phá rừng có hậu quả sâu rộng đối với khí hậu toàn cầu. | `have far-reaching consequences for sth`<br>Deforestation **has far-reaching consequences for** the global climate. |
-
-### 2.13. Speaking: câu mở đầu và câu đệm · Speaking: openers and fillers
-
-| Mức | Kỹ năng | Tiếng Việt | English |
-|---|---|---|---|
-| Cơ bản | S | **để tôi nghĩ đã…**<br>Để tôi nghĩ đã… chắc tôi sẽ chọn biển. | `Well, let me think…`<br>**Well, let me think…** I'd probably choose the beach. |
-| Cơ bản | S | **câu hỏi hay / thú vị đấy**<br>Câu hỏi thú vị đấy. Tôi chưa bao giờ thực sự nghĩ về nó. | `That's a good / an interesting question.`<br>**That's an interesting question.** I've never really thought about it. |
-| Cơ bản | S | **thành thật mà nói**<br>Thành thật mà nói, tôi không thích nấu ăn lắm. | `To be honest, …`<br>**To be honest,** I'm not a big fan of cooking. |
-| Trung cấp | S | **còn tùy vào**<br>Còn tùy thời tiết, nhưng tôi thường chạy bộ vào buổi tối. | `It depends on …`<br>**It depends on** the weather, but I usually go jogging in the evening. |
-| Trung cấp | S | **theo như tôi biết**<br>Theo như tôi biết, hầu hết người dân thành phố tôi đi xe máy. | `As far as I know, …`<br>**As far as I know,** most people in my city ride motorbikes. |
-| Trung cấp | S | **ý tôi là …**<br>Ý tôi là, vấn đề không phải tiền mà là thời gian. | `What I mean is …`<br>**What I mean is,** it's not about money, it's about time. |
-| Nâng cao | S | **nghĩ nhanh thì …**<br>Nghĩ nhanh thì tôi đoán khoảng một nửa bạn bè tôi làm việc tại nhà. | `Off the top of my head, …`<br>**Off the top of my head,** I'd say about half of my friends work from home. |
-| Nâng cao | S | **tôi chưa từng nghĩ kỹ, nhưng …**<br>Tôi chưa từng nghĩ kỹ, nhưng chắc thư viện vẫn còn hữu ích. | `I've never really given it much thought, but …`<br>**I've never really given it much thought, but** I suppose libraries are still useful. |
-| Nâng cao | S | **tóm lại, nói ngắn gọn**<br>Tóm lại, nó rẻ, nhanh và tiện. | `In a nutshell, …`<br>**In a nutshell,** it's cheap, fast and convenient. |
 
 ## 3. 12 hướng phát triển ý · 12 directions for ideas
 
@@ -219,14 +175,16 @@
 
 **Ý triển khai · Ideas to develop**
 
+*Mỗi câu tiếng Anh áp dụng một pattern ở mục 2 (ghi bên dưới câu). · Each English sentence applies one pattern from section 2 (shown below it).*
+
 | Tiếng Việt | English |
 |---|---|
-| Ban hành luật và quy định. | Introduce **laws and regulations**. |
-| Tăng ngân sách, đầu tư dịch vụ công. | **Increase public funding** and invest in public services. |
-| Nâng cao nhận thức cộng đồng. | **Raise public awareness** through national campaigns. |
-| Xây dựng cơ sở hạ tầng. | **Develop infrastructure** such as roads, hospitals and schools. |
-| Trợ cấp hoặc áp thuế. | **Provide subsidies** for good behaviour or **impose taxes** on harmful products. |
-| Giám sát và xử phạt hành vi vi phạm. | Monitor compliance and **enforce regulations** with fines. |
+| Chính phủ nên ban hành luật và quy định buộc doanh nghiệp đáp ứng tiêu chuẩn an toàn nghiêm ngặt. | The government should introduce **laws and regulations** that **require companies to meet** strict safety standards.<br>`require sb to do sth` · Trung cấp |
+| Tăng ngân sách cho dịch vụ công như trường học và bệnh viện sẽ góp phần rất lớn vào việc nâng cao chất lượng sống của người dân. | **Increasing public funding** for services such as schools and hospitals **would go a long way towards improving** people's quality of life.<br>`go a long way towards V-ing` · Nâng cao |
+| Các chiến dịch quốc gia nâng cao nhận thức cộng đồng có thể thuyết phục người dân áp dụng thói quen lành mạnh hơn. | National campaigns that **raise public awareness** can **persuade people to adopt** healthier habits.<br>`persuade sb to do sth` · Trung cấp |
+| Xây dựng cơ sở hạ tầng như đường bộ và đường sắt mở đường cho tăng trưởng kinh tế ở nông thôn. | **Developing infrastructure** such as roads and railways **paves the way for** economic growth in rural areas.<br>`pave the way for sth` · Nâng cao |
+| Thuế thuốc lá cao hơn, cộng với trợ cấp cho các chương trình cai thuốc, khiến ít người trẻ bắt đầu hút thuốc hơn. | Higher **taxes** on cigarettes, **coupled with** **subsidies** for quit-smoking programmes, **mean that** fewer young people take up smoking.<br>`A, coupled with B, means that …` · Nâng cao |
+| Tiền phạt nặng và giám sát chặt chẽ răn đe doanh nghiệp không vi phạm quy định, vì vậy chính phủ phải thực thi luật một cách nhất quán. | Heavy fines and strict monitoring **deter businesses from breaking** the rules, so the government must **enforce regulations** consistently.<br>`deter sb from doing sth` · Nâng cao |
 
 **Đào sâu bằng 6 câu hỏi: ý triển khai cho từng câu · Six questions: ideas to develop for each**
 
@@ -293,14 +251,16 @@
 
 **Ý triển khai · Ideas to develop**
 
+*Mỗi câu tiếng Anh áp dụng một pattern ở mục 2 (ghi bên dưới câu). · Each English sentence applies one pattern from section 2 (shown below it).*
+
 | Tiếng Việt | English |
 |---|---|
-| Thay đổi thói quen và hành vi. | **Change personal habits** and behaviour. |
-| Chịu trách nhiệm cho lựa chọn của mình. | **Take responsibility** for their own choices. |
-| Nâng cao kiến thức và kỹ năng. | **Improve their knowledge and skills**. |
-| Tuân thủ pháp luật. | **Obey the law**. |
-| Sử dụng tài nguyên hợp lý. | **Use resources responsibly**, such as water and electricity. |
-| Chủ động giải quyết vấn đề thay vì phụ thuộc vào người khác. | **Take the initiative** instead of relying on others to solve problems. |
+| Nếu mỗi người thay đổi một vài thói quen, như dùng túi tái sử dụng, lượng rác thải sẽ giảm đáng kể. | **If** everyone **changes** a few **personal habits**, such as using reusable bags, the amount of waste **will fall** considerably.<br>`If + present, will + V` · Cơ bản |
+| Điều cốt yếu là mỗi người phải chịu trách nhiệm cho lựa chọn của mình thay vì đổ lỗi cho người khác. | **It is essential that** individuals **take responsibility for** their own choices instead of blaming others.<br>`It is essential / vital that sb (should) do sth` · Trung cấp |
+| Các khóa học trực tuyến cho phép mỗi người nâng cao kiến thức và kỹ năng theo tốc độ của riêng mình. | Online courses **allow people to improve their knowledge and skills** at their own pace.<br>`allow sb to do sth` · Cơ bản |
+| Ngay cả luật tốt nhất cũng vô ích trừ khi người dân tuân thủ pháp luật trong đời sống hằng ngày. | Even the best laws are useless **unless** citizens **obey the law** in their daily lives.<br>`unless + clause` · Trung cấp |
+| Sử dụng tài nguyên hợp lý, như tắt đèn và tắm nhanh hơn, giúp các hộ gia đình giảm hóa đơn năng lượng. | **Using resources responsibly**, such as turning off lights and taking shorter showers, **helps households cut** their energy bills.<br>`help sb (to) do sth` · Cơ bản |
+| Không còn nghi ngờ gì, người chủ động giải quyết vấn đề làm việc nhanh hơn người phụ thuộc vào người khác. | **There is no doubt that** people who **take the initiative** solve problems faster than those who rely on others.<br>`There is no doubt that …` · Trung cấp |
 
 **Đào sâu bằng 6 câu hỏi: ý triển khai cho từng câu · Six questions: ideas to develop for each**
 
@@ -367,14 +327,16 @@
 
 **Ý triển khai · Ideas to develop**
 
+*Mỗi câu tiếng Anh áp dụng một pattern ở mục 2 (ghi bên dưới câu). · Each English sentence applies one pattern from section 2 (shown below it).*
+
 | Tiếng Việt | English |
 |---|---|
-| Cải thiện chất lượng giáo dục. | **Improve the quality of education**. |
-| Dạy kỹ năng thực tế bên cạnh lý thuyết. | **Teach practical skills** alongside theory. |
-| Tổ chức hoạt động ngoại khóa. | **Organise extracurricular activities**. |
-| Giáo dục ý thức và trách nhiệm. | **Raise students' awareness** and sense of responsibility. |
-| Hướng nghiệp cho học sinh, sinh viên. | **Provide career guidance** for students. |
-| Trang bị kỹ năng công nghệ và tư duy phản biện. | Develop **digital literacy** and **critical thinking**. |
+| Cải thiện chất lượng giáo dục có tác động tích cực đến sự phát triển lâu dài của một quốc gia. | **Improving the quality of education** **has a positive impact on** a country's long-term development.<br>`have a positive / negative impact on sth` · Trung cấp |
+| Dạy kỹ năng thực tế bên cạnh lý thuyết giúp học sinh có khả năng áp dụng điều đã học vào đời sống. | **Teaching practical skills** alongside theory **enables students to apply** what they learn in real life.<br>`enable sb to do sth` · Trung cấp |
+| Tổ chức hoạt động ngoại khóa như câu lạc bộ thể thao và dự án tình nguyện giúp học sinh rèn kỹ năng làm việc nhóm. | **Organising extracurricular activities** such as sports clubs and volunteer projects **helps students build** teamwork skills.<br>`help sb (to) do sth` · Cơ bản |
+| Các bài học về bổn phận công dân nâng cao ý thức của học sinh và dạy các em chú ý đến tác động của hành động mình lên người khác. | Lessons on civic duty **raise students' awareness** and teach them to **pay attention to** the impact of their actions on others.<br>`pay attention to sth` · Cơ bản |
+| Nhà trường nên hướng nghiệp cho học sinh, vì thiếu nó nhiều em chọn sai ngành, điều này lại gây lãng phí thời gian và tiền bạc. | Schools should **provide career guidance**, because without it many students choose the wrong major**, which in turn wastes** time and money.<br>`…, which in turn + V` · Nâng cao |
+| Trang bị kỹ năng công nghệ và tư duy phản biện giúp người trẻ đủ năng lực tự đánh giá thông tin. | Developing **digital literacy** and **critical thinking** **empowers young people to judge** information for themselves.<br>`empower sb to do sth` · Nâng cao |
 
 **Đào sâu bằng 6 câu hỏi: ý triển khai cho từng câu · Six questions: ideas to develop for each**
 
@@ -441,14 +403,16 @@
 
 **Ý triển khai · Ideas to develop**
 
+*Mỗi câu tiếng Anh áp dụng một pattern ở mục 2 (ghi bên dưới câu). · Each English sentence applies one pattern from section 2 (shown below it).*
+
 | Tiếng Việt | English |
 |---|---|
-| Làm gương cho con cái. | **Set a good example** for their children. |
-| Giám sát việc sử dụng Internet. | **Monitor their children's Internet use**. |
-| Dạy kỹ năng sống và đạo đức. | **Teach life skills and moral values**. |
-| Dành thời gian cho con. | **Spend quality time** with their children. |
-| Khuyến khích tính tự lập. | **Encourage independence**. |
-| Hỗ trợ tinh thần và việc học của trẻ. | Provide **emotional and academic support**. |
+| Vì trẻ em bắt chước những gì chúng thấy, cha mẹ phải làm gương cho con. | **Because** children copy what they see, parents must **set a good example** for them.<br>`because + clause / because of + noun` · Cơ bản |
+| Cha mẹ giám sát việc dùng Internet của con có thể ngăn trẻ xem những nội dung độc hại. | Parents who **monitor their children's Internet use** can **stop them from seeing** harmful content.<br>`stop sb (from) doing sth` · Cơ bản |
+| Cha mẹ dạy kỹ năng sống và đạo đức là trang bị cho con công cụ để đối mặt với khó khăn. | Parents who **teach life skills and moral values** **equip their children with** the tools to face difficulties.<br>`equip sb with sth` · Trung cấp |
+| Dành thời gian cho con giúp gia đình gắn bó hơn và khiến trẻ cảm thấy an toàn, được trân trọng. | **Spending quality time** with children strengthens family bonds and **makes them feel** safe and valued.<br>`make sb do sth` · Cơ bản |
+| Cha mẹ nên để con tự đưa ra những quyết định nhỏ để khuyến khích tính tự lập. | Parents should **let their children make** small decisions on their own to **encourage independence**.<br>`let sb do sth` · Cơ bản |
+| Cha mẹ nên hỗ trợ con về tinh thần và việc học, nhất là trong mùa thi. | Parents should **provide their children with** **emotional and academic support**, especially during exam periods.<br>`provide sb with sth` · Trung cấp |
 
 **Đào sâu bằng 6 câu hỏi: ý triển khai cho từng câu · Six questions: ideas to develop for each**
 
@@ -515,14 +479,16 @@
 
 **Ý triển khai · Ideas to develop**
 
+*Mỗi câu tiếng Anh áp dụng một pattern ở mục 2 (ghi bên dưới câu). · Each English sentence applies one pattern from section 2 (shown below it).*
+
 | Tiếng Việt | English |
 |---|---|
-| Đào tạo và nâng cao kỹ năng cho nhân viên. | **Provide staff training** and upskilling. |
-| Cải thiện môi trường làm việc. | **Improve working conditions**. |
-| Áp dụng công nghệ để tăng năng suất. | **Adopt technology** to **boost productivity**. |
-| Bảo vệ quyền lợi người lao động. | **Protect workers' rights**. |
-| Thực hiện trách nhiệm xã hội. | Practise **corporate social responsibility**. |
-| Giảm chất thải và ô nhiễm trong sản xuất. | **Cut waste and pollution** in production. |
+| Đào tạo nhân viên giúp họ có thể theo kịp công nghệ mới. | **Providing staff training** **makes it possible for employees to keep up** with new technology.<br>`make it possible for sb to do sth` · Trung cấp |
+| Cải thiện môi trường làm việc mang lại tinh thần làm việc cao hơn và ít người nghỉ việc hơn. | **Improving working conditions** **results in** higher staff morale and lower staff turnover.<br>`result in sth / result from sth` · Trung cấp |
+| Doanh nghiệp áp dụng công nghệ để tăng năng suất được kỳ vọng sẽ vượt lên trước đối thủ. | Companies that **adopt technology** to **boost productivity** **are expected to** stay ahead of their rivals.<br>`be expected to V` · Trung cấp |
+| Người sử dụng lao động phải bảo vệ quyền lợi người lao động và không bao giờ được buộc nhân viên làm thêm giờ không lương. | Employers must **protect workers' rights** and should never **force staff to work** unpaid overtime.<br>`force / compel sb to do sth` · Trung cấp |
+| Thông qua các chương trình trách nhiệm xã hội, doanh nghiệp lớn có thể giúp thu hẹp khoảng cách giữa vùng giàu và vùng nghèo. | Through **corporate social responsibility** programmes, large firms can help **bridge the gap between** rich and poor areas.<br>`bridge the gap between A and B` · Nâng cao |
+| Đã đến lúc các nhà sản xuất phải giảm chất thải và ô nhiễm trong quá trình sản xuất. | **It is high time** manufacturers **reduced waste and pollution** in production.<br>`It is high time sb did sth` · Nâng cao |
 
 **Đào sâu bằng 6 câu hỏi: ý triển khai cho từng câu · Six questions: ideas to develop for each**
 
@@ -589,14 +555,16 @@
 
 **Ý triển khai · Ideas to develop**
 
+*Mỗi câu tiếng Anh áp dụng một pattern ở mục 2 (ghi bên dưới câu). · Each English sentence applies one pattern from section 2 (shown below it).*
+
 | Tiếng Việt | English |
 |---|---|
-| Cải thiện sức khỏe thể chất. | **Improve physical health**. |
-| Bảo vệ sức khỏe tinh thần. | **Protect mental wellbeing**. |
-| Giảm nguy cơ mắc bệnh. | **Reduce the risk of disease**. |
-| Giảm chi phí điều trị lâu dài. | **Cut long-term medical costs**. |
-| Nâng cao chất lượng cuộc sống. | **Improve quality of life**. |
-| Giảm áp lực cho hệ thống y tế. | **Ease pressure on the healthcare system**. |
+| Tập thể dục đều đặn cho phép mọi người cải thiện sức khỏe thể chất mà không cần điều trị tốn kém. | Regular exercise **allows people to improve their physical health** without expensive treatment.<br>`allow sb to do sth` · Cơ bản |
+| Giờ làm việc dài có thể khiến người ta thiếu thời gian nghỉ ngơi, vì vậy người sử dụng lao động nên giúp nhân viên bảo vệ sức khỏe tinh thần. | Long working hours can **deprive people of** rest, so employers should help staff **protect their mental wellbeing**.<br>`deprive sb of sth` · Nâng cao |
+| Chế độ ăn cân bằng có thể ngăn mọi người mắc bệnh nghiêm trọng và giảm nguy cơ mắc bệnh tim. | A balanced diet can **prevent people from developing** serious illnesses and **reduce the risk of** heart disease.<br>`prevent sb from doing sth` · Trung cấp |
+| Khám sức khỏe định kỳ góp phần rất lớn vào việc giảm chi phí điều trị lâu dài. | Regular check-ups **go a long way towards cutting long-term medical costs**.<br>`go a long way towards V-ing` · Nâng cao |
+| Sức khỏe tốt không chỉ nâng cao chất lượng cuộc sống mà còn giúp mọi người làm việc hiệu quả hơn. | Good health **not only improves quality of life but also** makes people more productive at work.<br>`not only … but (also) …` · Trung cấp |
+| Nếu ít người mắc bệnh do lối sống hơn, bệnh viện sẽ bớt quá tải, từ đó giảm áp lực cho hệ thống y tế. | **If** fewer people **developed** lifestyle diseases, hospitals **would be** less crowded, which would **ease pressure on the healthcare system**.<br>`If + past, would + V` · Trung cấp |
 
 **Đào sâu bằng 6 câu hỏi: ý triển khai cho từng câu · Six questions: ideas to develop for each**
 
@@ -663,14 +631,16 @@
 
 **Ý triển khai · Ideas to develop**
 
+*Mỗi câu tiếng Anh áp dụng một pattern ở mục 2 (ghi bên dưới câu). · Each English sentence applies one pattern from section 2 (shown below it).*
+
 | Tiếng Việt | English |
 |---|---|
-| Tạo việc làm. | **Create jobs**. |
-| Tăng thu nhập và mức sống. | **Raise incomes and living standards**. |
-| Giảm chi phí sản xuất. | **Lower production costs**. |
-| Tăng năng suất lao động. | **Boost labour productivity**. |
-| Thu hút đầu tư. | **Attract investment**. |
-| Giảm gánh nặng tài chính cho người dân hoặc chính phủ. | **Ease the financial burden** on citizens or the government. |
+| Các khu công nghiệp mới tạo việc làm và mang lại cho người trẻ một nguồn thu nhập ổn định. | New industrial parks **create jobs** and **provide young people with** a stable income.<br>`provide sb with sth` · Trung cấp |
+| Tăng trưởng kinh tế ổn định dẫn đến thu nhập cao hơn và mức sống tốt hơn. | Steady economic growth **leads to** **higher incomes and better living standards**.<br>`lead to sth` · Cơ bản |
+| Tự động hóa giúp nhà sản xuất giảm chi phí sản xuất, nên hàng hóa rẻ hơn cho người tiêu dùng. | Automation **helps manufacturers lower production costs**, so products become cheaper for consumers.<br>`help sb (to) do sth` · Cơ bản |
+| Các chương trình đào tạo trang bị cho người lao động kỹ năng mới, từ đó tăng năng suất lao động. | Training programmes **equip workers with** new skills, which **boosts labour productivity**.<br>`equip sb with sth` · Trung cấp |
+| Chính sách ổn định thu hút đầu tư và mở đường cho các ngành công nghiệp mới. | Stable policies **attract investment** and **pave the way for** new industries.<br>`pave the way for sth` · Nâng cao |
+| Y tế công miễn phí giảm gánh nặng tài chính cho các gia đình nghèo, trong khi chăm sóc tư nhân thường quá đắt đỏ. | Free public healthcare **eases the financial burden on** poor families, **whereas** private care is often unaffordable.<br>`whereas / while + clause` · Trung cấp |
 
 **Đào sâu bằng 6 câu hỏi: ý triển khai cho từng câu · Six questions: ideas to develop for each**
 
@@ -737,14 +707,16 @@
 
 **Ý triển khai · Ideas to develop**
 
+*Mỗi câu tiếng Anh áp dụng một pattern ở mục 2 (ghi bên dưới câu). · Each English sentence applies one pattern from section 2 (shown below it).*
+
 | Tiếng Việt | English |
 |---|---|
-| Tăng cường sự gắn kết cộng đồng. | **Strengthen community ties**. |
-| Giảm bất bình đẳng. | **Reduce inequality**. |
-| Hỗ trợ nhóm yếu thế. | **Support vulnerable groups**. |
-| Nâng cao ý thức cộng đồng. | **Foster civic awareness**. |
-| Xây dựng môi trường sống an toàn. | **Create safer neighbourhoods**. |
-| Thúc đẩy sự công bằng và hòa nhập xã hội. | **Promote fairness and social inclusion**. |
+| Nhà văn hóa cho phép hàng xóm gặp gỡ thường xuyên, nhờ đó tăng cường sự gắn kết cộng đồng. | Community centres **allow neighbours to meet** regularly, which **strengthens community ties**.<br>`allow sb to do sth` · Cơ bản |
+| Giáo dục miễn phí thu hẹp khoảng cách giàu nghèo và giảm bất bình đẳng. | Free education **bridges the gap between** rich and poor and **reduces inequality**.<br>`bridge the gap between A and B` · Nâng cao |
+| Xã hội nên hỗ trợ nhóm yếu thế và chăm lo cho người già, người khuyết tật. | Society should **support vulnerable groups** and **take care of** the elderly and people with disabilities.<br>`take care of sb / sth` · Cơ bản |
+| Các chương trình tình nguyện nâng cao ý thức cộng đồng và giúp người trẻ đủ tự tin tham gia tích cực vào cộng đồng. | Volunteer programmes **foster civic awareness** and **empower young people to take** an active part in their community.<br>`empower sb to do sth` · Nâng cao |
+| Đèn đường tốt hơn và tuần tra thường xuyên răn đe tội phạm nhắm vào khu dân cư, giúp tạo môi trường sống an toàn hơn. | Better street lighting and regular police patrols **deter criminals from targeting** residential areas, which helps **create safer neighbourhoods**.<br>`deter sb from doing sth` · Nâng cao |
+| Luật chống phân biệt đối xử thúc đẩy công bằng và hòa nhập xã hội vì nó cấm nhà tuyển dụng từ chối ứng viên dựa trên giới tính hay chủng tộc. | Anti-discrimination laws **promote fairness and social inclusion** because they **prohibit employers from rejecting** candidates on the basis of gender or race.<br>`prohibit / ban sb from doing sth` · Nâng cao |
 
 **Đào sâu bằng 6 câu hỏi: ý triển khai cho từng câu · Six questions: ideas to develop for each**
 
@@ -811,14 +783,16 @@
 
 **Ý triển khai · Ideas to develop**
 
+*Mỗi câu tiếng Anh áp dụng một pattern ở mục 2 (ghi bên dưới câu). · Each English sentence applies one pattern from section 2 (shown below it).*
+
 | Tiếng Việt | English |
 |---|---|
-| Giảm ô nhiễm không khí và nguồn nước. | **Reduce air and water pollution**. |
-| Bảo tồn tài nguyên thiên nhiên. | **Conserve natural resources**. |
-| Giảm khí thải carbon. | **Cut carbon emissions**. |
-| Tăng tái chế và sử dụng năng lượng sạch. | **Promote recycling** and the use of **clean energy**. |
-| Bảo vệ đa dạng sinh học. | **Protect biodiversity**. |
-| Hướng đến phát triển bền vững. | **Achieve sustainable development**. |
+| Tiêu chuẩn khí thải nghiêm ngặt buộc nhà máy giảm ô nhiễm không khí và nguồn nước. | Strict emission standards **force factories to reduce air and water pollution**.<br>`force / compel sb to do sth` · Trung cấp |
+| Bảo tồn tài nguyên thiên nhiên hôm nay giúp thế hệ sau cũng có thể được hưởng chúng. | **Conserving natural resources** today **makes it possible for future generations to enjoy** them too.<br>`make it possible for sb to do sth` · Trung cấp |
+| Điều thiết yếu là mọi quốc gia phải giảm khí thải carbon để hạn chế nóng lên toàn cầu. | **It is vital that** every country **should cut carbon emissions** to limit global warming.<br>`It is essential / vital that sb (should) do sth` · Trung cấp |
+| Ưu đãi thuế giúp các hộ gia đình có thể chuyển sang năng lượng sạch, còn chương trình hoàn tiền vỏ chai thúc đẩy tái chế. | Tax breaks **enable households to switch** to **clean energy**, while deposit schemes **promote recycling**.<br>`enable sb to do sth` · Trung cấp |
+| Vườn quốc gia bảo vệ đa dạng sinh học bằng cách ngăn con người săn bắt loài nguy cấp. | National parks **protect biodiversity** by **preventing people from hunting** endangered species.<br>`prevent sb from doing sth` · Trung cấp |
+| Chính phủ phải cân bằng giữa tăng trưởng kinh tế và bảo vệ môi trường để hướng đến phát triển bền vững. | Governments must **strike a balance between** economic growth and environmental protection to **achieve sustainable development**.<br>`strike a balance between A and B` · Nâng cao |
 
 **Đào sâu bằng 6 câu hỏi: ý triển khai cho từng câu · Six questions: ideas to develop for each**
 
@@ -885,14 +859,16 @@
 
 **Ý triển khai · Ideas to develop**
 
+*Mỗi câu tiếng Anh áp dụng một pattern ở mục 2 (ghi bên dưới câu). · Each English sentence applies one pattern from section 2 (shown below it).*
+
 | Tiếng Việt | English |
 |---|---|
-| Tự động hóa công việc. | **Automate tasks**. |
-| Tiếp cận thông tin nhanh chóng. | **Access information instantly**. |
-| Cải thiện giao tiếp và kết nối. | **Improve communication** and connection. |
-| Tăng hiệu quả và độ chính xác. | **Increase efficiency and accuracy**. |
-| Gây rủi ro về quyền riêng tư. | **Pose privacy risks**. |
-| Làm gia tăng sự phụ thuộc vào công nghệ hoặc nguy cơ mất việc. | Lead to **overdependence on technology** and **job losses**. |
+| Robot tự động hóa các công việc lặp lại dẫn đến sản xuất nhanh hơn và ít sai sót hơn. | Robots that **automate repetitive tasks** **lead to** faster production and fewer errors.<br>`lead to sth` · Cơ bản |
+| Internet cho phép học sinh tiếp cận thông tin ngay lập tức, dù ở bất cứ đâu. | The Internet **lets students access information instantly**, wherever they are.<br>`let sb do sth` · Cơ bản |
+| Gọi video giúp các gia đình giữ liên lạc và cải thiện giao tiếp dù ở xa nhau. | Video calls **help families stay** connected and **improve communication** across long distances.<br>`help sb (to) do sth` · Cơ bản |
+| Máy tính xử lý dữ liệu chính xác hơn con người rất nhiều, nhờ đó tăng hiệu quả ở văn phòng và bệnh viện. | Computers process data **far more accurately than** humans, which **increases efficiency** in offices and hospitals.<br>`far / much / considerably + comparative` · Trung cấp |
+| Các ứng dụng thu thập dữ liệu cá nhân gây ra mối đe dọa nghiêm trọng đối với quyền riêng tư của người dùng. | Apps that collect personal data **pose a serious threat to** users' privacy.<br>`pose a (serious) threat to sth` · Nâng cao |
+| Tự động hóa quá nhanh có thể làm phát sinh tình trạng mất việc hàng loạt và sự phụ thuộc quá mức vào công nghệ. | Rapid automation could **give rise to** widespread **job losses** and **overdependence on technology**.<br>`give rise to sth` · Nâng cao |
 
 **Đào sâu bằng 6 câu hỏi: ý triển khai cho từng câu · Six questions: ideas to develop for each**
 
@@ -959,13 +935,15 @@
 
 **Ý triển khai · Ideas to develop**
 
+*Mỗi câu tiếng Anh áp dụng một pattern ở mục 2 (ghi bên dưới câu). · Each English sentence applies one pattern from section 2 (shown below it).*
+
 | Tiếng Việt | English |
 |---|---|
-| Tiết kiệm thời gian. | **Save time**. |
-| Giảm công sức cho công việc thường ngày. | **Reduce the effort of daily tasks**. |
-| Tăng thời gian dành cho gia đình. | **Free up time for family**. |
-| Cải thiện cân bằng công việc và cuộc sống. | **Improve work–life balance**. |
-| Giảm thời gian đi lại và chờ đợi. | **Cut commuting and waiting time**. |
+| Ngân hàng trực tuyến tiết kiệm thời gian vì khách hàng không còn phải xếp hàng ở chi nhánh. | Online banking **saves time** **because** customers no longer need to queue at a branch.<br>`because + clause / because of + noun` · Cơ bản |
+| Máy rửa bát và robot hút bụi giảm công sức cho việc nhà hằng ngày, nên mọi người còn sức cho hoạt động khác. | Dishwashers and robot vacuums **reduce the effort of daily tasks**, **so** people have more energy for other activities.<br>`so + clause / As a result, …` · Cơ bản |
+| Giờ làm việc linh hoạt mang lại cho cha mẹ nhiều thời gian hơn cho gia đình. | Flexible working hours **provide parents with** more **free time for their family**.<br>`provide sb with sth` · Trung cấp |
+| Không còn nghi ngờ gì, làm việc từ xa có thể cải thiện cân bằng giữa công việc và cuộc sống cho nhiều người. | **There is no doubt that** remote work can **improve work–life balance** for many employees.<br>`There is no doubt that …` · Trung cấp |
+| Hệ thống tàu điện nhanh giảm thời gian đi lại và khuyến khích người dân để ô tô ở nhà. | A fast metro system **cuts commuting time** and **encourages people to leave** their cars at home.<br>`encourage sb to do sth` · Cơ bản |
 
 **Đào sâu bằng 6 câu hỏi: ý triển khai cho từng câu · Six questions: ideas to develop for each**
 
@@ -1032,12 +1010,14 @@
 
 **Ý triển khai · Ideas to develop**
 
+*Mỗi câu tiếng Anh áp dụng một pattern ở mục 2 (ghi bên dưới câu). · Each English sentence applies one pattern from section 2 (shown below it).*
+
 | Tiếng Việt | English |
 |---|---|
-| Ngắn hạn: chi phí ban đầu, khó thích nghi, mất thời gian đào tạo. | Short term: **initial costs**, **an adjustment period** and time spent on training. |
-| Dài hạn: tăng năng suất, tiết kiệm tiền, nâng cao chất lượng cuộc sống. | Long term: **higher productivity**, **savings** and **a better quality of life**. |
-| Tác động đến thế hệ tương lai. | Effects on **future generations**. |
-| Tính bền vững của giải pháp. | Whether the solution is **sustainable**. |
+| Ngắn hạn: bất chấp chi phí ban đầu, giai đoạn thích nghi và thời gian đào tạo, hệ thống mới thường vẫn đáng để áp dụng. | Short term: **despite** the **initial costs**, **an adjustment period** and the time spent on training, new systems are usually worth adopting.<br>`despite / in spite of + noun / V-ing` · Trung cấp |
+| Dài hạn: khoản đầu tư như vậy mang lại năng suất cao hơn, tiết kiệm tiền và chất lượng sống tốt hơn. | Long term: such investment **results in** **higher productivity**, **savings** and **a better quality of life**.<br>`result in sth / result from sth` · Trung cấp |
+| Việc đốt nhiên liệu hóa thạch hôm nay sẽ tác động tiêu cực đến các thế hệ tương lai. | Burning fossil fuels today will **have a negative impact on** **future generations**.<br>`have a positive / negative impact on sth` · Trung cấp |
+| Một giải pháp chỉ đáng áp dụng với điều kiện nó bền vững về lâu dài. | A solution is only worth adopting **provided that** it is **sustainable** in the long term.<br>`provided that / as long as + clause` · Trung cấp |
 
 **Đào sâu bằng 6 câu hỏi: ý triển khai cho từng câu · Six questions: ideas to develop for each**
 

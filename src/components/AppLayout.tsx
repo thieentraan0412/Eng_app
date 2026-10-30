@@ -27,6 +27,7 @@ import QuickTranslateModal from './QuickTranslateModal'
 import { matchesAccelerator, readQuickTranslateHotkey } from '../services/hotkey'
 import { readSelectedText, takeSelectedText, watchSelection } from '../services/selection'
 import { watchKeyboardInset } from '../services/keyboardInset'
+import { useSentenceReminder } from '../services/sentenceReminder'
 
 const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
 
@@ -71,6 +72,12 @@ export default function AppLayout() {
 
   // Đo thời gian học khi đang ở một trang học (dừng khi rời trang / ẩn cửa sổ)
   useStudyTime(STUDY_PAGES.has(page))
+
+  // Nhắc chép câu theo chu kỳ (desktop): bộ đếm ở main, ở đây chọn câu + lưu bài
+  useSentenceReminder((message) => {
+    setToast(message)
+    window.setTimeout(() => setToast(null), 4000)
+  })
 
   // Chọn trang: chuyển trang + đóng drawer (mobile)
   const goto = (p: PageKey) => {

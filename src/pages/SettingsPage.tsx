@@ -6,8 +6,36 @@ import { isDesktop } from '../platform'
 import Icon from '../components/Icon'
 import type { UpdateStatus } from '../vite-env'
 import { accelFromEvent, readQuickTranslateHotkey } from '../services/hotkey'
-import { ttsSupported } from '../services/tts'
+import {
+  autoEnglishVoice,
+  englishVoiceGroups,
+  loadVoiceChoice,
+  onVoicesChanged,
+  saveVoiceChoice,
+  speak,
+  ttsSupported,
+  voiceLabel,
+} from '../services/tts'
+import { listFolders, type Folder } from '../services/cloud/sentenceCloud'
+import {
+  DISPLAY_OPTIONS,
+  INTERVAL_OPTIONS,
+  REMINDER_UPDATED_EVENT,
+  describeNext,
+  formatDuration,
+  planNextSentence,
+  readReminderEnabled,
+  readReminderFolder,
+  readReminderTiming,
+  saveReminderEnabled,
+  saveReminderFolder,
+  saveReminderTiming,
+  type ReminderTiming,
+} from '../services/sentenceReminder'
 import '../styles/settings.css'
+
+// Câu đọc thử khi chọn giọng / bấm "Nghe thử"
+const VOICE_SAMPLE = 'Hello! This is the voice I will use to read English for you.'
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
@@ -57,6 +85,20 @@ export default function SettingsPage() {
     setAutoSpeak(next)
     localStorage.setItem('fc_autospeak', next ? '1' : '0')
   }
+  // Giọng đọc tiếng Anh cho toàn bộ app (lưu theo từng thiết bị). Danh sách giọng
+  // nạp chậm và đổi khi cài thêm giọng -> đọc lại mỗi khi trình duyệt báo.
+  const [voiceGroups, setVoiceGroups] = useState(englishVoiceGroups)
+  const [voiceChoice, setVoiceChoice] = useState(loadVoiceChoice)
+  useEffect(() => onVoicesChanged(() => setVoiceGroups(englishVoiceGroups())), [])
+  const chooseVoice = (voiceURI: string) => {
+    setVoiceChoice(voiceURI)
+    saveVoiceChoice(voiceURI)
+    speak(VOICE_SAMPLE) // đọc thử ngay bằng giọng vừa chọn
+  }
+  const autoVoice = autoEnglishVoice()
+  const allVoices = voiceGroups.flatMap((g) => g.voices)
+  // Giọng đã chọn không còn trên máy này -> ô chọn hiện "Tự động" (app cũng đọc như vậy)
+  const voiceValue = allVoices.some((v) => v.voiceURI === voiceChoice) ? voiceChoice : ''
   // Chép câu: làm đúng thì tự đọc to câu hoàn chỉnh (đọc thẳng khóa lúc chấm)
   const [sentenceSpeak, setSentenceSpeak] = useState(
     localStorage.getItem('sc_autospeak') !== '0',
@@ -66,6 +108,67 @@ export default function SettingsPage() {
     setSentenceSpeak(next)
     localStorage.setItem('sc_autospeak', next ? '1' : '0')
   }
+  // Chép câu: gõ xong một từ đúng chỗ thì đọc ngay từ đó (mặc định TẮT)
+  const [wordSpeak, setWordSpeak] = useState(localStorage.getItem('sc_wordspeak') === '1')
+  const toggleWordSpeak = () => {
+    const next = !wordSpeak
+    setWordSpeak(next)
+    localStorage.setItem('sc_wordspeak', next ? '1' : '0')
+  }
+  // Nhắc chép câu (desktop): mặc định TẮT; nguồn câu là 1 thư mục hoặc tất cả
+  const [reminder, setReminder] = useState(readReminderEnabled)
+  const [reminderFolder, setReminderFolder] = useState(readReminderFolder)
+  const [sentenceFolders, setSentenceFolders] = useState<Folder[]>([])
+  // Chờ bao lâu thì hiện câu + câu nằm trên màn hình bao lâu thì ẩn
+  const [reminderTiming, setReminderTiming] = useState(readReminderTiming)
+  const toggleReminder = () => {
+    const next = !reminder
+    setReminder(next)
+    saveReminderEnabled(next)
+  }
+  const chooseReminderTiming = (patch: Partial<ReminderTiming>) => {
+    setReminderTiming((t) => ({ ...t, ...patch }))
+    saveReminderTiming(patch)
+  }
+  const chooseReminderFolder = (folderId: string) => {
+    setReminderFolder(folderId)
+    saveReminderFolder(folderId)
+  }
+  useEffect(() => {
+    if (!isDesktop) return
+    let active = true
+    // Lỗi tải -> ô chọn chỉ còn "Tất cả thư mục"
+    void listFolders()
+      .then((fs) => active && setSentenceFolders(fs))
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
+  // Câu sẽ hiện ở lượt tới (số thứ tự trong bộ đang dùng). Tính lại khi đổi bộ và
+  // mỗi khi lượt nhắc hiện câu / tự chuyển bộ / tự tắt / vừa làm xong một câu.
+  const [nextInfo, setNextInfo] = useState<string | null>(null)
+  useEffect(() => {
+    if (!isDesktop || !reminder) return
+    let active = true
+    const refresh = () => {
+      planNextSentence()
+        .then((next) => active && setNextInfo(describeNext(next)))
+        .catch(() => active && setNextInfo(null))
+    }
+    const onUpdated = () => {
+      setReminder(readReminderEnabled())
+      setReminderFolder(readReminderFolder())
+      refresh()
+    }
+    setNextInfo(null)
+    refresh()
+    window.addEventListener(REMINDER_UPDATED_EVENT, onUpdated)
+    return () => {
+      active = false
+      window.removeEventListener(REMINDER_UPDATED_EVENT, onUpdated)
+    }
+  }, [reminder, reminderFolder])
 
   const toggleDeskTrans = () => {
     const next = !deskTrans
@@ -396,6 +499,63 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      {/* -------------------------------------------------- Giọng đọc */}
+      {ttsSupported && (
+        <>
+          <h2 className="set-label">Giọng đọc</h2>
+          <section className="set-card">
+            <div className="set-row">
+              <span className="set-ico">
+                <Icon name="speak" />
+              </span>
+              <span className="set-main">
+                <span className="set-title">Giọng đọc tiếng Anh</span>
+                <span className="set-desc">
+                  Dùng cho mọi chỗ máy đọc tiếng Anh: từ vựng, ôn tập, chép câu, bài đọc, dịch
+                  nhanh. Mỗi máy và trình duyệt có bộ giọng riêng nên chọn riêng trên từng thiết bị.
+                  {allVoices.some((v) => !v.localService) &&
+                    ' Giọng (online) nghe tự nhiên hơn nhưng cần mạng và ra tiếng chậm hơn.'}
+                </span>
+                {isDesktop && (
+                  <span className="set-hotkey">
+                    Thêm giọng Anh-Anh, Úc, Ấn…: Settings của Windows › Time & language › Speech ›
+                    Add voices, rồi mở lại app.
+                  </span>
+                )}
+              </span>
+              <span className="set-side set-voice">
+                <select
+                  className="set-select"
+                  value={voiceValue}
+                  aria-label="Giọng đọc tiếng Anh"
+                  onChange={(e) => chooseVoice(e.target.value)}
+                >
+                  <option value="">
+                    Tự động{autoVoice ? ` — ${voiceLabel(autoVoice)}` : ''}
+                  </option>
+                  {voiceGroups.map((g) => (
+                    <optgroup key={g.label} label={g.label}>
+                      {g.voices.map((v) => (
+                        <option key={v.voiceURI} value={v.voiceURI}>
+                          {voiceLabel(v)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <button
+                  className="set-btn"
+                  onClick={() => speak(VOICE_SAMPLE)}
+                  title="Nghe thử giọng đang chọn"
+                >
+                  <Icon name="play" /> Nghe thử
+                </button>
+              </span>
+            </div>
+          </section>
+        </>
+      )}
+
       {/* Cửa sổ nổi / thu gọn — chỉ có ở bản desktop (web không điều khiển được cửa sổ) */}
       {isDesktop && (
         <>
@@ -692,32 +852,170 @@ export default function SettingsPage() {
       </section>
 
       {/* --------------------------------------------------- Chép câu */}
-      {ttsSupported && (
+      {(ttsSupported || isDesktop) && (
         <>
           <h2 className="set-label">Chép câu</h2>
           <section className="set-card">
-            <div className="set-row">
-              <span className="set-ico">
-                <Icon name="speak" />
-              </span>
-              <span className="set-main">
-                <span className="set-title">Tự phát âm câu khi làm đúng</span>
-                <span className="set-desc">
-                  Đọc to câu tiếng Anh hoàn chỉnh ngay khi kiểm tra đúng. Tắt đi vẫn nghe lại
-                  được bằng nút loa cạnh kết quả.
+            {ttsSupported && (
+              <div className="set-row">
+                <span className="set-ico">
+                  <Icon name="speak" />
                 </span>
-              </span>
-              <span className="set-side">
-                <label className="set-switch">
-                  <input
-                    type="checkbox"
-                    checked={sentenceSpeak}
-                    onChange={toggleSentenceSpeak}
-                  />
-                  <span className="track" />
-                </label>
-              </span>
-            </div>
+                <span className="set-main">
+                  <span className="set-title">Tự phát âm câu khi làm đúng</span>
+                  <span className="set-desc">
+                    Đọc to câu tiếng Anh hoàn chỉnh ngay khi kiểm tra đúng. Tắt đi vẫn nghe lại
+                    được bằng nút loa cạnh kết quả.
+                  </span>
+                </span>
+                <span className="set-side">
+                  <label className="set-switch">
+                    <input
+                      type="checkbox"
+                      checked={sentenceSpeak}
+                      onChange={toggleSentenceSpeak}
+                    />
+                    <span className="track" />
+                  </label>
+                </span>
+              </div>
+            )}
+
+            {ttsSupported && (
+              <div className="set-row">
+                <span className="set-ico">
+                  <Icon name="keyboard" />
+                </span>
+                <span className="set-main">
+                  <span className="set-title">Đọc từng từ khi gõ đúng</span>
+                  <span className="set-desc">
+                    Gõ xong một từ (bấm cách hoặc dấu câu) mà từ đó đúng chỗ trong đáp án thì máy
+                    đọc ngay từ đó; gõ sai thì im. Từ cuối câu được đọc ngay khi gõ đủ chữ, hoặc
+                    khi bấm Enter. Gõ nhanh thì từ mới ngắt từ đang đọc, nên tiếng luôn theo kịp
+                    tay gõ.
+                  </span>
+                </span>
+                <span className="set-side">
+                  <label className="set-switch">
+                    <input type="checkbox" checked={wordSpeak} onChange={toggleWordSpeak} />
+                    <span className="track" />
+                  </label>
+                </span>
+              </div>
+            )}
+
+            {/* Cửa sổ câu nổi trên mọi ứng dụng là tính năng của desktop → ẩn trên web */}
+            {isDesktop && (
+              <div className="set-row">
+                <span className="set-ico">
+                  <Icon name="clock" />
+                </span>
+                <span className="set-main">
+                  <span className="set-title">Tự động hiển thị câu chép</span>
+                  <span className="set-desc">
+                    Cứ {formatDuration(reminderTiming.intervalMs)} hiện một câu chưa làm xong lên
+                    màn hình, nổi trên mọi ứng dụng, để làm và lưu kết quả ngay — không bấm vào
+                    thì tự ẩn sau {formatDuration(reminderTiming.displayMs)}, lần sau hiện lại.
+                  </span>
+                </span>
+                <span className="set-side">
+                  <label className="set-switch">
+                    <input type="checkbox" checked={reminder} onChange={toggleReminder} />
+                    <span className="track" />
+                  </label>
+                </span>
+              </div>
+            )}
+
+            {isDesktop && reminder && (
+              <div className="set-row">
+                <span className="set-ico">
+                  <Icon name="repeat" />
+                </span>
+                <span className="set-main">
+                  <span className="set-title">Thời gian chờ giữa hai lần hiện</span>
+                  <span className="set-desc">
+                    Câu đóng lại rồi, chờ bao lâu thì hiện câu tiếp theo
+                  </span>
+                </span>
+                <span className="set-side">
+                  <select
+                    className="set-select"
+                    value={reminderTiming.intervalMs}
+                    aria-label="Thời gian chờ giữa hai lần hiện câu"
+                    onChange={(e) => chooseReminderTiming({ intervalMs: Number(e.target.value) })}
+                  >
+                    {INTERVAL_OPTIONS.map((ms) => (
+                      <option key={ms} value={ms}>
+                        {formatDuration(ms)}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </div>
+            )}
+
+            {isDesktop && reminder && (
+              <div className="set-row">
+                <span className="set-ico">
+                  <Icon name="eye" />
+                </span>
+                <span className="set-main">
+                  <span className="set-title">Thời gian hiện câu</span>
+                  <span className="set-desc">
+                    Không bấm vào câu trong khoảng này thì câu tự ẩn. Đã bắt đầu làm thì câu ở
+                    lại tới khi bạn đóng hoặc làm đúng.
+                  </span>
+                </span>
+                <span className="set-side">
+                  <select
+                    className="set-select"
+                    value={reminderTiming.displayMs}
+                    aria-label="Thời gian hiện câu trên màn hình"
+                    onChange={(e) => chooseReminderTiming({ displayMs: Number(e.target.value) })}
+                  >
+                    {DISPLAY_OPTIONS.map((ms) => (
+                      <option key={ms} value={ms}>
+                        {formatDuration(ms)}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </div>
+            )}
+
+            {isDesktop && reminder && (
+              <div className="set-row">
+                <span className="set-ico">
+                  <Icon name="folder" />
+                </span>
+                <span className="set-main">
+                  <span className="set-title">Thư mục câu</span>
+                  <span className="set-desc">
+                    Chỉ hiện câu chưa đúng 100%: chưa làm xong thì lần sau hiện lại đúng câu đó.
+                    Bộ xong hết thì tự chuyển sang bộ kế tiếp; mọi bộ đều xong thì tự tắt.
+                  </span>
+                  <span className="set-hotkey">{nextInfo ?? 'Đang tính câu tiếp theo…'}</span>
+                </span>
+                <span className="set-side">
+                  <select
+                    className="set-select"
+                    value={
+                      sentenceFolders.some((f) => f.id === reminderFolder) ? reminderFolder : ''
+                    }
+                    aria-label="Thư mục câu để hiển thị"
+                    onChange={(e) => chooseReminderFolder(e.target.value)}
+                  >
+                    <option value="">Tất cả thư mục</option>
+                    {sentenceFolders.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </div>
+            )}
           </section>
         </>
       )}

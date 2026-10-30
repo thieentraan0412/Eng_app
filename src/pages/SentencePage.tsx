@@ -15,7 +15,12 @@ import {
 import Icon from '../components/Icon'
 import { type SentenceItem, type CefrLevel } from '../data/sentences'
 import { errText } from '../services/cloud/cloudError'
-import { gradeSentence, wrongWordSegments, type GradeResult } from '../services/sentencecheck'
+import {
+  gradeSentence,
+  typedWordMatch,
+  wrongWordSegments,
+  type GradeResult,
+} from '../services/sentencecheck'
 import {
   ensureReady,
   listFolders,
@@ -45,13 +50,14 @@ import {
   exportFolderExcel,
 } from '../services/excelImport'
 import { translateToEnglish } from '../services/translation'
-import { speak, ttsSupported } from '../services/tts'
+import { speak, ttsSupported, warmUpSpeech } from '../services/tts'
 import {
   DICT_RATES,
   loadRate,
   saveRate,
   loadRepeat,
   saveRepeat,
+  isDictating,
   playDictation,
   stopDictation,
   stopDictationExcept,
@@ -61,6 +67,8 @@ import {
   type DictState,
 } from '../services/dictation'
 import { openPipWindow, pipSupported } from '../services/pip'
+import { isDesktop } from '../platform'
+import { REMINDER_PROGRESS_EVENT, type ReminderProgressDetail } from '../services/sentenceReminder'
 import { createPortal } from 'react-dom'
 import '../styles/sentence.css'
 
@@ -99,6 +107,26 @@ function sanitizeEnglishInput(value: string): string {
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .replace(/[^\x20-\x7E\n]/g, '')
+}
+
+// Vừa gõ thêm ĐÚNG MỘT dấu cách / dấu câu ngay sau một từ (không phải xoá, dán
+// hay gõ giữa từ) -> trả về phần chữ đứng trước dấu đó, ngược lại null.
+function endedWord(prev: string, next: string, caret: number): string | null {
+  if (next.length !== prev.length + 1 || caret < 2) return null
+  if (!/[\s.,!?;:")]/.test(next[caret - 1])) return null
+  const before = next.slice(0, caret - 1)
+  if (!/[A-Za-z0-9']$/.test(before)) return null
+  return before + next.slice(caret) === prev ? before : null
+}
+
+// Vừa gõ thêm MỘT chữ cái / chữ số ở cuối một từ (sau con trỏ là hết câu hoặc
+// dấu ngăn cách) -> trả về phần chữ tới con trỏ, ngược lại null.
+function grewWordEnd(prev: string, next: string, caret: number): string | null {
+  if (next.length !== prev.length + 1 || caret < 1) return null
+  if (!/[A-Za-z0-9']/.test(next[caret - 1])) return null
+  if (caret < next.length && !/[\s.,!?;:")]/.test(next[caret])) return null
+  const before = next.slice(0, caret)
+  return before.slice(0, -1) + next.slice(caret) === prev ? before : null
 }
 
 // Màn hẹp (mobile) -> dùng chế độ luyện tập "tập trung" 1 câu/màn.
@@ -846,6 +874,28 @@ function PracticeView({
     }
   }, [])
 
+  // Câu vừa được làm trong cửa sổ "Nhắc chép câu" -> cập nhật thẻ ở đây, và bỏ
+  // lượt lưu cũ đang chờ của thẻ đó để không ghi đè bài mới hơn.
+  useEffect(() => {
+    const onReminderProgress = (e: Event) => {
+      const { sentenceId, record } = (e as CustomEvent<ReminderProgressDetail>).detail
+      const item = itemsRef.current.find((s) => s.id === sentenceId)
+      if (!item) return
+      const pending = saveTimers.current[sentenceId]
+      if (pending) clearTimeout(pending)
+      setInputs((m) => ({ ...m, [sentenceId]: record.answer }))
+      setRevealed((m) => ({ ...m, [sentenceId]: record.revealed }))
+      setResults((m) => {
+        const next = { ...m }
+        if (record.status && record.answer.trim()) next[sentenceId] = gradeSentence(item, record.answer)
+        else delete next[sentenceId]
+        return next
+      })
+    }
+    window.addEventListener(REMINDER_PROGRESS_EVENT, onReminderProgress)
+    return () => window.removeEventListener(REMINDER_PROGRESS_EVENT, onReminderProgress)
+  }, [])
+
   // Lưu bài 1 câu lên cloud — ÂM THẦM, không hiện chỉ báo nào.
   // Trước đây có dòng "đang lưu…" hiện/ẩn liên tục khi gõ, làm hàng tiến độ
   // co giãn và cả trang nhảy lên nhảy xuống trên điện thoại.
@@ -1463,7 +1513,8 @@ const STATUS_BADGE: Record<GradeResult['status'], string> = {
 
 // ================= THẺ MỘT CÂU (luyện tập) =================
 // Bọc memo + callback ổn định (nhận id) -> gõ ở 1 thẻ không re-render 99 thẻ kia.
-const SentenceCard = memo(function SentenceCard({
+// Dùng lại ở cửa sổ "Nhắc chép câu" (components/SentenceReminderWindow.tsx).
+export const SentenceCard = memo(function SentenceCard({
   index,
   item,
   value,
@@ -1535,6 +1586,36 @@ const SentenceCard = memo(function SentenceCard({
     }
   }
 
+  // Cài đặt › Chép câu › "Đọc từng từ khi gõ đúng": gõ xong một từ đúng chỗ ->
+  // đọc ngay từ đó, gõ sai thì im. Gọi thẳng trong nhịp gõ (không hẹn giờ) để
+  // tiếng ra sát phím cách; speak() ngắt từ đang đọc dở nên gõ nhanh cũng không
+  // bị đọc dồn, trễ dần so với tay gõ.
+  // spokenUpTo: phần chữ tới hết từ vừa đọc — gõ tiếp dấu chấm hay bấm Enter
+  // ngay sau từ cuối câu (đã đọc lúc gõ đủ chữ) thì không đọc lại lần nữa.
+  const spokenUpTo = useRef('')
+  // Cửa sổ nhắc dùng lại thẻ này cho câu khác -> quên từ vừa đọc của câu cũ
+  useEffect(() => {
+    spokenUpTo.current = ''
+  }, [item.id])
+  const speakTypedWord = (typed: string | null, atEnd = false) => {
+    if (!typed || typed === spokenUpTo.current) return
+    if (!ttsSupported || localStorage.getItem('sc_wordspeak') !== '1') return
+    // Máy đang đọc câu cho nghe–chép -> không đọc chen, kẻo cắt mất câu đang nghe
+    if (isDictating(item.id)) return
+    const word = typedWordMatch(item, typed, atEnd)
+    if (!word) return
+    spokenUpTo.current = typed
+    speak(word, rate)
+  }
+  // Mỗi lần ô nhập đổi: gõ dấu cách / dấu câu sau một từ -> từ đó xong; gõ chữ
+  // cuối của TỪ CUỐI CÂU -> xong luôn, không cần dấu cách hay Enter.
+  const onTyped = (prev: string, next: string, caret: number) => {
+    if (next.length < prev.length) spokenUpTo.current = '' // xoá rồi gõ lại -> đọc lại
+    const ended = endedWord(prev, next, caret)
+    if (ended) speakTypedWord(ended)
+    else speakTypedWord(grewWordEnd(prev, next, caret), true)
+  }
+
   // Chuyển focus sang ô nhập của câu kế tiếp (dir=1) hoặc trước đó (dir=-1)
   const focusSibling = (dir: 1 | -1) => {
     const inputs = Array.from(document.querySelectorAll<HTMLTextAreaElement>('.cc-answer'))
@@ -1552,6 +1633,10 @@ const SentenceCard = memo(function SentenceCard({
     // Shift+Enter để xuống dòng.
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
+      // Enter cũng là gõ xong từ đứng trước con trỏ (thường là từ cuối câu). Đọc
+      // TRƯỚC khi chấm: câu đúng thì lượt đọc cả câu sẽ thay luôn từ này.
+      const typed = e.currentTarget.value.slice(0, e.currentTarget.selectionStart)
+      if (/[A-Za-z0-9']$/.test(typed)) speakTypedWord(typed)
       onCheck(item.id, true)
       return
     }
@@ -1696,6 +1781,7 @@ const SentenceCard = memo(function SentenceCard({
             const nextCaret = sanitizeEnglishInput(raw.slice(0, rawCaret)).length
             writeBack(el, nextValue, nextCaret)
             onChange(item.id, nextValue)
+            onTyped(value, nextValue, nextCaret)
           }}
           onCompositionStart={() => {
             composing.current = true
@@ -1708,12 +1794,15 @@ const SentenceCard = memo(function SentenceCard({
             const nextCaret = sanitizeEnglishInput(raw.slice(0, el.selectionStart)).length
             writeBack(el, nextValue, nextCaret)
             onChange(item.id, nextValue)
+            onTyped(value, nextValue, nextCaret)
           }}
           onKeyDown={onKeyDown}
           onScroll={syncScroll}
           onFocus={(e) => {
             // Chuyển sang gõ câu khác -> câu đang được đọc (kể cả đang lặp) dừng
             stopDictationExcept(item.id)
+            // Bật "Đọc từng từ" -> nạp sẵn giọng đọc để từ đầu tiên cũng ra tiếng ngay
+            if (isDesktop && localStorage.getItem('sc_wordspeak') === '1') warmUpSpeech()
             // Chế độ thu gọn khi gõ là cho bàn phím ảo trên trang chính — cửa sổ
             // nổi mà bật thì trang chính phía sau bị cất mất tiêu đề/điều hướng.
             if (floating) return

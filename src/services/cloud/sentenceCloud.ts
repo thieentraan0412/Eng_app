@@ -8,6 +8,7 @@ import {
   CloudApi,
   type CloudSentenceFolder,
   type CloudSentence,
+  type CloudSentenceProgress,
   type SentenceStatus,
 } from './CloudApiClient'
 import { SENTENCES, type SentenceItem, type CefrLevel } from '../../data/sentences'
@@ -153,6 +154,16 @@ export async function listSentences(folderId: string): Promise<StoredSentence[]>
   return rows.map(sentenceFromCloud)
 }
 
+// Câu của MỌI thư mục còn dùng được, theo thứ tự thư mục trên lưới rồi theo ngày tạo
+export async function listAllSentences(folders: Folder[]): Promise<StoredSentence[]> {
+  const order = new Map(folders.map((f, i) => [f.id, i]))
+  const rows = await CloudApi.listAllSentences()
+  return rows
+    .map(sentenceFromCloud)
+    .filter((s) => order.has(s.folderId)) // bỏ câu của thư mục đã xoá
+    .sort((a, b) => order.get(a.folderId)! - order.get(b.folderId)! || a.createdAt - b.createdAt)
+}
+
 export async function createSentence(folderId: string, data: SentenceInput): Promise<void> {
   await CloudApi.createSentence(folderId, inputToNew(data))
 }
@@ -172,7 +183,17 @@ export async function deleteSentence(id: string): Promise<void> {
 // ---------- Bài đã làm (progress) ----------
 // Trả về map sentence_id -> bài đã làm
 export async function loadProgress(sentenceIds: string[]): Promise<Record<string, PracticeRecord>> {
-  const rows = await CloudApi.listProgress(sentenceIds)
+  return progressMap(await CloudApi.listProgress(sentenceIds))
+}
+
+// Như loadProgress nhưng theo thư mục (bỏ trống = mọi thư mục)
+export async function loadProgressByFolder(
+  folderId?: string,
+): Promise<Record<string, PracticeRecord>> {
+  return progressMap(await CloudApi.listProgressByFolder(folderId))
+}
+
+function progressMap(rows: CloudSentenceProgress[]): Record<string, PracticeRecord> {
   const map: Record<string, PracticeRecord> = {}
   for (const r of rows) {
     map[r.sentence_id] = {

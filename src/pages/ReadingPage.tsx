@@ -5,7 +5,7 @@ import {
   type Reading,
   type ReadingHighlight,
 } from '../services/cloud/CloudApiClient'
-import { bestEnglishVoice, speak, ttsSupported } from '../services/tts'
+import { applyEnglishVoice, speak, ttsSupported } from '../services/tts'
 import { isSingleWord, translate, translateOnline } from '../services/translation'
 import {
   lookupWordDetails,
@@ -803,12 +803,10 @@ function ReadingViewer({
     const synth = window.speechSynthesis
     synth.cancel()
     const chunks = splitChunks(text)
-    const voice = bestEnglishVoice()
     chunks.forEach((c, i) => {
       const u = new SpeechSynthesisUtterance(c)
-      u.lang = 'en-US'
+      applyEnglishVoice(u)
       u.rate = 0.95
-      if (voice) u.voice = voice
       if (i === chunks.length - 1) u.onend = () => setTts('idle')
       synth.speak(u)
     })

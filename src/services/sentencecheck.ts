@@ -207,6 +207,68 @@ export function wrongWordSegments(userInput: string, refAnswer: string): WrongSe
   return segs
 }
 
+// ---------- Đọc từng từ khi gõ (Cài đặt › Chép câu) ----------
+// Vị trí trong đáp án của `count` từ cuối người dùng gõ, nếu tất cả đều ĐÚNG
+// CHỖ theo diff LCS. Như tô đỏ sau khi chấm, từ khớp nằm ngay sau chỗ THIẾU từ
+// (VD bỏ sót "provide") là sai chỗ; riêng khi người dùng đã gõ một từ khác vào
+// chỗ đó ("give" thay "provide") thì từ khớp sau nó vẫn tính là đúng chỗ.
+// atEnd: chỉ nhận khi đó là TỪ CUỐI của đáp án và câu không thiếu từ nào (từ
+// nào của đáp án cũng đã gõ, đúng hoặc sai) — tức người dùng vừa gõ xong cả câu.
+function tailMatch(
+  userToks: string[],
+  refToks: string[],
+  count: number,
+  atEnd: boolean,
+): number[] | null {
+  const at: number[] = [] // vị trí trong đáp án của từng từ người dùng (-1 = sai)
+  let j = 0
+  let extra = 0 // số từ thừa / thiếu kể từ từ khớp gần nhất
+  let missing = 0
+  let extraAll = 0 // … và tính trên cả câu
+  let missingAll = 0
+  for (const t of wordDiff(userToks, refToks)) {
+    if (t.op === 'add') {
+      at.push(-1)
+      extra++
+      extraAll++
+      continue
+    }
+    if (t.op === 'same') {
+      at.push(missing > extra ? -1 : j)
+      extra = 0
+      missing = 0
+    } else {
+      missing++
+      missingAll++
+    }
+    j++
+  }
+  const tail = at.slice(-count)
+  if (tail.length < count || tail.includes(-1)) return null
+  if (atEnd && (tail[tail.length - 1] !== refToks.length - 1 || missingAll > extraAll)) return null
+  return tail
+}
+
+// Gõ xong một từ: `typed` là phần chữ tới hết từ đó — trước dấu cách / dấu câu
+// / Enter vừa gõ, hoặc (atEnd) tới chữ cuối vừa gõ của từ cuối câu.
+// Từ đó đúng chỗ trong một đáp án -> trả về từ đó theo dạng gốc trong đáp án
+// (hoa/thường, dấu nháy: "US", "don't") để máy đọc; sai -> null.
+export function typedWordMatch(item: SentenceItem, typed: string, atEnd = false): string | null {
+  const word = /[^\s.,!?;:"“”()]+$/.exec(typed)?.[0] ?? ''
+  const count = tokens(word).length // "don't" = 2 token: don + t
+  if (!count) return null
+  const userToks = tokens(typed)
+  for (const ans of [item.en, ...(item.altAnswers ?? [])]) {
+    const at = tailMatch(userToks, tokens(ans), count, atEnd)
+    if (!at) continue
+    const words = [...ans.matchAll(WORD_RE)]
+    const first = words[at[0]]
+    const last = words[at[at.length - 1]]
+    return ans.slice(first.index ?? 0, (last.index ?? 0) + last[0].length)
+  }
+  return null
+}
+
 // Lỗi chính tả trong câu người dùng
 function spellHints(text: string): SpellHint[] {
   const uniq = [...new Set(tokenizeWords(text))]

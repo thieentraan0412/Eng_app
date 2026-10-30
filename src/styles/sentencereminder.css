@@ -1,0 +1,121 @@
+/* ============================================================
+   Nhắc chép câu — cửa sổ riêng, trong suốt, nổi trên mọi ứng dụng.
+   Bên trong là đúng thẻ luyện tập của trang Chép câu (.cc-sent, sentence.css);
+   ở đây chỉ dựng khung bao + hàng tiêu đề + thanh đếm ngược.
+   Cửa sổ ôm vừa chiều cao khung (cửa sổ câu tự báo cho main).
+   ============================================================ */
+body.sentence-reminder-body {
+  min-width: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+/* Chừa chỗ cho bóng đổ của khung trong cửa sổ trong suốt */
+.sr-root {
+  padding: 10px;
+}
+
+.sr-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+  animation: sr-in 0.18s ease;
+}
+@keyframes sr-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+.sr-shell .cc-sent {
+  margin-bottom: 0;
+}
+
+.sr-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-left: 4px;
+}
+.sr-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.sr-meta b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-soft);
+  font-weight: 600;
+}
+.sr-close {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.sr-close:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+/* Vừa tự chuyển sang bộ kế tiếp vì bộ cũ đã xong */
+.sr-notice {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: var(--r-md);
+  background: var(--primary-soft);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+.sr-notice .ico {
+  color: var(--success);
+}
+
+/* Thanh mỏng dưới đáy: thời gian còn lại trước khi thẻ tự ẩn (chưa bấm vào) */
+.sr-timer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--surface-2);
+}
+.sr-timer i {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  transform-origin: left;
+  animation-name: sr-countdown;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@keyframes sr-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
