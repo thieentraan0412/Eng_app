@@ -779,6 +779,30 @@ export const CloudApi = {
     if (error) throw error
   },
 
+  // ---------- Cài đặt theo tài khoản (bảng settings — mỗi tài khoản 1 dòng) ----------
+  // "Tự động hiển thị câu chép": bộ đang dùng + câu hiện gần nhất, để bản cài,
+  // bản dev, máy khác và web cùng thấy một chỗ. Cột chưa có (chưa chạy
+  // supabase/sentence_reminder_place.sql) -> ném lỗi, phía gọi giữ bản trên máy.
+  async getSentenceReminderPlace(): Promise<unknown> {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('sentence_reminder')
+      .maybeSingle()
+    if (error) throw error
+    return (data as { sentence_reminder: unknown } | null)?.sentence_reminder ?? null
+  },
+
+  async saveSentenceReminderPlace(place: unknown): Promise<void> {
+    // Lấy user từ phiên đang lưu (không gọi mạng) — hàm này chạy sau mỗi lượt hiện câu
+    const { data } = await supabase.auth.getSession()
+    const user = data.session?.user
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { error } = await supabase
+      .from('settings')
+      .upsert({ user_id: user.id, sentence_reminder: place }, { onConflict: 'user_id' })
+    if (error) throw error
+  },
+
   // ---------- Luyện Task 1 (đồng bộ mọi thiết bị) ----------
   async listTask1Essays(): Promise<Task1Essay[]> {
     const { data, error } = await supabase

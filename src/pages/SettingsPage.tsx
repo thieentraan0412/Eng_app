@@ -118,14 +118,29 @@ export default function SettingsPage() {
   // Nhắc chép câu (desktop): mặc định TẮT; nguồn câu là 1 thư mục hoặc tất cả
   const [reminder, setReminder] = useState(readReminderEnabled)
   const [reminderFolder, setReminderFolder] = useState(readReminderFolder)
-  const [sentenceFolders, setSentenceFolders] = useState<Folder[]>([])
+  // null = đang tải: ô chọn giữ bộ đã lưu thay vì tạm hiện "Tất cả thư mục"
+  const [sentenceFolders, setSentenceFolders] = useState<Folder[] | null>(null)
   // Chờ bao lâu thì hiện câu + câu nằm trên màn hình bao lâu thì ẩn
   const [reminderTiming, setReminderTiming] = useState(readReminderTiming)
   const toggleReminder = () => {
     const next = !reminder
     setReminder(next)
+    // Bật lại -> đọc bộ đang dùng mới nhất (lấy từ tài khoản về lúc vào app);
+    // saveReminderEnabled còn hỏi lại tài khoản, đổi thì báo qua sự kiện bên dưới
+    if (next) setReminderFolder(readReminderFolder())
     saveReminderEnabled(next)
   }
+  // Công tắc / bộ đang dùng đổi từ chỗ khác (tự chuyển bộ, tự tắt, lấy từ tài
+  // khoản về) -> đọc lại, kể cả lúc công tắc đang tắt
+  useEffect(() => {
+    if (!isDesktop) return
+    const sync = () => {
+      setReminder(readReminderEnabled())
+      setReminderFolder(readReminderFolder())
+    }
+    window.addEventListener(REMINDER_UPDATED_EVENT, sync)
+    return () => window.removeEventListener(REMINDER_UPDATED_EVENT, sync)
+  }, [])
   const chooseReminderTiming = (patch: Partial<ReminderTiming>) => {
     setReminderTiming((t) => ({ ...t, ...patch }))
     saveReminderTiming(patch)
@@ -134,39 +149,28 @@ export default function SettingsPage() {
     setReminderFolder(folderId)
     saveReminderFolder(folderId)
   }
-  useEffect(() => {
-    if (!isDesktop) return
-    let active = true
-    // Lỗi tải -> ô chọn chỉ còn "Tất cả thư mục"
-    void listFolders()
-      .then((fs) => active && setSentenceFolders(fs))
-      .catch(() => {})
-    return () => {
-      active = false
-    }
-  }, [])
   // Câu sẽ hiện ở lượt tới (số thứ tự trong bộ đang dùng). Tính lại khi đổi bộ và
-  // mỗi khi lượt nhắc hiện câu / tự chuyển bộ / tự tắt / vừa làm xong một câu.
+  // mỗi khi lượt nhắc hiện câu / tự chuyển bộ / tự tắt / vừa làm một câu / vừa
+  // lấy bộ đang dùng từ tài khoản về. Danh sách bộ nạp lại cùng lúc.
   const [nextInfo, setNextInfo] = useState<string | null>(null)
   useEffect(() => {
     if (!isDesktop || !reminder) return
     let active = true
     const refresh = () => {
+      // Lỗi tải -> giữ danh sách cũ, lần làm mới sau thử lại
+      listFolders()
+        .then((fs) => active && setSentenceFolders(fs))
+        .catch(() => {})
       planNextSentence()
         .then((next) => active && setNextInfo(describeNext(next)))
         .catch(() => active && setNextInfo(null))
     }
-    const onUpdated = () => {
-      setReminder(readReminderEnabled())
-      setReminderFolder(readReminderFolder())
-      refresh()
-    }
     setNextInfo(null)
     refresh()
-    window.addEventListener(REMINDER_UPDATED_EVENT, onUpdated)
+    window.addEventListener(REMINDER_UPDATED_EVENT, refresh)
     return () => {
       active = false
-      window.removeEventListener(REMINDER_UPDATED_EVENT, onUpdated)
+      window.removeEventListener(REMINDER_UPDATED_EVENT, refresh)
     }
   }, [reminder, reminderFolder])
 
@@ -992,8 +996,9 @@ export default function SettingsPage() {
                 <span className="set-main">
                   <span className="set-title">Thư mục câu</span>
                   <span className="set-desc">
-                    Chỉ hiện câu chưa đúng 100%: chưa làm xong thì lần sau hiện lại đúng câu đó.
-                    Bộ xong hết thì tự chuyển sang bộ kế tiếp; mọi bộ đều xong thì tự tắt.
+                    Chỉ hiện câu chưa làm lần nào, lần lượt theo thứ tự trong bộ; câu đã làm (kể
+                    cả chưa đúng) thì bỏ qua. Bộ làm hết thì tự chuyển sang bộ kế tiếp; mọi bộ đều
+                    làm hết thì tự tắt. Bộ đang dùng được lưu theo tài khoản.
                   </span>
                   <span className="set-hotkey">{nextInfo ?? 'Đang tính câu tiếp theo…'}</span>
                 </span>
@@ -1001,13 +1006,19 @@ export default function SettingsPage() {
                   <select
                     className="set-select"
                     value={
-                      sentenceFolders.some((f) => f.id === reminderFolder) ? reminderFolder : ''
+                      sentenceFolders === null ||
+                      sentenceFolders.some((f) => f.id === reminderFolder)
+                        ? reminderFolder
+                        : ''
                     }
                     aria-label="Thư mục câu để hiển thị"
                     onChange={(e) => chooseReminderFolder(e.target.value)}
                   >
+                    {sentenceFolders === null && reminderFolder && (
+                      <option value={reminderFolder}>Đang tải bộ đã chọn…</option>
+                    )}
                     <option value="">Tất cả thư mục</option>
-                    {sentenceFolders.map((f) => (
+                    {(sentenceFolders ?? []).map((f) => (
                       <option key={f.id} value={f.id}>
                         {f.name}
                       </option>

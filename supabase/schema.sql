@@ -126,7 +126,10 @@ create table if not exists public.settings (
   user_id              uuid primary key references auth.users (id) on delete cascade,
   theme                text not null default 'system',
   suggestion_enabled   boolean not null default true,
-  translation_provider text not null default 'offline'
+  translation_provider text not null default 'offline',
+  -- Chép câu › Tự động hiển thị câu chép: bộ đang dùng + câu hiện gần nhất
+  -- {"folderId", "lastId", "at"}. DB đã có sẵn thì chạy supabase/sentence_reminder_place.sql.
+  sentence_reminder    jsonb
 );
 
 -- ---------- 10. SENTENCE_FOLDERS (thư mục "Chép câu") ----------

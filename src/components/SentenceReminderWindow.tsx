@@ -155,7 +155,8 @@ export default function SentenceReminderWindow() {
     send(id, { answer, status: r?.status ?? null, score: r?.score ?? null, revealed: true })
   }
 
-  const left = content.remaining - (result?.status === 'correct' ? 1 : 0)
+  // Câu này đã gõ / chấm / xem đáp án -> không còn tính là câu trống
+  const left = content.remaining - (result || revealed || value.trim() ? 1 : 0)
 
   return (
     <div className="sr-root" ref={rootRef} onPointerDownCapture={hold}>
@@ -167,7 +168,7 @@ export default function SentenceReminderWindow() {
             <span>
               Câu {content.index}/{content.total}
             </span>
-            <span>· {left > 0 ? `còn ${left} câu chưa xong` : 'đã đúng hết'}</span>
+            <span>· {left > 0 ? `còn ${left} câu chưa làm` : 'đã làm hết'}</span>
           </span>
           <button
             className="sr-close"
