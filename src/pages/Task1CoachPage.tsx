@@ -1,10 +1,10 @@
 // Trang "Luyện Task 1" — người học tự làm một đề IELTS Writing Task 1 theo từng bước, cùng bố cục với Luyện Task 2.
-//   Bước 1 · Nhận dạng đề: dán đề, tự chọn dạng (Compare / Trend + Compare) rồi mới so với app.
+//   Bước 1 · Nhận dạng đề: dán đề + ảnh biểu đồ (lưu ở Supabase Storage), tự chọn dạng (Compare / Trend + Compare) rồi mới so với app.
 //   Bước 2 · Công thức: bảng công thức và mẫu câu của dạng đã chọn (DATA/compare.md · DATA/trendandcompare.md).
 // Bên trái là outline của dạng đề: mỗi câu có câu khung (bấm chỗ [..] để chọn cách viết), mẫu câu theo tình huống
 // số liệu và một ô để người học viết câu đó. Tài liệu chỉ để chọn mẫu, app không viết sẵn bài.
 // Trang mở ra danh sách bài (bảng task1_essays trên Supabase, đồng bộ app ↔ web); mọi thay đổi tự lưu sau khi ngừng gõ.
-// Dữ liệu: src/data/task1Outlines.ts
+// Dữ liệu: src/data/task1Outlines.ts · Ảnh đề: components/PromptImage.tsx (cần chạy supabase/task1_images.sql)
 import { useEffect, useMemo, useRef, useState } from 'react'
 import '@fontsource/overpass/600.css'
 import '@fontsource/overpass/700.css'
@@ -39,6 +39,8 @@ import { T1_TYPES, detectT1Type, findT1Type, t1Lines, type T1Block, type T1Line,
 import { segsToText, type Tone } from '../data/task2Outlines'
 import { CloudApi, type Task1Essay } from '../services/cloud/CloudApiClient'
 import { errText, isMissingSchema } from '../services/cloud/cloudError'
+import { asT1Image, removeEssayImages, removeT1Images, type T1Image } from '../services/cloud/task1Images'
+import { ImageViewer, PromptBrief, PromptImageField, useBlockFileDrop } from '../components/PromptImage'
 import '../styles/mindmap.css'
 import '../styles/task2coach.css'
 import '../styles/task1coach.css'
@@ -47,6 +49,7 @@ import '../styles/task1coach.css'
 interface T1State {
   step: 1 | 2
   prompt: string
+  image: T1Image | null // ảnh biểu đồ của đề (Supabase Storage), bài chỉ giữ đường dẫn
   typeId: T1TypeId | null // người học tự chọn, app chỉ đối chiếu khi được hỏi
   compared: boolean
   lines: Record<string, string> // câu người học viết, khóa = lineKey (dạng đề · số câu)
@@ -59,6 +62,7 @@ const MIN_WORDS = 150
 const INITIAL: T1State = {
   step: 1,
   prompt: '',
+  image: null,
   typeId: null,
   compared: false,
   lines: {},
@@ -81,6 +85,8 @@ function normalize(raw: unknown): T1State {
   return {
     ...INITIAL,
     ...s,
+    prompt: typeof s.prompt === 'string' ? s.prompt : '',
+    image: asT1Image(s.image),
     typeId: findT1Type(s.typeId) ? s.typeId! : null,
     lines: { ...s.lines },
     fills: { ...s.fills },
@@ -211,11 +217,14 @@ export default function Task1CoachPage({ onNavigate }: { onNavigate?: (p: PageKe
   }
 
   const remove = async (e: Task1Essay) => {
-    if (!window.confirm(`Xóa bài "${e.title || 'chưa có đề'}"? Thao tác này không hoàn tác được.`)) return
+    const withImage = normalize(e.data).image ? ' cùng ảnh đề bài' : ''
+    if (!window.confirm(`Xóa bài "${e.title || 'chưa có đề'}"${withImage}? Thao tác này không hoàn tác được.`)) return
     setError(null)
     try {
       await CloudApi.deleteTask1Essay(e.id)
       setEssays((l) => l.filter((x) => x.id !== e.id))
+      // Bài đã xóa thì ảnh đề cũng không còn chỗ dùng: dọn khỏi kho, lỗi thì bỏ qua (không ảnh hưởng bài)
+      if (normalize(e.data).image) void removeEssayImages(e.id).catch(() => undefined)
     } catch (err) {
       fail(err)
     }
@@ -392,7 +401,7 @@ function EssayCard({
             {title}
           </span>
         ) : (
-          <span className="tc-eprompt is-empty">Bài chưa có đề</span>
+          <span className="tc-eprompt is-empty">{state.image ? 'Đề bài dạng ảnh, chưa dán chữ của đề' : 'Bài chưa có đề'}</span>
         )}
       </button>
       <span className="tc-strip-row">
@@ -408,7 +417,15 @@ function EssayCard({
         <b className={done ? 'tc-ecount is-full' : 'tc-ecount'}>{type ? `${filled}/${total}` : '–'}</b>
       </span>
       <span className="tc-efoot">
-        <span>{relTime(updated)}</span>
+        <span className="t1-emeta">
+          <span>{relTime(updated)}</span>
+          {state.image && (
+            <span className="t1-ehas" title="Bài có ảnh biểu đồ của đề">
+              <Icon name="image" />
+              Có ảnh đề
+            </span>
+          )}
+        </span>
         {done ? (
           <span className="tc-estate is-done">
             <Icon name="check" />
@@ -443,9 +460,26 @@ function Task1Editor({
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [leaving, setLeaving] = useState(false)
   const [tab, setTab] = useState<string>('') // phần công thức đang xem ở bước 2
+  const [viewing, setViewing] = useState(false) // trình xem ảnh đề toàn màn hình
   const workRef = useRef<HTMLDivElement>(null)
+  const stRef = useRef(st)
+  stRef.current = st
+  // Ảnh đề đã bị thay / xóa: chỉ xóa khỏi kho sau khi bài trên cloud đã thôi trỏ tới nó,
+  // để lỡ lưu lỗi hay đóng app giữa chừng thì bài vẫn mở được ảnh cũ.
+  const staleImages = useRef(new Set<string>())
 
-  const { save, saveErr, flush } = useAutosave(st, (s) => CloudApi.updateTask1Essay(essay.id, titleOf(s), s), onSaved)
+  useBlockFileDrop()
+
+  const persist = async (s: T1State) => {
+    const row = await CloudApi.updateTask1Essay(essay.id, titleOf(s), s)
+    const gone = [...staleImages.current].filter((p) => p !== s.image?.path)
+    if (gone.length) {
+      gone.forEach((p) => staleImages.current.delete(p))
+      void removeT1Images(gone).catch(() => undefined)
+    }
+    return row
+  }
+  const { save, saveErr, flush } = useAutosave(st, persist, onSaved)
 
   const back = async () => {
     setLeaving(true)
@@ -456,6 +490,13 @@ function Task1Editor({
   }
 
   const patch = (p: Partial<T1State>) => setSt((s) => ({ ...s, ...p }))
+
+  const setImage = (img: T1Image | null) => {
+    const old = stRef.current.image
+    if (old && old.path !== img?.path) staleImages.current.add(old.path)
+    if (!img) setViewing(false)
+    patch({ image: img })
+  }
 
   // ---------------------------------------------------------------- Dữ liệu suy ra
   const detected = useMemo(() => detectT1Type(st.prompt), [st.prompt])
@@ -473,6 +514,12 @@ function Task1Editor({
   const goTo = (step: 1 | 2) => {
     patch({ step })
     requestAnimationFrame(() => workRef.current?.parentElement?.scrollTo({ top: 0, behavior: 'smooth' }))
+  }
+
+  /** Từ khung "Đề bài" bên trái: về bước 1 và đặt con trỏ vào ô chữ của đề. */
+  const editPrompt = () => {
+    goTo(1)
+    window.setTimeout(() => document.getElementById('t1-prompt')?.focus({ preventScroll: false }), 80)
   }
 
   const essayText = type ? buildEssayText(st, type) : ''
@@ -512,15 +559,18 @@ function Task1Editor({
   // ---------------------------------------------------------------- Bước 1
   const renderStep1 = () => (
     <>
-      <Card no="1.1" title="Đề bài" hint="Dán nguyên văn đề, kể cả câu mô tả biểu đồ.">
-        <Field
-          id="t1-prompt"
-          lang="en"
-          rows={3}
-          value={st.prompt}
-          onChange={(v) => patch({ prompt: v, compared: false })}
-          placeholder="Ví dụ: The bar chart shows the number of male and female students enrolled in four courses at a college in 2023."
-        />
+      <Card no="1.1" title="Đề bài" hint="Dán nguyên văn đề, kể cả câu mô tả biểu đồ, rồi thêm ảnh biểu đồ để xem lại trong lúc viết outline.">
+        <PromptImageField essayId={essay.id} image={st.image} onChange={setImage} onView={() => setViewing(true)}>
+          <Field
+            id="t1-prompt"
+            lang="en"
+            rows={3}
+            value={st.prompt}
+            onChange={(v) => patch({ prompt: v, compared: false })}
+            placeholder="Ví dụ: The bar chart shows the number of male and female students enrolled in four courses at a college in 2023."
+            ariaLabel="Chữ của đề bài"
+          />
+        </PromptImageField>
       </Card>
 
       <Card
@@ -717,6 +767,7 @@ function Task1Editor({
             </span>
           )}
         </div>
+        <PromptBrief prompt={st.prompt} image={st.image} onView={() => setViewing(true)} onEdit={editPrompt} />
         {!type ? (
           <p className="mt-empty">Chọn dạng đề ở mục 1.2 để hiện outline của dạng đó.</p>
         ) : (
@@ -777,6 +828,7 @@ function Task1Editor({
           </div>
         </aside>
       </div>
+      {viewing && st.image && <ImageViewer image={st.image} prompt={st.prompt} onClose={() => setViewing(false)} />}
     </div>
   )
 }

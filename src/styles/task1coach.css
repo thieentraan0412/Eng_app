@@ -128,3 +128,672 @@
 .t1-essay p {
   margin: 0;
 }
+
+/* ------------------------------------------------------------------ Ảnh đề bài
+   Mục 1.1: ô tải ảnh (bấm · kéo thả · dán), ảnh đã có + nút Xem lớn / Đổi ảnh / Xóa ảnh.
+   Đầu outline: khung "Đề bài" thu gọn / ghim được. Trình xem toàn màn hình: .t1-viewer.
+   Ảnh biểu đồ luôn nằm trên nền giấy trắng để ảnh trong suốt vẫn đọc được ở giao diện tối. */
+.mt-page {
+  --t1-paper: #ffffff;
+}
+.t1-prompt {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.t1-prompt .mt-mini:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  scale: 1;
+}
+
+/* Ô trống: bấm để chọn ảnh hoặc thả ảnh vào */
+.t1-drop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px dashed var(--mt-rule);
+  border-radius: 8px;
+  background: var(--mt-surface-2);
+  color: var(--mt-ink-soft);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.t1-drop:hover,
+.t1-drop.is-drag {
+  border-color: var(--mt-m);
+  background: var(--mt-m-soft);
+}
+.t1-drop.is-drag {
+  border-style: solid;
+}
+.t1-drop:active {
+  scale: 0.99;
+}
+.t1-drop:focus-visible {
+  outline: 2px solid var(--mt-m);
+  outline-offset: 2px;
+}
+.t1-drop-ico {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--mt-rule-soft);
+  border-radius: 8px;
+  background: var(--mt-surface);
+  color: var(--mt-m-ink);
+}
+.mt-page .t1-drop-ico .ico {
+  width: 20px;
+  height: 20px;
+}
+.t1-drop-txt {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.t1-drop-txt b {
+  color: var(--mt-ink);
+  font: 700 14px/1.35 var(--mt-font-d);
+}
+.t1-drop-txt small {
+  color: var(--mt-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* Ảnh đã có */
+.t1-shot {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.t1-shot-view {
+  position: relative;
+  min-width: 0;
+}
+/* Kéo ảnh mới vào khi đã có ảnh: phủ lớp báo "Thả để thay ảnh" */
+.t1-shot-view.is-drag::after {
+  content: attr(data-drop);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--mt-m);
+  border-radius: 8px;
+  background: var(--mt-surface);
+  opacity: 0.94;
+  color: var(--mt-m-ink);
+  font: 700 14px/1.3 var(--mt-font-d);
+  pointer-events: none;
+}
+.t1-shot-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.t1-shot-meta {
+  color: var(--mt-muted);
+  font: 500 12px/1 var(--mt-font-m);
+  font-variant-numeric: tabular-nums;
+}
+/* Nút xóa tách về phía phải, xa các nút xem / đổi ảnh */
+.t1-shot-acts .t1-danger {
+  margin-left: auto;
+}
+.mt-mini.t1-danger:hover:not(:disabled) {
+  border-color: var(--mt-r);
+  background: var(--mt-r-soft);
+  color: var(--mt-r-ink);
+}
+.mt-mini.t1-danger:focus-visible {
+  outline-color: var(--mt-r);
+}
+.mt-warn.t1-shot-err {
+  align-items: center;
+  margin-top: 0;
+}
+.t1-shot-err > span {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.t1-shot-err .mt-mini {
+  flex: 0 0 auto;
+}
+
+/* Khung ảnh dùng chung (mục 1.1 và khung Đề bài): ảnh giữ tỉ lệ, không phóng quá cỡ thật */
+.t1-img {
+  position: relative;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--mt-rule-soft);
+  border-radius: 8px;
+  background: var(--mt-surface-2);
+  color: inherit;
+  font: inherit;
+}
+.t1-img img {
+  display: block;
+  max-width: 100%;
+  max-height: var(--t1-img-max, 260px);
+  border-radius: 4px;
+  background: var(--t1-paper);
+}
+button.t1-img {
+  cursor: zoom-in;
+  transition: border-color 0.15s;
+}
+button.t1-img:hover {
+  border-color: var(--mt-ink-soft);
+}
+button.t1-img:active {
+  scale: 0.995;
+}
+button.t1-img:focus-visible {
+  outline: 2px solid var(--mt-m);
+  outline-offset: 2px;
+}
+.t1-img-hint {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: rgba(17, 20, 24, 0.78);
+  color: #ffffff;
+  font: 600 12px/1 var(--mt-font-b);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+button.t1-img:hover .t1-img-hint,
+button.t1-img:focus-visible .t1-img-hint {
+  opacity: 1;
+}
+.mt-page .t1-img-hint .ico {
+  width: 13px;
+  height: 13px;
+}
+.t1-img.is-field,
+.t1-img-skel.is-field {
+  --t1-img-max: 240px;
+}
+.t1-img.is-brief,
+.t1-img-skel.is-brief {
+  --t1-img-max: 320px;
+}
+.t1-img-skel {
+  display: block;
+  width: 100%;
+  max-height: var(--t1-img-max, 260px);
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--mt-rule-soft) 25%, var(--mt-surface-2) 50%, var(--mt-rule-soft) 75%);
+  background-size: 200% 100%;
+  animation: tc-shimmer 1.2s linear infinite;
+}
+.t1-imgerr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed var(--mt-rule);
+  border-radius: 8px;
+  background: var(--mt-warn-soft);
+  color: var(--mt-warn);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.t1-imgerr > span {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+/* Đang xử lý / tải ảnh lên: ảnh mờ + nhãn ở giữa */
+.t1-shot-busy {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  border: 1px solid var(--mt-rule-soft);
+  border-radius: 8px;
+  background: var(--mt-surface-2);
+}
+.t1-shot-busy img {
+  display: block;
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: 4px;
+  background: var(--t1-paper);
+  opacity: 0.4;
+}
+.t1-shot-busy .t1-img-skel {
+  --t1-img-max: 160px;
+}
+.t1-busytag {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--mt-rule);
+  border-radius: 999px;
+  background: var(--mt-surface);
+  box-shadow: var(--mt-shadow);
+  color: var(--mt-ink);
+  font: 600 13px/1 var(--mt-font-b);
+}
+.t1-spin {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--mt-rule);
+  border-top-color: var(--mt-m);
+  border-radius: 50%;
+  animation: t1-spin 0.8s linear infinite;
+}
+@keyframes t1-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* ------------------------------------------------------------------ Khung "Đề bài" trên đầu outline */
+.t1-brief {
+  min-width: 0; /* dòng xem trước (nowrap) khi thu gọn không được nới rộng cột outline */
+  border: 1px solid var(--mt-rule);
+  border-radius: var(--mt-radius);
+  background: var(--mt-surface);
+  box-shadow: var(--mt-shadow);
+}
+/* Ghim: dính trên đầu cột outline khi cuộn, phần thân tự cuộn nếu dài */
+.t1-brief.is-pinned {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  box-shadow: 0 8px 22px rgba(17, 20, 24, 0.12);
+}
+.t1-brief-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 4px;
+}
+.t1-brief-toggle {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--mt-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.t1-brief-toggle:hover {
+  background: var(--mt-surface-2);
+}
+.t1-brief-toggle:focus-visible {
+  outline: 2px solid var(--mt-m);
+  outline-offset: 0;
+}
+.t1-brief-toggle b {
+  flex: 0 0 auto;
+  font: 800 15px/1.3 var(--mt-font-d);
+}
+.mt-page .t1-brief-toggle .ico {
+  color: var(--mt-muted);
+  transition: rotate 0.15s;
+}
+.t1-brief.is-closed .t1-brief-toggle .ico {
+  rotate: -90deg;
+}
+.t1-brief-peek {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--mt-ink-soft);
+  font-size: 13.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.t1-brief-acts {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+.mt-mini.t1-pin[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--mt-m-soft);
+  color: var(--mt-m-ink);
+}
+.t1-brief-body {
+  display: grid;
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+.t1-brief.is-pinned .t1-brief-body {
+  max-height: 46vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.t1-brief.is-pinned .t1-img.is-brief,
+.t1-brief.is-pinned .t1-img-skel.is-brief {
+  --t1-img-max: 240px;
+}
+.t1-brief-text {
+  color: var(--mt-ink);
+  font-size: 14.5px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.t1-brief-none {
+  color: var(--mt-muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.t1-brief.is-empty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-style: dashed;
+  background: var(--mt-surface-2);
+  box-shadow: none;
+  color: var(--mt-ink-soft);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.t1-brief.is-empty > span {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.t1-brief.is-empty > .ico {
+  color: var(--mt-muted);
+}
+.t1-brief.is-empty .mt-mini {
+  flex: 0 0 auto;
+}
+
+/* Thẻ bài trong danh sách: dấu "Có ảnh đề" cạnh thời gian */
+.t1-emeta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+}
+.t1-ehas {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--mt-ink-soft);
+  font-weight: 600;
+}
+.mt-page .t1-ehas .ico {
+  width: 14px;
+  height: 14px;
+}
+
+/* ------------------------------------------------------------------ Trình xem ảnh toàn màn hình
+   Gắn vào <body> (portal) nhưng vẫn mang lớp mt-page để dùng chung token và nét icon.
+   Luôn nền tối như trình xem ảnh, ở cả giao diện sáng. */
+.t1-viewer {
+  --v-bg: rgba(10, 12, 16, 0.94);
+  --v-bar: #15181e;
+  --v-ink: #eef1f5;
+  --v-soft: #a9b1bd;
+  --v-rule: rgba(255, 255, 255, 0.16);
+  --v-btn: rgba(255, 255, 255, 0.08);
+  --v-btn-hover: rgba(255, 255, 255, 0.16);
+  --v-on: #4c8dff;
+  --v-warn: #ffc46b;
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  background: var(--v-bg);
+  color: var(--v-ink);
+  font-family: var(--mt-font-b);
+  -webkit-app-region: no-drag; /* phủ lên thanh cửa sổ tự vẽ của bản desktop: nút trong trình xem phải bấm được */
+  animation: t1-vfade 0.14s ease;
+}
+@keyframes t1-vfade {
+  from {
+    opacity: 0;
+  }
+}
+.t1-vbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--v-rule);
+  background: var(--v-bar);
+}
+.t1-vtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-right: auto;
+}
+.t1-vtitle b {
+  font: 800 15px/1.2 var(--mt-font-d);
+}
+.t1-vtitle small {
+  color: var(--v-soft);
+  font: 500 12px/1 var(--mt-font-m);
+}
+.t1-vzoom,
+.t1-vend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.t1-vpct {
+  min-width: 48px;
+  color: var(--v-ink);
+  font: 600 13px/1 var(--mt-font-m);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.t1-vbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--v-rule);
+  border-radius: 8px;
+  background: var(--v-btn);
+  color: var(--v-ink);
+  font: 600 13px/1 var(--mt-font-b);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.t1-vbtn.is-icon {
+  width: 34px;
+  padding: 0;
+}
+.t1-vbtn:hover:not(:disabled) {
+  background: var(--v-btn-hover);
+}
+.t1-vbtn:active:not(:disabled) {
+  scale: 0.97;
+}
+.t1-vbtn:focus-visible {
+  outline: 2px solid var(--v-on);
+  outline-offset: 2px;
+}
+.t1-vbtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.t1-vbtn[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--v-on);
+  color: #ffffff;
+}
+.t1-vbtn.is-close {
+  margin-left: 6px;
+}
+.t1-vstage {
+  position: relative; /* mốc offsetLeft/Top của ảnh khi giữ điểm dưới con trỏ lúc phóng to */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.t1-vstage.is-big {
+  cursor: grab;
+}
+.t1-vstage.is-panning {
+  cursor: grabbing;
+  user-select: none;
+}
+.t1-vstage:focus-visible {
+  outline: 2px solid var(--v-on);
+  outline-offset: -2px;
+}
+/* Ảnh nhỏ hơn khung thì nằm giữa; lớn hơn thì khung cuộn được tới mọi mép ảnh */
+.t1-vcanvas {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: max-content;
+  height: max-content;
+  min-width: 100%;
+  min-height: 100%;
+}
+.t1-vcanvas img {
+  display: block;
+  max-width: none;
+  border-radius: 4px;
+  background: var(--t1-paper);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+  user-select: none;
+}
+.t1-verr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 520px;
+  padding: 16px;
+  border: 1px solid var(--v-rule);
+  border-radius: 10px;
+  background: var(--v-bar);
+  color: var(--v-warn);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+}
+.t1-verr > span {
+  color: var(--v-ink);
+}
+.t1-vload {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--v-soft);
+  font-size: 14px;
+}
+.t1-viewer .t1-spin {
+  border-color: var(--v-rule);
+  border-top-color: var(--v-on);
+}
+.t1-vprompt {
+  flex: 0 0 auto;
+  max-height: 24vh;
+  overflow-y: auto;
+  padding: 12px max(18px, calc((100% - 960px) / 2));
+  border-top: 1px solid var(--v-rule);
+  background: var(--v-bar);
+  color: var(--v-ink);
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.t1-vtip {
+  padding: 8px 14px;
+  border-top: 1px solid var(--v-rule);
+  background: var(--v-bar);
+  color: var(--v-soft);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+.t1-vprompt + .t1-vtip {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* ------------------------------------------------------------------ Màn hẹp + giảm chuyển động */
+@media (max-width: 720px) {
+  .t1-brief-head {
+    flex-wrap: wrap;
+  }
+  .t1-brief-acts {
+    margin-left: auto;
+  }
+  .t1-brief.is-empty {
+    flex-wrap: wrap;
+  }
+  .t1-drop {
+    align-items: flex-start;
+  }
+  .t1-shot-acts .mt-mini,
+  .t1-brief-acts .mt-mini {
+    min-height: 36px;
+  }
+  .t1-vbar {
+    padding: 8px 10px;
+  }
+  .t1-vtitle small,
+  .t1-vtip {
+    display: none;
+  }
+  .t1-vbtn {
+    height: 40px;
+  }
+  .t1-vbtn.is-icon {
+    width: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .t1-drop,
+  .t1-img-hint,
+  button.t1-img,
+  .mt-page .t1-brief-toggle .ico {
+    transition: none;
+  }
+  .t1-img-skel,
+  .t1-viewer {
+    animation: none;
+  }
+  .t1-spin {
+    animation-duration: 2s;
+  }
+}

@@ -326,6 +326,22 @@ const ICONS = {
     </>
   ),
   star: <path d="m12 3.2 2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-2.9-5.4 2.9 1.1-6-4.5-4.2 6.1-.8Z" />,
+  // Ảnh (ảnh đề bài Task 1)
+  image: (
+    <>
+      <rect x="3.2" y="4.2" width="17.6" height="15.6" rx="2.4" />
+      <circle cx="8.8" cy="9.6" r="1.7" />
+      <path d="m20.8 15.4-4.6-4.6-8.9 9" />
+    </>
+  ),
+  // Phóng to (mở trình xem)
+  expand: (
+    <>
+      <path d="M14.6 3.6h5.8v5.8M9.4 20.4H3.6v-5.8" />
+      <path d="m20.4 3.6-6.4 6.4M3.6 20.4l6.4-6.4" />
+    </>
+  ),
+  minus: <path d="M5 12h14" />,
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof ICONS
