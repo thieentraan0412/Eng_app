@@ -13,6 +13,7 @@ export type PageKey =
   | 'mindmap'
   | 'task1'
   | 'task2'
+  | 'documents'
   | 'usage'
   | 'settings'
 
@@ -48,6 +49,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { key: 'task2', label: 'Luyện Task 2', icon: 'target' },
       { key: 'sentence', label: 'Chép câu', icon: 'keyboard' },
       { key: 'mindmap', label: 'Tư duy', icon: 'mindmap' },
+      { key: 'documents', label: 'Tài liệu', icon: 'file' },
     ],
   },
   {

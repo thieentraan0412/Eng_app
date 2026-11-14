@@ -21,6 +21,7 @@ import SentencePage from '../pages/SentencePage'
 import MindMapPage from '../pages/MindMapPage'
 import Task1CoachPage from '../pages/Task1CoachPage'
 import Task2CoachPage from '../pages/Task2CoachPage'
+import DocumentsPage from '../pages/DocumentsPage'
 import UsagePage from '../pages/UsagePage'
 import SettingsPage from '../pages/SettingsPage'
 import QuickTranslateModal from './QuickTranslateModal'
@@ -42,6 +43,7 @@ const STUDY_PAGES = new Set<PageKey>([
   'mindmap',
   'task1',
   'task2',
+  'documents',
   'vocabulary',
 ])
 
@@ -325,6 +327,8 @@ export default function AppLayout() {
         return <Task1CoachPage onNavigate={setPage} />
       case 'task2':
         return <Task2CoachPage onNavigate={setPage} />
+      case 'documents':
+        return <DocumentsPage />
       case 'usage':
         return <UsagePage />
     }
