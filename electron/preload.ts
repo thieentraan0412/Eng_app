@@ -91,6 +91,9 @@ contextBridge.exposeInMainWorld('api', {
   // (Cửa sổ chính) Bật/tắt tính năng tô-chữ-để-dịch trên toàn desktop
   setDesktopTranslate: (enabled: boolean): Promise<boolean> =>
     ipcRenderer.invoke('desktop-translate:set', enabled),
+  // (Cửa sổ chính) Phạm vi bôi chữ để dịch: toàn bộ máy hoặc chỉ trong EngMaster
+  setDesktopTranslateScope: (scope: 'system' | 'app'): Promise<'system' | 'app'> =>
+    ipcRenderer.invoke('desktop-translate:scope', scope),
   // (Cửa sổ chính) Nghe yêu cầu "Lưu vào bộ từ" đến từ popup toàn cục (kèm bộ từ đã chọn)
   onQuickSave: (cb: (payload: { entry: SaveEntry; deckId?: string }) => void): (() => void) => {
     const h = (_e: IpcRendererEvent, payload: { entry: SaveEntry; deckId?: string }) => cb(payload)

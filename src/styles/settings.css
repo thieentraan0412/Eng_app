@@ -118,6 +118,12 @@
 .set-side {
   flex: 0 0 auto;
 }
+/* Nhiều điều khiển trên một hàng (VD: ô chọn phạm vi + công tắc) */
+.set-side-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
 
 /* ---------- Nút (mockup .btn) ---------- */
 .set-btn {
@@ -447,6 +453,17 @@
   }
   .set-voice .set-select + .set-btn {
     margin-left: 0;
+  }
+  .set-side .set-side-inline {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .set-side .set-side-inline .set-select,
+  .set-side .set-side-inline .set-switch {
+    margin-left: 0;
+  }
+  .set-side .set-side-inline .set-select {
+    min-width: 0;
   }
   .set-btn {
     height: 36px;

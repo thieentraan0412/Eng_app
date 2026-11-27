@@ -4,7 +4,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useWindowChrome } from '../contexts/WindowChromeContext'
 import { isDesktop } from '../platform'
 import Icon from '../components/Icon'
-import type { UpdateStatus } from '../vite-env'
+import type { DesktopTranslateScope, UpdateStatus } from '../vite-env'
 import { accelFromEvent, readQuickTranslateHotkey } from '../services/hotkey'
 import {
   autoEnglishVoice,
@@ -47,6 +47,11 @@ export default function SettingsPage() {
   // Mặc định TẮT (tính năng nền toàn cục, người dùng chủ động bật)
   const [deskTrans, setDeskTrans] = useState(
     localStorage.getItem('desktop_translate_enabled') === '1',
+  )
+  // Phạm vi bôi chữ để dịch: toàn bộ máy (mặc định, chỉ desktop) hoặc chỉ trong
+  // app & web EngMaster. Bản web luôn là 'app' vì không đọc được app khác.
+  const [deskScope, setDeskScope] = useState<DesktopTranslateScope>(
+    isDesktop && localStorage.getItem('desktop_translate_scope') !== 'app' ? 'system' : 'app',
   )
   // Phím tắt toàn cục bật/tắt dịch nhanh ('' = không dùng phím tắt)
   const [hotkey, setHotkey] = useState(
@@ -180,6 +185,12 @@ export default function SettingsPage() {
     localStorage.setItem('desktop_translate_enabled', next ? '1' : '0')
     window.dispatchEvent(new CustomEvent('desktop-translate-changed', { detail: next }))
     window.api?.setDesktopTranslate(next)
+  }
+
+  const chooseDeskScope = (next: DesktopTranslateScope) => {
+    setDeskScope(next)
+    localStorage.setItem('desktop_translate_scope', next)
+    void window.api?.setDesktopTranslateScope(next)
   }
 
   const toggleOnTop = () => {
@@ -775,19 +786,20 @@ export default function SettingsPage() {
           </span>
         </div>
 
-        {/* Dịch toàn màn hình là tính năng nền của desktop → ẩn trên web */}
-        {isDesktop && (
-          <div className="set-row">
-            <span className="set-ico">
-              <Icon name="lang" />
+        {/* Bôi chữ để dịch. Phạm vi "toàn bộ máy" cần hook chuột của desktop → bản
+            web chỉ có phạm vi trong app & web EngMaster (ẩn ô chọn + phím tắt). */}
+        <div className="set-row">
+          <span className="set-ico">
+            <Icon name="lang" />
+          </span>
+          <span className="set-main">
+            <span className="set-title">Dịch nhanh khi bôi chữ</span>
+            <span className="set-desc">
+              {deskScope === 'system'
+                ? 'Bôi/tô chữ ở BẤT KỲ app nào trên máy (trình duyệt, Word, PDF…) để dịch'
+                : 'Chỉ dịch khi bôi/tô chữ bên trong app & web EngMaster'}
             </span>
-            <span className="set-main">
-              <span className="set-title">Dịch nhanh toàn màn hình</span>
-              <span className="set-desc">
-                {deskTrans
-                  ? 'Bôi/tô chữ ở BẤT KỲ app nào (trình duyệt, Word, PDF…) để dịch'
-                  : 'Bôi/tô chữ ở bất kỳ ứng dụng nào để dịch nhanh'}
-              </span>
+            {isDesktop && (
               <span className="set-hotkey">
                 Phím tắt bật/tắt:{' '}
                 {recording ? (
@@ -804,15 +816,28 @@ export default function SettingsPage() {
                 )}
                 {hkErr && <span className="set-hotkey-err">{hkErr}</span>}
               </span>
-            </span>
-            <span className="set-side">
+            )}
+          </span>
+          <span className="set-side">
+            <span className="set-side-inline">
+              {isDesktop && (
+                <select
+                  className="set-select"
+                  value={deskScope}
+                  aria-label="Phạm vi dịch khi bôi chữ"
+                  onChange={(e) => chooseDeskScope(e.target.value as DesktopTranslateScope)}
+                >
+                  <option value="system">Toàn bộ máy</option>
+                  <option value="app">Chỉ app &amp; web EngMaster</option>
+                </select>
+              )}
               <label className="set-switch">
                 <input type="checkbox" checked={deskTrans} onChange={toggleDeskTrans} />
                 <span className="track" />
               </label>
             </span>
-          </div>
-        )}
+          </span>
+        </div>
       </section>
 
       {/* ----------------------------------------------------- Ôn tập */}

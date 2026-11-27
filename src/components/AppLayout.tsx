@@ -262,6 +262,11 @@ export default function AppLayout() {
       setToast(on ? '📌 Luôn nổi trên cùng: BẬT' : '📌 Luôn nổi trên cùng: TẮT')
       window.setTimeout(() => setToast(null), 2600)
     })
+    // Gửi phạm vi TRƯỚC khi bật, để phạm vi "chỉ trong EngMaster" không lỡ khởi
+    // động hook chuột toàn cục trong tích tắc.
+    void window.api.setDesktopTranslateScope(
+      localStorage.getItem('desktop_translate_scope') === 'app' ? 'app' : 'system',
+    )
     if (localStorage.getItem('desktop_translate_enabled') === '1') {
       window.api.setDesktopTranslate(true)
     }
@@ -271,7 +276,7 @@ export default function AppLayout() {
     const offState = window.api.onDesktopTranslateState((on) => {
       localStorage.setItem('desktop_translate_enabled', on ? '1' : '0')
       window.dispatchEvent(new CustomEvent('desktop-translate-changed', { detail: on }))
-      setToast(on ? '🖱️ Dịch nhanh toàn màn hình: BẬT' : 'Dịch nhanh toàn màn hình: TẮT')
+      setToast(on ? '🖱️ Dịch nhanh khi bôi chữ: BẬT' : 'Dịch nhanh khi bôi chữ: TẮT')
       window.setTimeout(() => setToast(null), 2600)
     })
     const off = window.api.onQuickSave(async ({ entry, deckId }) => {

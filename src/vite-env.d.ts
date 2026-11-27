@@ -16,6 +16,9 @@ export interface SaveEntry {
   deckId?: string // bộ từ người dùng chọn để lưu vào
 }
 
+// Phạm vi "dịch khi bôi chữ": 'system' = mọi app trên máy, 'app' = chỉ trong EngMaster
+export type DesktopTranslateScope = 'system' | 'app'
+
 export type UpdateStatus =
   | { state: 'checking' | 'none' }
   | { state: 'available' | 'ready'; version: string }
@@ -86,6 +89,7 @@ export interface EngMasterApi {
 
   // Dịch nhanh toàn màn hình
   setDesktopTranslate: (enabled: boolean) => Promise<boolean>
+  setDesktopTranslateScope: (scope: DesktopTranslateScope) => Promise<DesktopTranslateScope>
   setTranslateHotkey: (accel: string) => Promise<boolean>
   onDesktopTranslateState: (cb: (enabled: boolean) => void) => () => void
   setQuickTranslateHotkey: (accel: string) => Promise<boolean>
