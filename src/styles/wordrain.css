@@ -700,27 +700,88 @@ body.wr-focus .app-root .content {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
-.wr-input {
+/* Ô gõ: chữ thật của input bị ẩn (có thể còn sót ký tự sai / từ đã trúng khi bộ gõ đang
+   soạn chữ); .wr-inputview vẽ đè đúng phần đã gõ được nhận + con trỏ giả. */
+.wr-inputwrap {
+  position: relative;
   width: min(560px, 100%);
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+.wr-input {
+  display: block;
+  width: 100%;
   padding: 0.7rem 1rem;
   border: 1.5px solid var(--border-strong);
   border-radius: 12px;
   background: var(--bg);
-  color: var(--text);
+  color: transparent;
+  caret-color: transparent;
   font: inherit;
-  font-size: 1.3rem;
-  font-weight: 600;
   text-align: center;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+.wr-input::placeholder {
+  color: transparent;
+}
+.wr-input::selection {
+  background: transparent;
 }
 .wr-input:focus {
   border-color: var(--primary);
   box-shadow: var(--ring);
 }
-.wr-input.is-shake {
+.wr-inputwrap.is-shake {
   animation: wr-shake 0.26s;
+}
+.wr-inputwrap.is-shake .wr-input {
   border-color: var(--danger);
+}
+/* phủ kín phần trong viền ô (nền đặc) để gạch chân / tô nền của bộ gõ quanh chữ ẩn không lộ ra */
+.wr-inputview {
+  position: absolute;
+  inset: 1.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 calc(1rem - 1.5px);
+  border-radius: 10.5px;
+  background: var(--bg);
+  overflow: hidden;
+  white-space: pre;
+  pointer-events: none;
+}
+.wr-inputview-text {
+  color: var(--text);
+}
+.wr-inputview-ph {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  font-weight: 400;
+}
+.wr-caret {
+  flex: none;
+  width: 2px;
+  height: 1.25em;
+  margin: 0 1px;
+  border-radius: 1px;
+  background: var(--text);
+  visibility: hidden;
+}
+.wr-input:focus ~ .wr-inputview .wr-caret {
+  visibility: visible;
+  animation: wr-blink 1.06s steps(1) infinite;
+}
+.wr-stage.is-paused .wr-caret {
+  visibility: hidden;
+}
+@keyframes wr-blink {
+  50% {
+    opacity: 0;
+  }
 }
 @keyframes wr-shake {
   20% {
@@ -961,7 +1022,8 @@ body.wr-focus .app-root .content {
   .wr-count,
   .wr-levelup,
   .wr-last.is-miss,
-  .wr-input.is-shake {
+  .wr-inputwrap.is-shake,
+  .wr-input:focus ~ .wr-inputview .wr-caret {
     animation: none;
   }
 }

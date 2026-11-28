@@ -9,7 +9,6 @@ import {
   comboMult,
   createRain,
   focusOf,
-  markBad,
   pauseRain,
   quitRain,
   stepRain,
@@ -66,13 +65,18 @@ export default function RainStage({ launch, onEnd }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fxRef = useRef<RainFx | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
   const els = useRef(new Map<number, HTMLDivElement>())
   const sizes = useRef(new Map<number, { w: number; h: number }>())
   const dims = useRef({ W: 800, H: 500 })
   // Bộ chuyển ô nhập -> phím: `consumed` = số ký tự đầu ô đã dùng xong (chỉ khác 0 khi
   // bộ gõ đang soạn chữ, lúc đó không được ghi đè ô); `prev` = phần còn lại đã xử lý;
-  // `junk` = số ký tự sai còn nằm trong ô (cũng chỉ có khi đang soạn chữ).
-  const io = useRef({ consumed: 0, prev: '', junk: 0, composing: false })
+  // `kept[i]` = ký tự prev[i] có được nhận vào phần đã gõ không (false = gõ sai, bị bỏ —
+  // chỉ còn sót trong ô khi bộ gõ đang soạn chữ). Luôn có: số `true` = s.buffer.length.
+  // Chữ thật của ô bị ẩn; thứ người chơi thấy là lớp `wr-inputview` vẽ s.buffer, nên ô
+  // luôn chỉ hiện chữ đã nhận: gõ sai không hiện, gõ trúng từ là ô trống ngay — kể cả khi
+  // bộ gõ (Gboard, bộ gõ có gạch chân…) chưa cho ghi đè ô.
+  const io = useRef({ consumed: 0, prev: '', kept: [] as boolean[], composing: false })
   const [ghosts, setGhosts] = useState<Ghost[]>([])
   const [toast, setToast] = useState<MissToast | null>(null)
   const [levelFlash, setLevelFlash] = useState<number | null>(null)
@@ -125,11 +129,11 @@ export default function RainStage({ launch, onEnd }: Props) {
     }
     a.consumed = 0
     a.prev = s.buffer
-    a.junk = 0
+    a.kept = Array.from(s.buffer, () => true)
   }, [s])
 
   const shake = () => {
-    const el = inputRef.current
+    const el = wrapRef.current
     if (!el) return
     el.classList.remove('is-shake')
     void el.offsetWidth // khởi động lại animation
@@ -171,8 +175,9 @@ export default function RainStage({ launch, onEnd }: Props) {
   const processInput = (raw: string) => {
     const a = io.current
     if (hasVietnameseMarks(raw)) setImeWarn(true)
-    if (s.phase !== 'playing') {
-      if (!a.composing) writeBack()
+    const playing = s.phase === 'playing'
+    if (!playing && !a.composing) {
+      writeBack()
       return
     }
     const v = sanitizeTyping(raw)
@@ -180,23 +185,31 @@ export default function RainStage({ launch, onEnd }: Props) {
     const view = v.slice(a.consumed)
     let k = 0
     while (k < view.length && k < a.prev.length && view[k] === a.prev[k]) k++
-    const bl = s.buffer.length
-    if (k < bl) {
-      trimBuffer(s, k)
-      a.junk = 0
-    } else a.junk = Math.min(a.junk, k - bl)
+    const kept = a.kept.slice(0, k)
+    // Xoá lùi ở cuối: mỗi phím xoá là một chữ người chơi NHÌN THẤY. Nếu bộ gõ chỉ xoá
+    // ký tự sai (đã ẩn, còn sót trong ô) thì bỏ thêm chữ đã nhận ở cuối cho khớp.
+    if (k === view.length && view.length < a.prev.length) {
+      let owe = a.prev.length - view.length - a.kept.slice(k).filter(Boolean).length
+      for (let j = kept.length - 1; j >= 0 && owe > 0; j--) {
+        if (kept[j]) {
+          kept[j] = false
+          owe--
+        }
+      }
+    }
+    trimBuffer(s, kept.filter(Boolean).length)
     const events: RainEvent[] = []
     let start = 0
     let bad = false
     for (let i = k; i < view.length; i++) {
-      if (a.junk > 0) {
-        a.junk++
-        markBad(s)
-        bad = true
+      if (!playing) {
+        kept.push(false) // gõ lúc đếm ngược / tạm dừng: bỏ, không phạt
         continue
       }
+      // ký tự sai bị bỏ (không vào phần đã gõ), các ký tự sau vẫn tính bình thường
       const r = typeChar(s, view[i], cfg)
       events.push(...r.events)
+      kept.push(r.kind === 'ok')
       if (r.kind === 'skip' || r.kind === 'hit') start = i + 1
       else if (r.kind === 'ok') {
         // mỗi chữ đúng: một viên đạn bay tới từ đang nhắm
@@ -205,13 +218,11 @@ export default function RainStage({ launch, onEnd }: Props) {
           const pos = screenPos(t)
           fxRef.current?.fire(pos.x, pos.y, false, t.id) // đạn đuổi theo từ đang rơi
         }
-      } else if (r.kind === 'bad') {
-        a.junk++
-        bad = true
-      }
+      } else if (r.kind === 'bad') bad = true
     }
     a.consumed += start
     a.prev = view.slice(start)
+    a.kept = kept.slice(start)
     if (!a.composing) writeBack()
     if (bad) {
       shake()
@@ -222,6 +233,19 @@ export default function RainStage({ launch, onEnd }: Props) {
   }
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => processInput(e.currentTarget.value)
+
+  // Chữ thật của ô bị ẩn nên giữ con trỏ ở cuối ô — không để chọn / chèn vào giữa chữ
+  const pinCaret = () => {
+    const el = inputRef.current
+    if (!el || io.current.composing) return
+    const n = el.value.length
+    if (el.selectionStart === n && el.selectionEnd === n) return
+    try {
+      el.setSelectionRange(n, n)
+    } catch {
+      /* một số loại input không hỗ trợ chọn vùng */
+    }
+  }
 
   // ---------- tạm dừng / tiếp tục ----------
   const pause = useCallback(() => {
@@ -294,7 +318,7 @@ export default function RainStage({ launch, onEnd }: Props) {
           if (a.composing) {
             a.consumed += a.prev.length
             a.prev = ''
-            a.junk = 0
+            a.kept = []
           } else writeBack()
         }
         handleEvents(events)
@@ -382,6 +406,7 @@ export default function RainStage({ launch, onEnd }: Props) {
   const wpl = cfg.wordsPerLevel
   const levelProgress = ((s.cleared % wpl) / wpl) * 100
   const count = s.phase === 'countdown' ? Math.max(1, Math.ceil(s.countdownMs / 600)) : 0
+  const placeholder = cfg.mode === 'meaning' ? 'Gõ từ tiếng Anh của nghĩa đang rơi…' : 'Gõ từ đang rơi…'
 
   return (
     <div className={`wr-stage${s.phase === 'paused' ? ' is-paused' : ''}`}>
@@ -570,35 +595,57 @@ export default function RainStage({ launch, onEnd }: Props) {
             <span>Gõ từ đang rơi — gõ đủ chữ là từ tự nổ.</span>
           )}
         </div>
-        <input
-          ref={inputRef}
-          className="wr-input"
-          type="text"
-          inputMode="text"
-          enterKeyHint="done"
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="none"
-          spellCheck={false}
-          data-lpignore="true"
-          data-1p-ignore="true"
-          data-form-type="other"
-          aria-label="Ô gõ từ"
-          placeholder={cfg.mode === 'meaning' ? 'Gõ từ tiếng Anh của nghĩa đang rơi…' : 'Gõ từ đang rơi…'}
-          onChange={onChange}
-          onKeyDown={onKeyDown}
-          onBlur={pause}
-          onPaste={(e) => e.preventDefault()}
-          onDrop={(e) => e.preventDefault()}
-          onCompositionStart={() => {
-            io.current.composing = true
+        <div
+          ref={wrapRef}
+          className="wr-inputwrap"
+          onAnimationEnd={(e) => {
+            if (e.target === e.currentTarget) e.currentTarget.classList.remove('is-shake')
           }}
-          onCompositionEnd={(e) => {
-            io.current.composing = false
-            processInput(e.currentTarget.value)
-          }}
-          onAnimationEnd={(e) => e.currentTarget.classList.remove('is-shake')}
-        />
+        >
+          <input
+            ref={inputRef}
+            className="wr-input"
+            type="text"
+            inputMode="text"
+            enterKeyHint="done"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-form-type="other"
+            aria-label="Ô gõ từ"
+            placeholder={placeholder}
+            onChange={onChange}
+            onKeyDown={onKeyDown}
+            onSelect={pinCaret}
+            onBlur={pause}
+            onPaste={(e) => e.preventDefault()}
+            onDrop={(e) => e.preventDefault()}
+            onCompositionStart={() => {
+              io.current.composing = true
+            }}
+            onCompositionEnd={(e) => {
+              io.current.composing = false
+              processInput(e.currentTarget.value)
+            }}
+          />
+          {/* Thứ người chơi thấy trong ô: chỉ các chữ đã nhận (xem ghi chú ở `io`) */}
+          <div className="wr-inputview" aria-hidden="true">
+            {s.buffer ? (
+              <>
+                <span className="wr-inputview-text">{s.buffer}</span>
+                <span className="wr-caret" />
+              </>
+            ) : (
+              <>
+                <span className="wr-caret" />
+                <span className="wr-inputview-ph">{placeholder}</span>
+              </>
+            )}
+          </div>
+        </div>
         <div className="wr-keys">
           <kbd>Esc</kbd> tạm dừng · <kbd>Enter</kbd> xoá chữ đang gõ
         </div>
