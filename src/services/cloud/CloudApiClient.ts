@@ -117,6 +117,30 @@ export interface Task2Essay {
 // ---------- Luyện Task 1: cùng cấu trúc với Luyện Task 2, bảng riêng task1_essays ----------
 export type Task1Essay = Task2Essay
 
+// ---------- Game gõ (Mưa từ): mỗi lượt chơi một dòng — supabase/typing_sessions.sql ----------
+export interface TypingSession {
+  id: string
+  user_id: string
+  game: string
+  mode: string
+  source_kind: string
+  source_key: string
+  source_label: string | null
+  score: number
+  words: number
+  missed_count: number
+  max_combo: number
+  level: number
+  wpm: number
+  accuracy: number | null
+  duration_ms: number
+  data: unknown
+  created_at: string
+}
+export type NewTypingSession = Omit<TypingSession, 'id' | 'user_id' | 'created_at'>
+const TYPING_COLS =
+  'id, user_id, game, mode, source_kind, source_key, source_label, score, words, missed_count, max_combo, level, wpm, accuracy, duration_ms, data, created_at'
+
 // ---------- Chép câu: thư mục / câu / bài làm ----------
 export interface CloudSentenceFolder {
   id: string
@@ -843,6 +867,49 @@ export const CloudApi = {
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
     if (error) throw error
+  },
+
+  // ---------- Game gõ (Mưa từ) ----------
+  // Bảng chưa có (chưa chạy supabase/typing_sessions.sql) -> ném lỗi; trang tự
+  // nhận ra bằng isMissingSchema và vẫn cho chơi, kỷ lục giữ trên máy.
+  async saveTypingSession(s: NewTypingSession): Promise<void> {
+    // Lấy user từ phiên đang lưu (không gọi mạng) — chạy ngay lúc kết thúc lượt chơi
+    const { data } = await supabase.auth.getSession()
+    const user = data.session?.user
+    if (!user) throw new Error('Chưa đăng nhập')
+    const { error } = await supabase.from('typing_sessions').insert({ ...s, user_id: user.id })
+    if (error) throw error
+  },
+
+  async listTypingSessions(limit = 10, game = 'rain'): Promise<TypingSession[]> {
+    const { data, error } = await supabase
+      .from('typing_sessions')
+      .select(TYPING_COLS)
+      .eq('game', game)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    if (error) throw error
+    return data as TypingSession[]
+  },
+
+  // Kỷ lục của một (game, kiểu chơi, nguồn từ, tốc độ, số mạng). Tốc độ và số mạng nằm
+  // trong cột data (jsonb). PostgREST tắt hàm gộp nên lấy dòng điểm cao nhất.
+  async bestTypingScore(game: string, mode: string, sourceKey: string, speed: string, lives: number): Promise<number | null> {
+    const { data, error } = await supabase
+      .from('typing_sessions')
+      .select('score')
+      .eq('game', game)
+      .eq('mode', mode)
+      .eq('source_key', sourceKey)
+      .eq('data->>speed', speed)
+      .eq('data->>lives', String(lives))
+      .is('deleted_at', null)
+      .order('score', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (error) throw error
+    return (data as { score: number } | null)?.score ?? null
   },
 
   // ---------- Chép câu: thư mục ----------

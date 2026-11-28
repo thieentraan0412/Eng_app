@@ -15,6 +15,7 @@ import {
 import Icon from '../components/Icon'
 import { type SentenceItem, type CefrLevel } from '../data/sentences'
 import { errText } from '../services/cloud/cloudError'
+import { sanitizeEnglishInput } from '../services/englishInput'
 import {
   gradeSentence,
   typedWordMatch,
@@ -91,23 +92,6 @@ const REPEATS: { value: DictRepeat; label: string; hint: string }[] = [
 ]
 
 const errMsg = errText
-
-// Ô luyện dịch chỉ nhận tiếng Anh: giữ chữ Latin ASCII, số, xuống dòng và
-// dấu câu; chuẩn hóa một số dấu câu “thông minh” thường gặp khi dán văn bản.
-// Chữ có dấu (bộ gõ tiếng Việt đang bật, hoặc dán văn bản tiếng Việt) được HẠ
-// DẤU về chữ cái gốc chứ không xóa — xóa thẳng thì chữ tự dưng biến mất,
-// người gõ tưởng ô nhập hỏng.
-function sanitizeEnglishInput(value: string): string {
-  return value
-    .replace(/[‘’]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/[–—]/g, '-')
-    .replace(/…/g, '...')
-    .replace(/[đĐ]/g, (c) => (c === 'đ' ? 'd' : 'D'))
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/[^\x20-\x7E\n]/g, '')
-}
 
 // Vừa gõ thêm ĐÚNG MỘT dấu cách / dấu câu ngay sau một từ (không phải xoá, dán
 // hay gõ giữa từ) -> trả về phần chữ đứng trước dấu đó, ngược lại null.

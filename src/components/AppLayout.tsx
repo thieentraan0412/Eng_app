@@ -15,6 +15,7 @@ import VocabularyPage from '../pages/VocabularyPage'
 import FlashcardPage from '../pages/FlashcardPage'
 import ReadingPage from '../pages/ReadingPage'
 import ExercisePage from '../pages/ExercisePage'
+import WordRainPage from '../pages/WordRainPage'
 import GrammarPage from '../pages/GrammarPage'
 import WritingPage from '../pages/WritingPage'
 import SentencePage from '../pages/SentencePage'
@@ -36,6 +37,7 @@ const SAVED_DECK_NAME = 'Từ đã lưu khi đọc'
 const STUDY_PAGES = new Set<PageKey>([
   'flashcard',
   'exercise',
+  'wordrain',
   'grammar',
   'reading',
   'writing',
@@ -320,6 +322,8 @@ export default function AppLayout() {
         return <SettingsPage />
       case 'exercise':
         return <ExercisePage />
+      case 'wordrain':
+        return <WordRainPage onNavigate={setPage} />
       case 'grammar':
         return <GrammarPage />
       case 'writing':

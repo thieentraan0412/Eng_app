@@ -1,0 +1,967 @@
+/* ============================================================
+   MƯA TỪ — game gõ tiếng Anh (tiền tố class "wr-")
+   Màn chọn nguồn / kết quả nằm trong .page như các trang khác; màn chơi chiếm
+   trọn vùng nội dung ở "chế độ tập trung" (body.wr-focus: ẩn thanh bên, thanh trên).
+   Màu lấy từ token chung nên tự hợp giao diện sáng / tối.
+   ============================================================ */
+
+/* ---------- Chế độ tập trung khi đang chơi ---------- */
+body.wr-focus .sidebar,
+body.wr-focus .sidebar-reveal,
+body.wr-focus .mobile-topbar {
+  display: none;
+}
+body.wr-focus .app-root .content {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.wr-page .ico,
+.wr-stage .ico {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wr-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.wr-icon-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+/* ============================================================
+   Màn chọn nguồn
+   ============================================================ */
+.wr-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+.wr-h {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.wr-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+.wr-choice,
+.wr-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.wr-choice:hover,
+.wr-mode:hover {
+  background: var(--surface-hover);
+}
+.wr-choice.is-on,
+.wr-mode.is-on {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+  box-shadow: var(--ring);
+}
+.wr-choice-name {
+  font-weight: 600;
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.wr-choice-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.wr-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.wr-mode b {
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+.wr-mode span {
+  font-size: 0.82rem;
+  color: var(--text-soft);
+  line-height: 1.4;
+}
+/* tốc độ rơi / số mạng: nhãn bên trái, nút chọn dạng phân đoạn bên phải */
+.wr-seg-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+.wr-seg-label {
+  flex: 0 0 96px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+.wr-seg {
+  flex: 1;
+  max-width: 420px;
+}
+.wr-seg .tab {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.wr-seg-note {
+  margin-top: 8px;
+}
+.wr-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+.wr-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+.wr-opt input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+.wr-note {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.wr-empty {
+  margin-top: 12px;
+  padding: 18px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  text-align: center;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+.wr-empty p {
+  margin: 0 0 10px;
+}
+.wr-empty-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.wr-start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 22px;
+}
+.wr-start .alert {
+  width: 100%;
+}
+.wr-start-btn {
+  min-width: 240px;
+  height: 46px;
+  font-size: 1rem;
+}
+.wr-start .wr-note {
+  margin: 0;
+}
+.wr-best {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: var(--text-soft);
+}
+.wr-best .ico {
+  color: var(--warn);
+}
+.wr-best b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.wr-recent {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wr-recent li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, auto) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+.wr-recent li:first-child {
+  border-top: none;
+}
+.wr-recent-src {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wr-recent-src small {
+  font-size: 0.76rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.wr-recent-num {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-soft);
+  text-align: right;
+}
+.wr-recent-date {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   Màn chơi
+   ============================================================ */
+.wr-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.wr-hud {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  user-select: none;
+}
+.wr-stat {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.wr-stat span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.wr-stat b {
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.wr-combo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  opacity: 0.45;
+  transition: opacity 0.15s, color 0.15s, background 0.15s, border-color 0.15s;
+}
+.wr-combo.is-on {
+  opacity: 1;
+  color: var(--text-soft);
+}
+.wr-combo.is-hot {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+}
+.wr-combo .ico {
+  width: 15px;
+  height: 15px;
+}
+.wr-lives {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: auto;
+}
+.wr-lives .ico {
+  width: 20px;
+  height: 20px;
+  color: var(--border-strong);
+}
+.wr-lives .ico.is-full {
+  color: var(--danger);
+  fill: currentColor;
+}
+.wr-lives {
+  align-items: center;
+}
+.wr-lives-num {
+  margin-left: 3px;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.wr-hud-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+.wr-progress {
+  height: 3px;
+  background: var(--surface-2);
+}
+.wr-progress span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.18s ease-out;
+}
+
+.wr-field {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, var(--primary-tint), transparent 45%),
+    repeating-linear-gradient(90deg, transparent 0 calc(20% - 1px), color-mix(in srgb, var(--border) 55%, transparent) calc(20% - 1px) 20%);
+  user-select: none;
+}
+.wr-item {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.36rem 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  transition: border-color 0.12s, background-color 0.12s, box-shadow 0.12s;
+}
+.wr-typed {
+  color: var(--primary);
+}
+/* nghĩa tiếng Việt dưới từ (tuỳ chọn "Hiện nghĩa tiếng Việt") */
+.wr-sub {
+  margin-top: 1px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-soft);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wr-item.is-cand {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border-strong));
+}
+.wr-item.is-danger {
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
+}
+/* từ cần gõ gần nhất (thấp nhất, hoặc từ đang gõ dở): nền màu đậm, nổi hẳn lên */
+.wr-item.is-next {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+  box-shadow: var(--shadow-md), 0 0 0 4px var(--primary-soft);
+  z-index: 2;
+}
+.wr-item.is-next .wr-typed {
+  color: #fff;
+  opacity: 0.45;
+}
+.wr-item.is-next .wr-sub,
+.wr-item.is-next .wr-mask {
+  color: rgba(255, 255, 255, 0.82);
+}
+.wr-item.is-next .wr-mask .is-typed {
+  color: #fff;
+}
+.wr-item.is-next.is-danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  box-shadow: var(--shadow-md), 0 0 0 4px color-mix(in srgb, var(--danger) 25%, transparent);
+}
+/* lớp hiệu ứng bắn súng (pháo, đạn, mảnh vỡ) */
+.wr-fx {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+.wr-item.is-meaning {
+  padding: 0.4rem 0.9rem 0.45rem;
+  gap: 2px;
+}
+.wr-mean {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.wr-mask {
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+.wr-mask .is-typed {
+  color: var(--primary);
+}
+.wr-mask .is-space {
+  letter-spacing: 0.4em;
+}
+.wr-stage.is-paused .wr-item {
+  filter: blur(7px);
+}
+
+/* vạch đáy */
+.wr-ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--danger) 55%, transparent) 0 14px, transparent 14px 24px);
+  pointer-events: none;
+}
+
+/* hiệu ứng nổ: chữ + điểm bay lên rồi mờ đi */
+/* từ vừa gõ xong: đứng lại (nền xanh = đã khoá mục tiêu) chờ viên đạn cuối, tới nơi thì vỡ
+   tung; "+điểm" bay lên đúng lúc nổ. --travel = thời gian đạn bay (đặt từ RainStage). */
+.wr-ghost {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  z-index: 2;
+}
+.wr-ghost .wr-item {
+  position: relative;
+  left: auto;
+  top: auto;
+  will-change: auto;
+}
+.wr-corpse {
+  border-color: var(--success);
+  background: var(--success);
+  color: #fff;
+  box-shadow: var(--shadow-md), 0 0 0 4px color-mix(in srgb, var(--success) 25%, transparent);
+  animation: wr-corpse 0.2s ease-in forwards;
+  animation-delay: var(--travel, 0ms);
+}
+.wr-corpse .wr-sub {
+  color: rgba(255, 255, 255, 0.85);
+}
+@keyframes wr-corpse {
+  to {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+.wr-ghost-pts {
+  position: absolute;
+  top: -12px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  animation: wr-pts 0.75s ease-out forwards;
+  animation-delay: var(--travel, 0ms);
+}
+@keyframes wr-pts {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-38px) scale(1);
+  }
+}
+
+.wr-levelup {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--primary);
+  pointer-events: none;
+  animation: wr-level 1.3s ease-out forwards;
+  z-index: 3;
+}
+@keyframes wr-level {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px) scale(0.92);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -12px);
+  }
+}
+
+/* lớp phủ: sẵn sàng / đếm ngược / tạm dừng */
+.wr-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  backdrop-filter: blur(3px);
+  z-index: 5;
+}
+.wr-overlay.is-clear {
+  background: transparent;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+.wr-count {
+  font-size: 6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+  animation: wr-count 0.6s ease-out;
+}
+@keyframes wr-count {
+  from {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.wr-panel {
+  width: min(380px, 100%);
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+.wr-panel h3 {
+  margin: 0 0 6px;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+.wr-panel p {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  color: var(--text-soft);
+}
+.wr-panel .btn .ico {
+  width: 16px;
+  height: 16px;
+}
+.wr-panel-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* thanh gõ */
+.wr-inputbar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.wr-last {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 1.3em;
+  max-width: 100%;
+  font-size: 0.86rem;
+  color: var(--muted);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.wr-last .ico {
+  width: 15px;
+  height: 15px;
+  color: var(--success);
+}
+.wr-last b {
+  color: var(--text);
+}
+/* từ vừa rơi mất: nhắc lại "từ = nghĩa" (ở thanh gõ, không che vùng chơi) */
+.wr-last.is-miss {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--text-soft);
+  font-size: 0.9rem;
+  animation: wr-miss 0.18s ease-out;
+}
+.wr-last.is-miss .ico {
+  color: var(--danger);
+}
+.wr-last.is-miss b {
+  color: var(--danger);
+}
+@keyframes wr-miss {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.wr-page .btn:focus-visible,
+.wr-stage .btn:focus-visible,
+.wr-choice:focus-visible,
+.wr-mode:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.wr-input {
+  width: min(560px, 100%);
+  padding: 0.7rem 1rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.3rem;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.wr-input:focus {
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+.wr-input.is-shake {
+  animation: wr-shake 0.26s;
+  border-color: var(--danger);
+}
+@keyframes wr-shake {
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+.wr-keys {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+.wr-keys kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.72rem;
+  color: var(--text-soft);
+  background: var(--surface-2);
+}
+.wr-ime {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: min(560px, 100%);
+  padding: 6px 6px 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border));
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface));
+  font-size: 0.82rem;
+  color: var(--text-soft);
+}
+.wr-ime > .ico {
+  color: var(--warn);
+}
+.wr-ime span {
+  flex: 1;
+}
+.wr-ime .wr-icon-btn {
+  width: 28px;
+  height: 28px;
+}
+
+/* ============================================================
+   Màn kết quả
+   ============================================================ */
+.wr-score-card {
+  text-align: center;
+  padding: 26px 22px 22px;
+}
+.wr-ended {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.wr-score {
+  margin-top: 6px;
+  font-size: 3.4rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.wr-score-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.wr-record,
+.wr-prev {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 10px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+.wr-record {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+}
+.wr-record .ico {
+  fill: currentColor;
+  width: 16px;
+  height: 16px;
+}
+.wr-prev {
+  color: var(--text-soft);
+  background: var(--surface-2);
+  font-variant-numeric: tabular-nums;
+}
+.wr-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 20px 0 18px;
+}
+.wr-statbox {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.wr-statbox b {
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.wr-statbox span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.wr-result-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.wr-result-actions .ico {
+  width: 16px;
+  height: 16px;
+}
+.wr-cloud-note {
+  margin: 14px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.wr-missed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wr-missed li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.wr-missed li:first-child {
+  border-top: none;
+}
+.wr-missed .wr-icon-btn {
+  align-self: center;
+  width: 30px;
+  height: 30px;
+}
+.wr-missed b {
+  font-size: 1rem;
+}
+.wr-missed-mean {
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+/* ============================================================
+   Điện thoại / màn hẹp
+   ============================================================ */
+@media (max-width: 860px) {
+  .wr-modes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wr-seg-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .wr-seg-label {
+    flex: none;
+  }
+  .wr-seg {
+    max-width: none;
+  }
+  .wr-seg .tab {
+    padding: 0.5rem 0.2rem;
+    font-size: 0.86rem;
+  }
+  .wr-hud {
+    gap: 12px;
+    padding: max(8px, env(safe-area-inset-top)) 12px 8px;
+  }
+  .wr-stat:nth-of-type(3),
+  .wr-combo span {
+    display: none;
+  }
+  .wr-combo.is-on span {
+    display: inline;
+  }
+  .wr-stat b {
+    font-size: 1rem;
+  }
+  .wr-lives .ico {
+    width: 17px;
+    height: 17px;
+  }
+  .wr-item {
+    font-size: 1.1rem;
+    padding: 0.3rem 0.65rem;
+  }
+  .wr-field {
+    background: linear-gradient(180deg, var(--primary-tint), transparent 45%);
+  }
+  .wr-inputbar {
+    padding: 8px 12px max(8px, env(safe-area-inset-bottom));
+  }
+  .wr-keys {
+    display: none;
+  }
+  .wr-recent li {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .wr-recent li .wr-recent-num:nth-child(3),
+  .wr-recent-date {
+    display: none;
+  }
+  .wr-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wr-score {
+    font-size: 2.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wr-count,
+  .wr-levelup,
+  .wr-last.is-miss,
+  .wr-input.is-shake {
+    animation: none;
+  }
+}

@@ -6,6 +6,7 @@ export type PageKey =
   | 'vocabulary'
   | 'flashcard'
   | 'exercise'
+  | 'wordrain'
   | 'grammar'
   | 'reading'
   | 'writing'
@@ -37,6 +38,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { key: 'vocabulary', label: 'Từ vựng', icon: 'layers', count: 'cards' },
       { key: 'flashcard', label: 'Ôn tập', icon: 'repeat', count: 'due' },
       { key: 'exercise', label: 'Bài tập', icon: 'tasks' },
+      { key: 'wordrain', label: 'Mưa từ', icon: 'rain' },
       { key: 'grammar', label: 'Ngữ pháp', icon: 'grammar' },
     ],
   },

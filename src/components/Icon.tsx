@@ -342,6 +342,22 @@ const ICONS = {
     </>
   ),
   minus: <path d="M5 12h14" />,
+  // Game Mưa từ: đám mây có 3 vệt mưa rơi
+  rain: (
+    <>
+      <path d="M7.4 14.6a4.2 4.2 0 0 1-.4-8.4 5.4 5.4 0 0 1 10.4 1.4 3.5 3.5 0 0 1-.2 7" />
+      <path d="m8.4 17.2-1 3M12.4 17.2l-1 3M16.4 17.2l-1 3" />
+    </>
+  ),
+  pause: (
+    <>
+      <path d="M9 5.4v13.2" />
+      <path d="M15 5.4v13.2" />
+    </>
+  ),
+  heart: (
+    <path d="M12 20.2s-7.6-4.5-7.6-10a4.3 4.3 0 0 1 7.6-2.8 4.3 4.3 0 0 1 7.6 2.8c0 5.5-7.6 10-7.6 10Z" />
+  ),
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof ICONS
